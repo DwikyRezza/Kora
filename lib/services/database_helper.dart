@@ -48,7 +48,7 @@ class DatabaseHelper {
         maxElevation REAL,
         photoPath TEXT,
         splitsStr TEXT,
-        polyline: TEXT,
+        polyline TEXT,
         title TEXT,
         photosJson TEXT
       )

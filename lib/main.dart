@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
@@ -10,13 +11,22 @@ import 'screens/onboarding_screen.dart';
 import 'screens/body_stats_screen.dart';
 import 'services/profile_service.dart';
 import 'services/notification_service.dart';
+import 'services/location_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // WAJIB: inisialisasi port komunikasi antara TaskHandler (background service)
+  // dan Flutter UI. Harus dipanggil SEBELUM runApp().
+  FlutterForegroundTask.initCommunicationPort();
+
+  // Inisialisasi foreground task config sekali di awal
+  LocationService.initialize();
+
   await initializeDateFormatting('id', null);
   await NotificationService().init();
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
+    const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
     ),

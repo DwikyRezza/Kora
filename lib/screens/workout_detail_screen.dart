@@ -292,7 +292,15 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     crossAxisSpacing: 12,
                     children: [
                       _buildStatCard('Kalori', '${_workout.caloriesBurned} kal', Icons.local_fire_department),
-                      _buildStatCard('Protein', '${_workout.proteinNeeded.toStringAsFixed(1)}g', Icons.egg_alt),
+                      if (_workout.type == 'running') ...[
+                        _buildStatCard('Jarak', '${(_workout.distance ?? 0).toStringAsFixed(2)} km', Icons.straighten),
+                        _buildStatCard('Avg Pace', '${_calculatePace()} /km', Icons.speed),
+                        if (_workout.movingTime != null && _workout.movingTime! > 0)
+                          _buildStatCard('Moving Time', _formatDuration(_workout.movingTime!), Icons.timer),
+                      ] else ...[
+                        if (_workout.movingTime != null && _workout.movingTime! > 0)
+                          _buildStatCard('Moving Time', _formatDuration(_workout.movingTime!), Icons.timer),
+                      ],
                       if (_workout.elevationGain != null && _workout.elevationGain! > 0)
                         _buildStatCard('Elev Gain', '${_workout.elevationGain!.toStringAsFixed(1)} m', Icons.terrain),
                       if (_workout.maxElevation != null && _workout.maxElevation! > 0)
