@@ -5,74 +5,69 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 // ─── Entry point — HARUS top-level function ───────────────────────────────
-// Ini adalah entry point yang dipanggil Android Service saat mulai.
-// Wajib @pragma agar tidak di-tree-shake oleh compiler.
 @pragma('vm:entry-point')
 void startRunningTaskCallback() {
   FlutterForegroundTask.setTaskHandler(RunningTaskHandler());
 }
 
 // ─── Task Handler: berjalan DI DALAM Android Service ─────────────────────
-// Semua logika tracking (GPS, timer, distance) ada di sini,
-// sehingga tetap berjalan meski layar mati / app di-minimise.
 class RunningTaskHandler extends TaskHandler {
-  // State tracking
   bool _isRunning = false;
   DateTime? _runStartTime;
   int _elapsedSeconds = 0;
   int _movingSeconds = 0;
   double _distanceKm = 0.0;
   double _elevationGain = 0.0;
-  double _maxElevation = 0.0;
-  double _lastAltitude = 0.0;
+  double _maxElevation = -9999.0;
+  double _lastAltitude = -9999.0;
   int _lastSplitKm = 0;
   int _lastSplitTimeSeconds = 0;
   final List<String> _splits = [];
-  final List<List<double>> _routePoints = []; // [[lat, lng], ...]
+  final List<List<double>> _routePoints = [];
+
+  // Buffer posisi terakhir yang VALID untuk kalkulasi jarak
+  Position? _lastValidPosition;
 
   StreamSubscription<Position>? _positionStream;
 
-  // ── Lifecycle: dipanggil saat service dimulai ──────────────────────────
+  // ── Lifecycle ──────────────────────────────────────────────────────────
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    print('🟢 [SERVICE] RunningTaskHandler started (starter: ${starter.name})');
-    // Langsung mulai tracking saat service booting (hindari race condition)
+    print('🟢 [SERVICE] RunningTaskHandler started');
     _handleStart({});
   }
 
-  // ── Getter untuk _paceStr ───────────────────────────────────────────────
-  String get _paceStr {
-    if (_distanceKm < 0.01) return '--:--';
-    final paceMins = (_elapsedSeconds / 60.0) / _distanceKm;
-    if (paceMins > 99) return '--:--';
-    final m = paceMins.truncate();
-    final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
-    return '$m:$s';
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    print('🔴 [SERVICE] RunningTaskHandler destroyed');
+    await _positionStream?.cancel();
+    _positionStream = null;
   }
 
-  // ── Repeat event: dipanggil setiap 1 detik (dari ForegroundTaskOptions) ─
+  // ── Repeat event: dipanggil setiap 1 detik ────────────────────────────
   @override
   void onRepeatEvent(DateTime timestamp) {
-    if (!_isRunning) return;
+    if (!_isRunning || _runStartTime == null) return;
 
     _elapsedSeconds = DateTime.now().difference(_runStartTime!).inSeconds;
 
-    // Update notifikasi setiap 2 detik agar selalu up-to-date di layar pull-down
-    if (_elapsedSeconds % 2 == 0) {
+    // Update notifikasi setiap 3 detik
+    if (_elapsedSeconds % 3 == 0) {
       FlutterForegroundTask.updateService(
         notificationTitle: 'Sesi Lari Sedang Berjalan 🏃',
-        notificationText: 'waktu: ${_formattedTime()} | pace: $_paceStr | jarak: ${_distanceKm.toStringAsFixed(2)} km',
+        notificationText:
+            '${_distanceKm.toStringAsFixed(2)} km · ${_formattedTime()} · $_paceStr /km',
       );
     }
 
-    // Kirim data ke Flutter UI (running_tracker_screen)
+    // Kirim data ke UI
     FlutterForegroundTask.sendDataToMain({
       'type': 'update',
       'elapsedSeconds': _elapsedSeconds,
       'movingSeconds': _movingSeconds,
       'distanceKm': _distanceKm,
       'elevationGain': _elevationGain,
-      'maxElevation': _maxElevation,
+      'maxElevation': _maxElevation < 0 ? 0.0 : _maxElevation,
       'splits': _splits,
       'routePoints': _routePoints,
       'isRunning': _isRunning,
@@ -82,9 +77,8 @@ class RunningTaskHandler extends TaskHandler {
   // ── Terima perintah dari Flutter UI ───────────────────────────────────
   @override
   void onReceiveData(Object data) {
-    print('📨 [SERVICE] Received command: $data');
+    print('📨 [SERVICE] Received: $data');
     if (data is! Map) return;
-
     final cmd = data['command'] as String?;
     switch (cmd) {
       case 'start':
@@ -102,16 +96,9 @@ class RunningTaskHandler extends TaskHandler {
     }
   }
 
-  // ── Lifecycle: dipanggil saat service dihentikan ──────────────────────
-  @override
-  Future<void> onDestroy(DateTime timestamp) async {
-    print('🔴 [SERVICE] RunningTaskHandler destroyed');
-    _positionStream?.cancel();
-  }
-
   @override
   void onNotificationButtonPressed(String id) {
-    print('🔔 [SERVICE] Notification button pressed: $id');
+    print('🔔 [SERVICE] Button: $id');
     if (id == 'pause_btn') {
       _handlePause();
       FlutterForegroundTask.sendDataToMain({'type': 'pause_from_notif'});
@@ -136,24 +123,24 @@ class RunningTaskHandler extends TaskHandler {
     _movingSeconds = 0;
     _distanceKm = 0.0;
     _elevationGain = 0.0;
-    _maxElevation = 0.0;
-    _lastAltitude = 0.0;
+    _maxElevation = -9999.0;
+    _lastAltitude = -9999.0;
     _lastSplitKm = 0;
     _lastSplitTimeSeconds = 0;
     _splits.clear();
     _routePoints.clear();
-    print('▶️ [SERVICE] Run started at $_runStartTime');
-    
-    // Mulai stream GPS di dalam background
+    _lastValidPosition = null;
+    print('▶️ [SERVICE] Run started');
     _startGpsStream();
   }
 
   void _handlePause() {
     _isRunning = false;
-    print('⏸️ [SERVICE] Run paused at ${_elapsedSeconds}s');
+    print('⏸️ [SERVICE] Paused at ${_elapsedSeconds}s, dist: ${_distanceKm.toStringAsFixed(3)} km');
     FlutterForegroundTask.updateService(
       notificationTitle: 'Sesi Lari Dijeda ⏸️',
-      notificationText: 'waktu: ${_formattedTime()} | jarak: ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText:
+          '${_distanceKm.toStringAsFixed(2)} km · ${_formattedTime()}',
       notificationButtons: const [
         NotificationButton(id: 'resume_btn', text: 'Lanjut'),
         NotificationButton(id: 'finish_btn', text: 'Finish'),
@@ -162,13 +149,16 @@ class RunningTaskHandler extends TaskHandler {
   }
 
   void _handleResume(Map data) {
-    // Hitung ulang runStartTime agar elapsed tetap kontinyu
-    _runStartTime = DateTime.now().subtract(Duration(seconds: _elapsedSeconds));
+    // Adjust runStartTime agar elapsed time tetap kontinyu
+    _runStartTime =
+        DateTime.now().subtract(Duration(seconds: _elapsedSeconds));
     _isRunning = true;
-    print('▶️ [SERVICE] Run resumed, elapsed was: ${_elapsedSeconds}s');
+    _lastValidPosition = null; // Reset agar tidak ada lompatan jarak saat resume
+    print('▶️ [SERVICE] Resumed, elapsed: ${_elapsedSeconds}s');
     FlutterForegroundTask.updateService(
       notificationTitle: 'Sesi Lari Sedang Berjalan 🏃',
-      notificationText: 'waktu: ${_formattedTime()} | pace: $_paceStr | jarak: ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText:
+          '${_distanceKm.toStringAsFixed(2)} km · ${_formattedTime()}',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
         NotificationButton(id: 'finish_btn', text: 'Finish'),
@@ -178,29 +168,36 @@ class RunningTaskHandler extends TaskHandler {
 
   void _handleStop() {
     _isRunning = false;
-    print('⏹️ [SERVICE] Run stopped');
-    // Kirim data final ke UI untuk disimpan ke database
+    print(
+        '⏹️ [SERVICE] Stopped. dist: ${_distanceKm.toStringAsFixed(3)} km, points: ${_routePoints.length}');
     FlutterForegroundTask.sendDataToMain({
       'type': 'final',
       'elapsedSeconds': _elapsedSeconds,
       'movingSeconds': _movingSeconds,
       'distanceKm': _distanceKm,
       'elevationGain': _elevationGain,
-      'maxElevation': _maxElevation,
+      'maxElevation': _maxElevation < 0 ? 0.0 : _maxElevation,
       'splits': jsonEncode(_splits),
       'routePoints': jsonEncode(_routePoints),
     });
   }
 
   void _startGpsStream() {
-    print('🚀 [SERVICE] Starting GPS stream inside service...');
     _positionStream?.cancel();
+    print('🚀 [SERVICE] Starting GPS stream...');
 
+    // Gunakan AndroidSettings untuk kontrol penuh di Android
     final locationSettings = AndroidSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 2,       // minimal 2m perlu bergerak
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 0, // Terima SEMUA update GPS, filter manual di _onPositionUpdate
       intervalDuration: const Duration(seconds: 1),
       forceLocationManager: false,
+      // Tetap jalan saat layar mati
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationText: 'GPS aktif merekam rute lari',
+        notificationTitle: 'AthleteSync Tracking',
+        enableWakeLock: true,
+      ),
     );
 
     _positionStream = Geolocator.getPositionStream(
@@ -209,77 +206,103 @@ class RunningTaskHandler extends TaskHandler {
       _onPositionUpdate,
       onError: (e) {
         print('❌ [SERVICE] GPS error: $e');
-        // Restart GPS stream setelah 3 detik jika error
         Future.delayed(const Duration(seconds: 3), _startGpsStream);
       },
       cancelOnError: false,
     );
-    print('✅ [SERVICE] GPS stream started inside service');
+    print('✅ [SERVICE] GPS stream started');
   }
 
   void _onPositionUpdate(Position position) {
-    final latLng = [position.latitude, position.longitude];
-
-    // Kirim posisi terbaru ke UI (untuk update peta real-time)
+    // Selalu kirim lokasi ke UI (untuk update marker di peta)
     FlutterForegroundTask.sendDataToMain({
       'type': 'location',
       'lat': position.latitude,
       'lng': position.longitude,
       'accuracy': position.accuracy,
       'speed': position.speed,
-      'altitude': position.altitude,
     });
 
+    // Hanya proses jarak jika sedang running
     if (!_isRunning) return;
 
-    // Filter akurasi buruk
-    if (position.accuracy > 30) {
-      print('⚠️ [SERVICE] Bad accuracy: ${position.accuracy}m — skipping distance');
+    // Filter posisi dengan akurasi buruk (> 25 meter)
+    if (position.accuracy > 25) {
+      print('⚠️ [SERVICE] Low accuracy: ${position.accuracy.toStringAsFixed(1)}m — skip');
       return;
     }
 
-    if (_routePoints.isEmpty) {
-      _routePoints.add(latLng);
-      _lastAltitude = position.altitude;
-      _maxElevation = position.altitude;
+    // Titik pertama — simpan sebagai awal rute
+    if (_lastValidPosition == null) {
+      _lastValidPosition = position;
+      _routePoints.add([position.latitude, position.longitude]);
+
+      // Init elevasi
+      if (position.altitude != 0) {
+        _lastAltitude = position.altitude;
+        _maxElevation = position.altitude;
+      }
+      print('📍 [SERVICE] First point recorded: ${position.latitude}, ${position.longitude}');
       return;
     }
 
-    final lastPoint = _routePoints.last;
-    final lastLatLng = LatLng(lastPoint[0], lastPoint[1]);
-    final currentLatLng = LatLng(position.latitude, position.longitude);
+    // Hitung jarak dari titik terakhir yang valid
+    final distanceMeters = Geolocator.distanceBetween(
+      _lastValidPosition!.latitude,
+      _lastValidPosition!.longitude,
+      position.latitude,
+      position.longitude,
+    );
 
-    final segmentDistanceKm =
-        const Distance().as(LengthUnit.Kilometer, lastLatLng, currentLatLng);
-    final segmentDistanceM = segmentDistanceKm * 1000;
+    print('📏 [SERVICE] Segment: ${distanceMeters.toStringAsFixed(1)}m, acc: ${position.accuracy.toStringAsFixed(1)}m');
 
-    // Hanya tambah jika 2m – 100m (filter GPS teleport)
-    if (segmentDistanceM >= 2.0 && segmentDistanceM < 100.0) {
-      _distanceKm += segmentDistanceKm;
+    // Filter: minimal 3m supaya noise GPS tidak dihitung,
+    // maksimal 80m untuk filter GPS teleport
+    if (distanceMeters >= 3.0 && distanceMeters < 80.0) {
+      final segmentKm = distanceMeters / 1000.0;
+      _distanceKm += segmentKm;
       _movingSeconds++;
-      print('✅ [SERVICE] +${segmentDistanceM.toStringAsFixed(1)}m, total: ${(_distanceKm * 1000).toStringAsFixed(0)}m');
-    } else if (segmentDistanceM >= 100.0) {
-      print('⚠️ [SERVICE] GPS teleport: ${segmentDistanceM.toStringAsFixed(0)}m — ignored');
+      _lastValidPosition = position;
+      _routePoints.add([position.latitude, position.longitude]);
+
+      print('✅ [SERVICE] +${distanceMeters.toStringAsFixed(1)}m → total: ${(_distanceKm * 1000).toStringAsFixed(0)}m (${_routePoints.length} pts)');
+
+      // Hitung elevasi
+      if (position.altitude != 0 && _lastAltitude != -9999.0) {
+        final altDiff = position.altitude - _lastAltitude;
+        if (altDiff > 0.5) _elevationGain += altDiff;
+        if (position.altitude > _maxElevation) {
+          _maxElevation = position.altitude;
+        }
+      }
+      if (position.altitude != 0) _lastAltitude = position.altitude;
+
+      // Split per km
+      final currentKm = _distanceKm.floor();
+      if (currentKm > _lastSplitKm) {
+        final splitTime = _elapsedSeconds - _lastSplitTimeSeconds;
+        final m = (splitTime ~/ 60).toString().padLeft(2, '0');
+        final s = (splitTime % 60).toString().padLeft(2, '0');
+        _splits.add('Km ${currentKm}: $m:$s');
+        _lastSplitKm = currentKm;
+        _lastSplitTimeSeconds = _elapsedSeconds;
+        print('🏃 [SERVICE] Split km$currentKm: $m:$s');
+      }
+    } else if (distanceMeters >= 80.0) {
+      print('⚠️ [SERVICE] GPS teleport ${distanceMeters.toStringAsFixed(0)}m — ignored, updating lastPos');
+      // Update lastValidPosition agar tidak tertinggal terlalu jauh
+      _lastValidPosition = position;
     }
+    // Jika < 3m, tidak update lastValidPosition (user diam/noise)
+  }
 
-    // Elevation
-    final altDiff = position.altitude - _lastAltitude;
-    if (altDiff > 0.5) _elevationGain += altDiff;
-    if (position.altitude > _maxElevation) _maxElevation = position.altitude;
-    _lastAltitude = position.altitude;
-
-    // Splits per km
-    final currentKm = _distanceKm.floor();
-    if (currentKm > _lastSplitKm) {
-      final splitTime = _elapsedSeconds - _lastSplitTimeSeconds;
-      final m = (splitTime ~/ 60).toString().padLeft(2, '0');
-      final s = (splitTime % 60).toString().padLeft(2, '0');
-      _splits.add('$m:$s');
-      _lastSplitKm = currentKm;
-      _lastSplitTimeSeconds = _elapsedSeconds;
-    }
-
-    _routePoints.add(latLng);
+  String get _paceStr {
+    if (_distanceKm < 0.01 || _movingSeconds == 0) return '--:--';
+    final paceMins = (_movingSeconds / 60.0) / _distanceKm;
+    if (paceMins > 99) return '--:--';
+    final m = paceMins.truncate();
+    final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   String _formattedTime() {

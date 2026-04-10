@@ -40,6 +40,33 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Strava deep link untuk share dari Strava -->
+            <!-- Share target: muncul di share sheet Android saat user share dari Strava/app lain -->
+            <intent-filter android:label="Import ke AthleteSync">
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+            <!-- Deep link: buka langsung dari URL strava.com/activities/ID -->
+            <intent-filter android:label="Buka di AthleteSync">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="www.strava.com" android:pathPrefix="/activities"/>
+            </intent-filter>
+        </activity>
+
+        <!-- flutter_web_auth_2: WAJIB ada untuk menangkap OAuth callback dari browser -->
+        <activity
+            android:name="com.linusu.flutter_web_auth_2.CallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter android:label="flutter_web_auth_2">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="athletesync" android:host="callback"/>
+            </intent-filter>
         </activity>
 
         <service
@@ -73,6 +100,15 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Diperlukan untuk membuka browser saat OAuth Strava -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
         </intent>
     </queries>
 </manifest>

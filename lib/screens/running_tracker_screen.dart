@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/workout.dart';
 import '../services/database_helper.dart';
 import '../services/location_service.dart';
+import 'strava_import_screen.dart';
 
 class RunningTrackerScreen extends StatefulWidget {
   final double userWeight;
@@ -610,31 +611,79 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
         Positioned(
           top: 50,
           right: 16,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.gps_fixed,
-                  color: _currentLocation != null ? Colors.greenAccent : Colors.redAccent,
-                  size: 14,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // GPS badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  _currentLocation != null ? 'GPS Ready' : 'Mencari GPS...',
-                  style: TextStyle(
-                    color: _currentLocation != null ? Colors.greenAccent : Colors.redAccent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.gps_fixed,
+                      color: _currentLocation != null ? Colors.greenAccent : Colors.redAccent,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _currentLocation != null ? 'GPS Ready' : 'Mencari GPS...',
+                      style: TextStyle(
+                        color: _currentLocation != null ? Colors.greenAccent : Colors.redAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Tombol import Strava
+              if (!_isRunning && !_hasStarted)
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const StravaImportScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFC5200),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFC5200).withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🔗', style: TextStyle(fontSize: 12)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Strava',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
 

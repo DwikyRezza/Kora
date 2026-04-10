@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'dart:async';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/workout_screen.dart';
@@ -9,9 +11,11 @@ import 'screens/protein_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/body_stats_screen.dart';
+import 'screens/strava_import_screen.dart';
 import 'services/profile_service.dart';
 import 'services/notification_service.dart';
 import 'services/location_service.dart';
+import 'services/strava_share_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +41,7 @@ void main() async {
 
 class AthleteSyncApp extends StatelessWidget {
   final bool isOnboarded;
-  AthleteSyncApp({super.key, required this.isOnboarded});
+  const AthleteSyncApp({super.key, required this.isOnboarded});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +61,7 @@ class AthleteSyncApp extends StatelessWidget {
 }
 
 class MainNavigation extends StatefulWidget {
-  MainNavigation({super.key});
+  const MainNavigation({super.key});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -65,9 +69,85 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  late StreamSubscription _intentSub;
 
   void _goToTab(int index) {
     setState(() => _currentIndex = index);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initSharingIntent();
+  }
+
+  /// Inisialisasi listener untuk share intent dari Strava
+  void _initSharingIntent() {
+    // Case 1: App sudah berjalan di background, lalu user share dari Strava
+    _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen(
+      (List<SharedMediaFile> files) {
+        _handleSharedMedia(files);
+      },
+      onError: (err) => debugPrint('Share intent stream error: $err'),
+    );
+
+    // Case 2: App dibuka dari posisi tertutup (cold start) via share
+    ReceiveSharingIntent.instance.getInitialMedia().then(
+      (List<SharedMediaFile> files) {
+        if (files.isNotEmpty) {
+          _handleSharedMedia(files);
+          ReceiveSharingIntent.instance.reset();
+        }
+      },
+    );
+  }
+
+  /// Proses shared media — cari URL Strava dan tampilkan bottom sheet import
+  void _handleSharedMedia(List<SharedMediaFile> files) {
+    if (!mounted) return;
+
+    // Gabungkan semua teks dari shared media
+    final allText = files
+        .where((f) =>
+            f.type == SharedMediaType.text ||
+            f.type == SharedMediaType.url)
+        .map((f) => f.path)
+        .join(' ');
+
+    if (allText.isEmpty) return;
+
+    // Cek apakah ada URL aktivitas Strava
+    final activityId = StravaShareHandler.extractActivityId(allText);
+    if (activityId == null) return; // Bukan dari Strava, abaikan
+
+    // Tampilkan bottom sheet auto-import
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _showImportBottomSheet(allText);
+    });
+  }
+
+  void _showImportBottomSheet(String sharedText) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StravaShareOverlay(
+        sharedText: sharedText,
+        onConnectStrava: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const StravaImportScreen()),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _intentSub.cancel();
+    super.dispose();
   }
 
   @override
@@ -128,9 +208,11 @@ class _MainNavigationState extends State<MainNavigation> {
         border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.isDarkMode ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.05),
+            color: AppTheme.isDarkMode
+                ? Colors.black.withValues(alpha: 0.4)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
-            offset: Offset(0, -4),
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -145,17 +227,17 @@ class _MainNavigationState extends State<MainNavigation> {
                   onTap: () => _goToTab(index),
                   behavior: HitTestBehavior.opaque,
                   child: AnimatedContainer(
-                    duration: Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 200),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         AnimatedContainer(
-                          duration: Duration(milliseconds: 200),
-                          padding: EdgeInsets.symmetric(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 4),
                           decoration: BoxDecoration(
                             color: isActive
-                                ? AppTheme.neonGreen.withOpacity(0.15)
+                                ? AppTheme.neonGreen.withValues(alpha: 0.15)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -169,7 +251,7 @@ class _MainNavigationState extends State<MainNavigation> {
                             size: 22,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           items[index].label!,
                           style: TextStyle(
@@ -177,8 +259,9 @@ class _MainNavigationState extends State<MainNavigation> {
                                 ? AppTheme.neonGreen
                                 : AppTheme.textMuted,
                             fontSize: 10,
-                            fontWeight:
-                                isActive ? FontWeight.w700 : FontWeight.w400,
+                            fontWeight: isActive
+                                ? FontWeight.w700
+                                : FontWeight.w400,
                           ),
                         ),
                       ],
