@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -153,7 +152,10 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     if (_workout.polyline != null && _workout.polyline!.isNotEmpty) {
       try {
         final List<dynamic> decoded = jsonDecode(_workout.polyline!);
-        routePoints = decoded.map((p) => LatLng(p[0], p[1])).toList();
+        routePoints = decoded.map((p) => LatLng(
+          (p[0] as num).toDouble(),
+          (p[1] as num).toDouble(),
+        )).toList();
       } catch (e) {
         // ignore
       }
@@ -234,13 +236,16 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (_workout.distance != null)
-                    _statHeader('Distance', '${_workout.distance!.toStringAsFixed(2)} km'),
-                  if (_workout.type == 'running')
-                    _statHeader('Pace', '${_calculatePace()} /km'),
-                  _statHeader('Time', _formatDuration(_workout.duration)),
+                  if (_workout.distance != null) ...[
+                    Expanded(child: _statHeader('Distance', '${_workout.distance!.toStringAsFixed(2)} km')),
+                    SizedBox(width: 8),
+                  ],
+                  if (_workout.type == 'running') ...[
+                    Expanded(child: _statHeader('Pace', '${_calculatePace()} /km')),
+                    SizedBox(width: 8),
+                  ],
+                  Expanded(child: _statHeader('Time', _formatDuration(_workout.duration))),
                 ],
               ),
             ),
@@ -251,26 +256,63 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               Container(
                 height: 300,
                 width: double.infinity,
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter: routePoints.isNotEmpty ? routePoints[routePoints.length ~/ 2] : LatLng(0, 0),
-                    initialZoom: 14.0,
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.athletesync',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(0),
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: routePoints[routePoints.length ~/ 2],
+                      zoom: 14.0,
                     ),
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: routePoints,
-                          strokeWidth: 4.0,
-                          color: Color(0xFFFC5200),
+                    style: '''[
+                      {"elementType":"geometry","stylers":[{"color":"#212121"}]},
+                      {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+                      {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
+                      {"elementType":"labels.text.stroke","stylers":[{"color":"#212121"}]},
+                      {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#2c2c2c"}]},
+                      {"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#373737"}]},
+                      {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#3c3c3c"}]},
+                      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#000000"}]},
+                      {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#181818"}]}
+                    ]''',
+                    myLocationEnabled: false,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    scrollGesturesEnabled: false,
+                    zoomGesturesEnabled: false,
+                    rotateGesturesEnabled: false,
+                    tiltGesturesEnabled: false,
+                    mapToolbarEnabled: false,
+                    polylines: {
+                      Polyline(
+                        polylineId: const PolylineId('route'),
+                        points: routePoints,
+                        color: const Color(0xFFFC5200),
+                        width: 5,
+                        startCap: Cap.roundCap,
+                        endCap: Cap.roundCap,
+                        jointType: JointType.round,
+                      ),
+                    },
+                    markers: {
+                      if (routePoints.isNotEmpty)
+                        Marker(
+                          markerId: const MarkerId('start'),
+                          position: routePoints.first,
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueGreen,
+                          ),
                         ),
-                      ],
-                    ),
-                  ],
+                      if (routePoints.length > 1)
+                        Marker(
+                          markerId: const MarkerId('end'),
+                          position: routePoints.last,
+                          icon: BitmapDescriptor.defaultMarkerWithHue(
+                            BitmapDescriptor.hueRed,
+                          ),
+                        ),
+                    },
+                    mapType: MapType.normal,
+                  ),
                 ),
               ),
 
@@ -283,30 +325,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 children: [
                   _buildSectionTitle('Lainnya'),
                   SizedBox(height: 12),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    childAspectRatio: 1.5,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    children: [
-                      _buildStatCard('Kalori', '${_workout.caloriesBurned} kal', Icons.local_fire_department),
-                      if (_workout.type == 'running') ...[
-                        _buildStatCard('Jarak', '${(_workout.distance ?? 0).toStringAsFixed(2)} km', Icons.straighten),
-                        _buildStatCard('Avg Pace', '${_calculatePace()} /km', Icons.speed),
-                        if (_workout.movingTime != null && _workout.movingTime! > 0)
-                          _buildStatCard('Moving Time', _formatDuration(_workout.movingTime!), Icons.timer),
-                      ] else ...[
-                        if (_workout.movingTime != null && _workout.movingTime! > 0)
-                          _buildStatCard('Moving Time', _formatDuration(_workout.movingTime!), Icons.timer),
-                      ],
-                      if (_workout.elevationGain != null && _workout.elevationGain! > 0)
-                        _buildStatCard('Elev Gain', '${_workout.elevationGain!.toStringAsFixed(1)} m', Icons.terrain),
-                      if (_workout.maxElevation != null && _workout.maxElevation! > 0)
-                        _buildStatCard('Max Elev', '${_workout.maxElevation!.toStringAsFixed(1)} m', Icons.landscape),
-                    ],
-                  ),
+                  _buildStatsGrid(),
                   
                   if (splits.isNotEmpty) ...[
                     SizedBox(height: 24),
@@ -386,9 +405,51 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w900)),
+        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w900)),
+        ),
       ],
+    );
+  }
+
+  Widget _buildStatsGrid() {
+    final List<List<Widget>> rows = [];
+    final allCards = <Widget>[
+      _buildStatCard('Kalori', '${_workout.caloriesBurned} kal', Icons.local_fire_department),
+      if (_workout.type == 'running') ...[
+        _buildStatCard('Jarak', '${(_workout.distance ?? 0).toStringAsFixed(2)} km', Icons.straighten),
+        _buildStatCard('Avg Pace', '${_calculatePace()} /km', Icons.speed),
+        if (_workout.movingTime != null && _workout.movingTime! > 0)
+          _buildStatCard('Moving Time', _formatDuration(_workout.movingTime!), Icons.timer),
+      ] else ...[
+        if (_workout.movingTime != null && _workout.movingTime! > 0)
+          _buildStatCard('Moving Time', _formatDuration(_workout.movingTime!), Icons.timer),
+      ],
+      if (_workout.elevationGain != null && _workout.elevationGain! > 0)
+        _buildStatCard('Elev Gain', '${_workout.elevationGain!.toStringAsFixed(1)} m', Icons.terrain),
+      if (_workout.maxElevation != null && _workout.maxElevation! > 0)
+        _buildStatCard('Max Elev', '${_workout.maxElevation!.toStringAsFixed(1)} m', Icons.landscape),
+    ];
+    for (int i = 0; i < allCards.length; i += 2) {
+      rows.add([
+        allCards[i],
+        if (i + 1 < allCards.length) allCards[i + 1] else SizedBox.shrink(),
+      ]);
+    }
+    return Column(
+      children: rows.map((pair) => Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: Row(
+          children: [
+            Expanded(child: pair[0]),
+            SizedBox(width: 12),
+            Expanded(child: pair[1]),
+          ],
+        ),
+      )).toList(),
     );
   }
 
@@ -424,12 +485,16 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppTheme.electricBlue, size: 24),
-          SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-          Text(label, style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+          Icon(icon, color: AppTheme.electricBlue, size: 20),
+          SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+          ),
+          Text(label, style: TextStyle(fontSize: 11, color: AppTheme.textSecondary), overflow: TextOverflow.ellipsis),
         ],
       ),
     );

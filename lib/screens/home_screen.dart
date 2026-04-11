@@ -95,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             // ---- APP BAR ----
             SliverAppBar(
-              expandedHeight: 140,
+              expandedHeight: 170,
               floating: false,
               pinned: true,
               backgroundColor: AppTheme.background,
@@ -109,38 +109,43 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Row(
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$greeting, ${_userName.isNotEmpty ? _userName : "Atlet"}! 👋',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    AppTheme.neonGreenGrad.createShader(bounds),
-                                child: Text(
-                                  'AthleteSync',
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '$greeting, ${_userName.isNotEmpty ? _userName : "Atlet"}! 👋',
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.5,
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 2),
+                                ShaderMask(
+                                  shaderCallback: (bounds) =>
+                                      AppTheme.neonGreenGrad.createShader(bounds),
+                                  child: Text(
+                                    'AthleteSync',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                          Spacer(),
                           IconButton(
                             icon: Icon(
                               AppTheme.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                               color: AppTheme.textSecondary,
+                              size: 22,
                             ),
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(minWidth: 36, minHeight: 36),
                             onPressed: () {
                               setState(() {
                                 AppTheme.toggleTheme();
@@ -152,13 +157,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             onTap: widget.onGoToBodyStats,
                             child: Container(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
+                                  horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppTheme.surfaceVariant,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(color: AppTheme.border),
                               ),
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.monitor_weight_rounded, color: AppTheme.electricBlue, size: 14),
                                   SizedBox(width: 4),
@@ -166,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     'Cek Tubuh',
                                     style: TextStyle(
                                       color: AppTheme.textSecondary,
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -200,42 +206,55 @@ class _HomeScreenState extends State<HomeScreen> {
                     // ---- STATS GRID ----
                     SectionHeader(title: 'Ringkasan Hari Ini'),
                     SizedBox(height: 12),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1.2,
+                    Column(
                       children: [
-                        StatCard(
-                          label: 'Nutrisi Dikonsumsi',
-                          value: _totalProteinToday.toStringAsFixed(1),
-                          unit: 'g',
-                          icon: Icons.restaurant_menu_rounded,
-                          gradient: AppTheme.neonGreenGrad,
-                          subtitle: 'Target: ${_totalProteinNeeded.toStringAsFixed(1)}g',
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StatCard(
+                                label: 'Nutrisi Dikonsumsi',
+                                value: _totalProteinToday.toStringAsFixed(1),
+                                unit: 'g',
+                                icon: Icons.restaurant_menu_rounded,
+                                gradient: AppTheme.neonGreenGrad,
+                                subtitle: 'Target: ${_totalProteinNeeded.toStringAsFixed(1)}g',
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: StatCard(
+                                label: 'Kalori Terbakar',
+                                value: _totalCaloriesToday.toString(),
+                                unit: 'kal',
+                                icon: Icons.local_fire_department_rounded,
+                                gradient: AppTheme.orangeGrad,
+                              ),
+                            ),
+                          ],
                         ),
-                        StatCard(
-                          label: 'Kalori Terbakar',
-                          value: _totalCaloriesToday.toString(),
-                          unit: 'kal',
-                          icon: Icons.local_fire_department_rounded,
-                          gradient: AppTheme.orangeGrad,
-                        ),
-                        StatCard(
-                          label: 'Durasi Latihan',
-                          value: _totalWorkoutMinutes.toString(),
-                          unit: 'menit',
-                          icon: Icons.timer_rounded,
-                          gradient: AppTheme.electricBlueGrad,
-                        ),
-                        StatCard(
-                          label: 'Sesi Latihan',
-                          value: _todayWorkouts.length.toString(),
-                          unit: 'sesi',
-                          icon: Icons.fitness_center_rounded,
-                          gradient: AppTheme.purpleGrad,
+                        SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StatCard(
+                                label: 'Durasi Latihan',
+                                value: _totalWorkoutMinutes.toString(),
+                                unit: 'menit',
+                                icon: Icons.timer_rounded,
+                                gradient: AppTheme.electricBlueGrad,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: StatCard(
+                                label: 'Sesi Latihan',
+                                value: _todayWorkouts.length.toString(),
+                                unit: 'sesi',
+                                icon: Icons.fitness_center_rounded,
+                                gradient: AppTheme.purpleGrad,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

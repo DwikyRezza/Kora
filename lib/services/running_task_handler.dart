@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 
 // ─── Entry point — HARUS top-level function ───────────────────────────────
 @pragma('vm:entry-point')
@@ -188,8 +187,8 @@ class RunningTaskHandler extends TaskHandler {
 
     // Gunakan AndroidSettings untuk kontrol penuh di Android
     final locationSettings = AndroidSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      distanceFilter: 0, // Terima SEMUA update GPS, filter manual di _onPositionUpdate
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 1,       // update setiap 1 meter bergerak
       intervalDuration: const Duration(seconds: 1),
       forceLocationManager: false,
       // Tetap jalan saat layar mati
@@ -226,9 +225,9 @@ class RunningTaskHandler extends TaskHandler {
     // Hanya proses jarak jika sedang running
     if (!_isRunning) return;
 
-    // Filter posisi dengan akurasi buruk (> 25 meter)
-    if (position.accuracy > 25) {
-      print('⚠️ [SERVICE] Low accuracy: ${position.accuracy.toStringAsFixed(1)}m — skip');
+    // Filter akurasi buruk — longgarkan ke 50m agar bekerja di HP murah
+    if (position.accuracy > 50) {
+      print('⚠️ [SERVICE] Bad accuracy: ${position.accuracy}m — skipping distance');
       return;
     }
 
@@ -246,63 +245,41 @@ class RunningTaskHandler extends TaskHandler {
       return;
     }
 
-    // Hitung jarak dari titik terakhir yang valid
-    final distanceMeters = Geolocator.distanceBetween(
-      _lastValidPosition!.latitude,
-      _lastValidPosition!.longitude,
-      position.latitude,
-      position.longitude,
+    final lastPoint = _routePoints.last;
+
+    final segmentDistanceM = Geolocator.distanceBetween(
+      lastPoint[0], lastPoint[1],
+      position.latitude, position.longitude,
     );
+    final segmentDistanceKm = segmentDistanceM / 1000.0;
 
-    print('📏 [SERVICE] Segment: ${distanceMeters.toStringAsFixed(1)}m, acc: ${position.accuracy.toStringAsFixed(1)}m');
-
-    // Filter: minimal 3m supaya noise GPS tidak dihitung,
-    // maksimal 80m untuk filter GPS teleport
-    if (distanceMeters >= 3.0 && distanceMeters < 80.0) {
-      final segmentKm = distanceMeters / 1000.0;
-      _distanceKm += segmentKm;
+    // Hanya tambah jika 1m – 150m (filter GPS teleport, lebih toleran)
+    if (segmentDistanceM >= 1.0 && segmentDistanceM < 150.0) {
+      _distanceKm += segmentDistanceKm;
       _movingSeconds++;
-      _lastValidPosition = position;
-      _routePoints.add([position.latitude, position.longitude]);
+      print('✅ [SERVICE] +${segmentDistanceM.toStringAsFixed(1)}m, total: ${(_distanceKm * 1000).toStringAsFixed(0)}m');
 
-      print('✅ [SERVICE] +${distanceMeters.toStringAsFixed(1)}m → total: ${(_distanceKm * 1000).toStringAsFixed(0)}m (${_routePoints.length} pts)');
+      // Elevation
+      final altDiff = position.altitude - _lastAltitude;
+      if (altDiff > 0.5) _elevationGain += altDiff;
+      if (position.altitude > _maxElevation) _maxElevation = position.altitude;
+      _lastAltitude = position.altitude;
 
-      // Hitung elevasi
-      if (position.altitude != 0 && _lastAltitude != -9999.0) {
-        final altDiff = position.altitude - _lastAltitude;
-        if (altDiff > 0.5) _elevationGain += altDiff;
-        if (position.altitude > _maxElevation) {
-          _maxElevation = position.altitude;
-        }
-      }
-      if (position.altitude != 0) _lastAltitude = position.altitude;
-
-      // Split per km
+      // Splits per km
       final currentKm = _distanceKm.floor();
       if (currentKm > _lastSplitKm) {
         final splitTime = _elapsedSeconds - _lastSplitTimeSeconds;
         final m = (splitTime ~/ 60).toString().padLeft(2, '0');
         final s = (splitTime % 60).toString().padLeft(2, '0');
-        _splits.add('Km ${currentKm}: $m:$s');
+        _splits.add('$m:$s');
         _lastSplitKm = currentKm;
         _lastSplitTimeSeconds = _elapsedSeconds;
-        print('🏃 [SERVICE] Split km$currentKm: $m:$s');
       }
-    } else if (distanceMeters >= 80.0) {
-      print('⚠️ [SERVICE] GPS teleport ${distanceMeters.toStringAsFixed(0)}m — ignored, updating lastPos');
-      // Update lastValidPosition agar tidak tertinggal terlalu jauh
-      _lastValidPosition = position;
-    }
-    // Jika < 3m, tidak update lastValidPosition (user diam/noise)
-  }
 
-  String get _paceStr {
-    if (_distanceKm < 0.01 || _movingSeconds == 0) return '--:--';
-    final paceMins = (_movingSeconds / 60.0) / _distanceKm;
-    if (paceMins > 99) return '--:--';
-    final m = paceMins.truncate();
-    final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
-    return '$m:$s';
+      _routePoints.add(latLng);
+    } else if (segmentDistanceM >= 150.0) {
+      print('⚠️ [SERVICE] GPS teleport: ${segmentDistanceM.toStringAsFixed(0)}m — ignored');
+    }
   }
 
   String _formattedTime() {

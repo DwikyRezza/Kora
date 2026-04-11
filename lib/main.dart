@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
-import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/workout_screen.dart';
@@ -11,14 +10,18 @@ import 'screens/protein_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/body_stats_screen.dart';
-import 'screens/strava_import_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/profile_screen.dart';
 import 'services/profile_service.dart';
 import 'services/notification_service.dart';
 import 'services/location_service.dart';
-import 'services/strava_share_handler.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
 
   // WAJIB: inisialisasi port komunikasi antara TaskHandler (background service)
   // dan Flutter UI. Harus dipanggil SEBELUM runApp().
@@ -35,13 +38,18 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Check login and onboarding status
+  bool isLoggedIn = AuthService.isLoggedIn;
   bool onboarded = await ProfileService.isOnboarded();
-  runApp(AthleteSyncApp(isOnboarded: onboarded));
+
+  runApp(AthleteSyncApp(isLoggedIn: isLoggedIn, isOnboarded: onboarded));
 }
 
 class AthleteSyncApp extends StatelessWidget {
+  final bool isLoggedIn;
   final bool isOnboarded;
-  const AthleteSyncApp({super.key, required this.isOnboarded});
+  AthleteSyncApp({super.key, required this.isLoggedIn, required this.isOnboarded});
 
   @override
   Widget build(BuildContext context) {
@@ -53,10 +61,20 @@ class AthleteSyncApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.theme,
           themeMode: currentMode,
-          home: isOnboarded ? MainNavigation() : OnboardingScreen(),
+          home: _getHomeScreen(),
         );
       },
     );
+  }
+
+  Widget _getHomeScreen() {
+    if (!isLoggedIn) {
+      return const LoginScreen();
+    }
+    if (!isOnboarded) {
+      return OnboardingScreen();
+    }
+    return MainNavigation();
   }
 }
 
@@ -172,6 +190,7 @@ class _MainNavigationState extends State<MainNavigation> {
           WorkoutScreen(),
           ProteinScreen(),
           ScheduleScreen(),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
@@ -199,6 +218,11 @@ class _MainNavigationState extends State<MainNavigation> {
         icon: Icon(Icons.calendar_month_rounded),
         activeIcon: Icon(Icons.calendar_month_rounded),
         label: 'Jadwal',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.person_rounded),
+        activeIcon: Icon(Icons.person_rounded),
+        label: 'Profil',
       ),
     ];
 
