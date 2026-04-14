@@ -55,8 +55,7 @@ class AuthService {
   }
 
   /// Get user display name
-  static String get displayName =>
-      currentUser?.displayName ?? 'Atlet';
+  static String get displayName => currentUser?.displayName ?? 'Atlet';
 
   /// Get user email
   static String get email => currentUser?.email ?? '';

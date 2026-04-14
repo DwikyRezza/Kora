@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/workout.dart';
@@ -187,11 +188,64 @@ class StravaService {
   // ── Cek apakah sudah terkoneksi (ada refresh token) ──────────────────
   static Future<bool> get isConnected => hasRefreshToken();
 
-  /// Hubungkan Strava dengan refresh token manual
+  /// Buka halaman OAuth Strava di browser, tangkap callback, lalu simpan token
   static Future<bool> connectStrava() async {
-    // Strava OAuth tidak bisa dilakukan langsung tanpa WebView/browser
-    // Gunakan refresh token yang sudah di-input user
-    return await hasRefreshToken();
+    const callbackScheme = 'athletesync';
+    const callbackHost   = 'callback';
+
+    // Bangun URL otorisasi Strava
+    final authUri = Uri.https('www.strava.com', '/oauth/authorize', {
+      'client_id':     _clientId,
+      'redirect_uri':  '$callbackScheme://$callbackHost',
+      'response_type': 'code',
+      'approval_prompt': 'auto',   // minta ulang consent hanya jika scope berubah
+      'scope': 'read,activity:read_all',
+    });
+
+    String resultUrl;
+    try {
+      resultUrl = await FlutterWebAuth2.authenticate(
+        url: authUri.toString(),
+        callbackUrlScheme: callbackScheme,
+      );
+    } catch (e) {
+      // User menutup browser / membatalkan
+      return false;
+    }
+
+    // Ambil authorization code dari URL callback
+    final code = Uri.parse(resultUrl).queryParameters['code'];
+    if (code == null || code.isEmpty) return false;
+
+    // Tukar authorization code dengan access token + refresh token
+    http.Response response;
+    try {
+      response = await http.post(
+        Uri.parse(_tokenUrl),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'client_id':     _clientId,
+          'client_secret': _clientSecret,
+          'code':          code,
+          'grant_type':    'authorization_code',
+        },
+      ).timeout(const Duration(seconds: 15));
+    } catch (e) {
+      throw Exception('Tidak bisa terhubung ke Strava: $e');
+    }
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      await _saveTokens(data);
+      return true;
+    } else {
+      String errMsg = 'HTTP ${response.statusCode}';
+      try {
+        final body = json.decode(response.body);
+        errMsg = body['message'] ?? errMsg;
+      } catch (_) {}
+      throw Exception('Strava menolak otorisasi: $errMsg');
+    }
   }
 
   /// Putuskan koneksi Strava
@@ -272,12 +326,20 @@ class StravaService {
 
 // ── Exception Classes ─────────────────────────────────────────────────────
 
-/// Belum ada refresh token (belum setup)
-class _NoRefreshTokenException implements Exception {
-  const _NoRefreshTokenException();
+/// Belum ada refresh token (belum setup / belum login Strava)
+class StravaNotConnectedException implements Exception {
+  const StravaNotConnectedException();
+  @override
+  String toString() => 'Belum terhubung ke Strava. Silakan hubungkan akun dulu.';
 }
 
 /// Refresh token yang tersimpan tidak valid / sudah kadaluwarsa
-class _InvalidRefreshTokenException implements Exception {
-  const _InvalidRefreshTokenException();
+class StravaTokenExpiredException implements Exception {
+  const StravaTokenExpiredException();
+  @override
+  String toString() => 'Sesi Strava kadaluwarsa. Silakan hubungkan ulang.';
 }
+
+// Alias private untuk kompatibilitas internal
+typedef _NoRefreshTokenException = StravaNotConnectedException;
+typedef _InvalidRefreshTokenException = StravaTokenExpiredException;

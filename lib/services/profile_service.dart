@@ -13,6 +13,7 @@ class ProfileService {
   static String keyWeight = 'weight';
   static String keyGoal = 'goal';
   static String keyTargetProtein = 'targetProtein';
+  static String keyPhotoUrl = 'photoUrl';
 
   static final _db = DatabaseHelper();
 
@@ -28,6 +29,7 @@ class ProfileService {
     required double height,
     required double weight,
     required String goal,
+    String? photoUrl,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     
@@ -60,24 +62,33 @@ class ProfileService {
     await prefs.setDouble(keyWeight, weight);
     await prefs.setString(keyGoal, goal);
     await prefs.setDouble(keyTargetProtein, targetProtein);
+    if (photoUrl != null) {
+      await prefs.setString(keyPhotoUrl, photoUrl);
+    }
     await prefs.setBool(keyIsOnboarded, true);
 
     // Also save to database if user is logged in
     if (AuthService.isLoggedIn) {
       final uid = AuthService.uid;
+      final existingProfile = await _db.getUserProfile(uid);
+      // Preserve existing photo: if new photoUrl provided, use it; else keep old one; else use Google photo
+      final finalPhotoUrl = photoUrl ?? existingProfile?['photoUrl'] ?? AuthService.photoUrl;
+
+      print('[ProfileService] upsertUserProfile photoUrl -> $finalPhotoUrl');
+
       final now = DateTime.now().toIso8601String();
       await _db.upsertUserProfile({
         'uid': uid,
         'name': name,
         'email': AuthService.email,
-        'photoUrl': AuthService.photoUrl,
+        'photoUrl': finalPhotoUrl,
         'age': age,
         'gender': gender,
         'height': height,
         'weight': weight,
         'goal': goal,
         'targetProtein': targetProtein,
-        'createdAt': now,
+        'createdAt': existingProfile?['createdAt'] ?? now,
         'updatedAt': now,
       });
     }
@@ -157,6 +168,7 @@ class ProfileService {
       keyWeight: prefs.getDouble(keyWeight) ?? 0.0,
       keyGoal: prefs.getString(keyGoal) ?? '',
       keyTargetProtein: prefs.getDouble(keyTargetProtein) ?? 0.0,
+      'photoUrl': prefs.getString(keyPhotoUrl) ?? AuthService.photoUrl,
     };
   }
 
@@ -221,6 +233,10 @@ class ProfileService {
       await prefs.setDouble(keyWeight, (dbProfile['weight'] as num?)?.toDouble() ?? 0.0);
       await prefs.setString(keyGoal, dbProfile['goal'] ?? '');
       await prefs.setDouble(keyTargetProtein, (dbProfile['targetProtein'] as num?)?.toDouble() ?? 0.0);
+      // Sync juga photoUrl agar tidak hilang
+      if (dbProfile['photoUrl'] != null) {
+        await prefs.setString(keyPhotoUrl, dbProfile['photoUrl']);
+      }
       await prefs.setBool(keyIsOnboarded, true);
       return true;
     }

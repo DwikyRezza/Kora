@@ -452,13 +452,14 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       weight: widget.userWeight,
     );
 
+    final now = DateTime.now();
     final workout = Workout(
       type: 'running',
       duration: durationMinutes,
       distance: _distanceKm,
       caloriesBurned: calories,
       proteinNeeded: protein,
-      date: DateTime.now(),
+      date: now,
       notes: 'Lari GPS Tracker. Jarak: ${_distanceKm.toStringAsFixed(2)} km',
       movingTime: _movingSeconds / 60.0,
       elevationGain: _elevationGain,
@@ -466,6 +467,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       splitsStr: _finalSplitsJson ?? jsonEncode(_splits),
       polyline: _finalRouteJson ??
           jsonEncode(_routePoints.map((p) => [p.latitude, p.longitude]).toList()),
+      title: _defaultActivityTitle('running', now),
     );
 
     await DatabaseHelper().insertWorkout(workout);
@@ -484,6 +486,43 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(msg)));
     }
+  }
+
+  /// Generates a time-aware default activity title.
+  /// e.g. "Morning Run", "Afternoon Workout", "Night Run"
+  static String _defaultActivityTitle(String type, DateTime date) {
+    final hour = date.hour;
+    String timeLabel;
+    if (hour >= 5 && hour < 10) {
+      timeLabel = 'Morning';
+    } else if (hour >= 10 && hour < 14) {
+      timeLabel = 'Midday';
+    } else if (hour >= 14 && hour < 17) {
+      timeLabel = 'Afternoon';
+    } else if (hour >= 17 && hour < 20) {
+      timeLabel = 'Evening';
+    } else {
+      timeLabel = 'Night';
+    }
+
+    String activityLabel;
+    switch (type) {
+      case 'running':
+        activityLabel = 'Run';
+        break;
+      case 'weightlifting':
+        activityLabel = 'Workout';
+        break;
+      case 'basketball':
+        activityLabel = 'Basketball';
+        break;
+      case 'walking':
+        activityLabel = 'Walk';
+        break;
+      default:
+        activityLabel = 'Activity';
+    }
+    return '$timeLabel $activityLabel';
   }
 
   void _handleBackPress() {

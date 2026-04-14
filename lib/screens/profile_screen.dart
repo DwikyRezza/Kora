@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
@@ -20,9 +22,11 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploadingPhoto = false; // loading saat upload foto ke Storage
   bool _hasUnsavedChanges = false;
   Map<String, dynamic> _profile = {};
-  String? _localPhotoPath;
+  String? _localPhotoPath;  // path lokal sementara sebelum upload selesai
+  String? _uploadedPhotoUrl; // URL Firebase Storage setelah upload
 
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
@@ -66,6 +70,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final profile = await ProfileService.getProfile();
+      print('[ProfileScreen] getProfile() returned photoUrl: ${profile["photoUrl"]}');
       if (mounted) {
         setState(() {
           _profile = profile;
@@ -78,11 +83,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _selectedGender =
               profile[ProfileService.keyGender] ?? 'Laki-laki';
           _selectedGoal = profile[ProfileService.keyGoal] ?? 'Bulking';
+          // Jika photoUrl adalah https:// dari Firebase Storage, simpan ke _uploadedPhotoUrl
+          final savedPhoto = profile['photoUrl'] as String?;
+          if (savedPhoto != null && savedPhoto.startsWith('https://')) {
+            _uploadedPhotoUrl = savedPhoto;
+            _localPhotoPath = null;
+          } else if (savedPhoto != null && !savedPhoto.startsWith('http') && !savedPhoto.startsWith('data:')) {
+            _localPhotoPath = savedPhoto; // path lokal (fallback lama)
+            _uploadedPhotoUrl = null;
+          } else {
+            _localPhotoPath = null;
+            _uploadedPhotoUrl = null;
+          }
           _isLoading = false;
-          _hasUnsavedChanges = false; // reset setelah load
+          _hasUnsavedChanges = false;
         });
       }
     } catch (e) {
+      print('[ProfileScreen] ERROR load: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -97,13 +115,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (pickedFile != null) {
-      // Save to app documents directory
+      // Simpan file lokal sementara untuk preview instan
       final appDir = await getApplicationDocumentsDirectory();
       final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final savedPath = p.join(appDir.path, fileName);
       await File(pickedFile.path).copy(savedPath);
 
-      setState(() => _localPhotoPath = savedPath);
+      setState(() {
+        _localPhotoPath = savedPath;   // tampilkan preview dulu
+        _uploadedPhotoUrl = null;      // URL belum ada sampai upload selesai
+        _isUploadingPhoto = true;
+      });
+
+      // Upload ke Firebase Storage di background
+      final url = await StorageService.uploadProfilePhoto(savedPath);
+
+      if (url != null) {
+        // Upload berhasil — simpan URL ke profil
+        setState(() {
+          _uploadedPhotoUrl = url;
+          _isUploadingPhoto = false;
+        });
+        // Langsung simpan URL ke DB / SharedPreferences
+        await ProfileService.saveProfile(
+          name: _nameController.text.trim(),
+          age: int.tryParse(_ageController.text) ?? 0,
+          gender: _selectedGender,
+          height: double.tryParse(_heightController.text) ?? 0.0,
+          weight: double.tryParse(_weightController.text) ?? 0.0,
+          goal: _selectedGoal,
+          photoUrl: url,
+        );
+        CloudSyncService.backupToCloud().catchError((_) {});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Foto profil berhasil disimpan! ✅'),
+              backgroundColor: AppTheme.neonGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
+      } else {
+        // Upload gagal — tetap pakai file lokal sebagai fallback
+        setState(() {
+          _isUploadingPhoto = false;
+          _hasUnsavedChanges = true;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Upload foto gagal. Tersimpan lokal saja.'),
+              backgroundColor: AppTheme.accentOrange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -116,6 +185,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final height = double.tryParse(_heightController.text) ?? 0.0;
       final weight = double.tryParse(_weightController.text) ?? 0.0;
 
+      // Gunakan URL Firebase Storage jika sudah di-upload, atau path lokal sebagai fallback
+      final String? photoToSave = _uploadedPhotoUrl ?? _localPhotoPath;
+      print('[ProfileScreen] Saving profile with photoUrl: $photoToSave');
+
       await ProfileService.saveProfile(
         name: name,
         age: age,
@@ -123,6 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         height: height,
         weight: weight,
         goal: _selectedGoal,
+        photoUrl: photoToSave,
       );
 
       if (mounted) {
@@ -136,10 +210,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
         await _loadProfile();
+        print('[ProfileScreen] Profil di-reload setelah disimpan. photoUrl = ${_profile["photoUrl"]}');
         // Auto-backup profil ke Firestore
         CloudSyncService.backupToCloud().catchError((_) {});
       }
     } catch (e) {
+      print('[ProfileScreen] ERROR simpan: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -421,11 +497,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfilePhoto() {
-    final photoUrl = _profile['photoUrl'] ?? AuthService.photoUrl;
-    final hasLocalPhoto = _localPhotoPath != null;
+    final hasLocalPhoto = _localPhotoPath != null && File(_localPhotoPath!).existsSync();
+    final hasCloudPhoto = _uploadedPhotoUrl != null;
+    final googlePhotoUrl = AuthService.photoUrl;
+
+    Widget photoWidget;
+    if (hasLocalPhoto) {
+      // Preview lokal sementara (sebelum upload selesai)
+      photoWidget = Image.file(
+        File(_localPhotoPath!),
+        width: 94,
+        height: 94,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _defaultAvatar(),
+      );
+    } else if (hasCloudPhoto) {
+      // Foto dari Firebase Storage — persisten lintas device
+      photoWidget = Image.network(
+        _uploadedPhotoUrl!,
+        width: 94,
+        height: 94,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _defaultAvatar(),
+      );
+    } else if (googlePhotoUrl != null && googlePhotoUrl.startsWith('http')) {
+      // Fallback foto Google Sign-In
+      photoWidget = Image.network(
+        googlePhotoUrl,
+        width: 94,
+        height: 94,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _defaultAvatar(),
+      );
+    } else {
+      photoWidget = _defaultAvatar();
+    }
 
     return GestureDetector(
-      onTap: _pickPhoto,
+      onTap: _isUploadingPhoto ? null : _pickPhoto,
       child: Stack(
         children: [
           Container(
@@ -444,42 +553,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             padding: const EdgeInsets.all(3),
             child: ClipOval(
-              child: hasLocalPhoto
-                  ? Image.file(
-                      File(_localPhotoPath!),
-                      width: 94,
-                      height: 94,
-                      fit: BoxFit.cover,
-                    )
-                  : (photoUrl != null
-                      ? Image.network(
-                          photoUrl,
-                          width: 94,
-                          height: 94,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _defaultAvatar(),
-                        )
-                      : _defaultAvatar()),
+              child: photoWidget,
             ),
           ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppTheme.neonGreen,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppTheme.background, width: 3),
-              ),
-              child: const Icon(
-                Icons.camera_alt_rounded,
-                color: Colors.black,
-                size: 16,
+          // Overlay loading saat upload berlangsung
+          if (_isUploadingPhoto)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black54,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  ),
+                ),
               ),
             ),
-          ),
+          if (!_isUploadingPhoto)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppTheme.neonGreen,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppTheme.background, width: 3),
+                ),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  color: Colors.black,
+                  size: 16,
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -122,6 +122,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
       notes += "Catatan: ${_notesController.text}";
     }
 
+    final now = DateTime.now();
     final workout = Workout(
       type: 'weightlifting',
       duration: durationMins,
@@ -132,7 +133,8 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
       caloriesBurned: calories,
       proteinNeeded: protein,
       notes: notes,
-      date: DateTime.now(),
+      date: now,
+      title: _defaultActivityTitle('weightlifting', now),
     );
 
     await DatabaseHelper().insertWorkout(workout);
@@ -142,6 +144,30 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
         SnackBar(content: Text('Sesi $subTypeStr berhasil disimpan!')),
       );
       Navigator.pop(context, true);
+    }
+  }
+
+  /// Generates a time-aware default activity title.
+  static String _defaultActivityTitle(String type, DateTime date) {
+    final hour = date.hour;
+    String timeLabel;
+    if (hour >= 5 && hour < 10) {
+      timeLabel = 'Morning';
+    } else if (hour >= 10 && hour < 14) {
+      timeLabel = 'Midday';
+    } else if (hour >= 14 && hour < 17) {
+      timeLabel = 'Afternoon';
+    } else if (hour >= 17 && hour < 20) {
+      timeLabel = 'Evening';
+    } else {
+      timeLabel = 'Night';
+    }
+    switch (type) {
+      case 'running':    return '$timeLabel Run';
+      case 'weightlifting': return '$timeLabel Workout';
+      case 'basketball': return '$timeLabel Basketball';
+      case 'walking':    return '$timeLabel Walk';
+      default:           return '$timeLabel Activity';
     }
   }
 

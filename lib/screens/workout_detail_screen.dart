@@ -11,6 +11,8 @@ import 'package:share_plus/share_plus.dart';
 import '../models/workout.dart';
 import '../services/database_helper.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
   final Workout workout;
@@ -26,10 +28,31 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
   bool _isLoading = false;
   final ScreenshotController _screenshotController = ScreenshotController();
 
+  String _userName = 'Atlet';
+  String? _userPhotoUrl;
+
   @override
   void initState() {
     super.initState();
     _workout = widget.workout;
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final profile = await ProfileService.getProfile();
+      if (mounted) {
+        setState(() {
+          String name = profile[ProfileService.keyName] ?? '';
+          if (name.isEmpty) name = AuthService.displayName;
+          if (name.isEmpty) name = 'Atlet';
+          _userName = name;
+          _userPhotoUrl = profile['photoUrl'] ?? AuthService.photoUrl;
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> _pickImage() async {
@@ -84,8 +107,31 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     }
   }
 
+  static String _defaultTitle(Workout w) {
+    final hour = w.date.hour;
+    String timeLabel;
+    if (hour >= 5 && hour < 10) {
+      timeLabel = 'Morning';
+    } else if (hour >= 10 && hour < 14) {
+      timeLabel = 'Midday';
+    } else if (hour >= 14 && hour < 17) {
+      timeLabel = 'Afternoon';
+    } else if (hour >= 17 && hour < 20) {
+      timeLabel = 'Evening';
+    } else {
+      timeLabel = 'Night';
+    }
+    switch (w.type) {
+      case 'running':       return '$timeLabel Run';
+      case 'weightlifting': return '$timeLabel Workout';
+      case 'basketball':    return '$timeLabel Basketball';
+      case 'walking':       return '$timeLabel Walk';
+      default:              return '$timeLabel Activity';
+    }
+  }
+
   Future<void> _editTitle() async {
-    final controller = TextEditingController(text: _workout.title ?? (_workout.type == 'running' ? 'Afternoon Run' : 'Workout Session'));
+    final controller = TextEditingController(text: _workout.title ?? _defaultTitle(_workout));
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -195,13 +241,22 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 children: [
                   CircleAvatar(
                     backgroundColor: AppTheme.surfaceVariant,
-                    child: Text('👤'),
+                    backgroundImage: _userPhotoUrl != null 
+                        ? (_userPhotoUrl!.startsWith('http') 
+                            ? NetworkImage(_userPhotoUrl!) 
+                            : (_userPhotoUrl!.startsWith('data:image')
+                                ? MemoryImage(base64Decode(_userPhotoUrl!.split(',').last.replaceAll(RegExp(r'\s+'), '')))
+                                : FileImage(File(_userPhotoUrl!)))) as ImageProvider
+                        : null,
+                    child: _userPhotoUrl == null 
+                        ? Text(_userName.isNotEmpty ? _userName[0].toUpperCase() : '👤', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold))
+                        : null,
                   ),
                   SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Dwiky Rezza', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                      Text(_userName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                       Text(
                         DateFormat('MMMM d, yyyy • HH:mm', 'id').format(_workout.date),
                         style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
@@ -218,7 +273,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      _workout.title ?? (_workout.type == 'running' ? 'Afternoon Run' : 'Workout Session'),
+                      _workout.title ?? _defaultTitle(_workout),
                       style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
                     ),
                   ),

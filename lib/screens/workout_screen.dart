@@ -25,6 +25,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
   bool _isLoading = true;
   late TabController _tabController;
   String _activeTypeFilter = 'running';
+  String _userName = '';
 
   @override
   void initState() {
@@ -43,10 +44,12 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
     setState(() => _isLoading = true);
     final workouts = await _db.getRecentWorkouts(limit: 50);
     final weekly = await _db.getWeeklyWorkoutStats(_activeTypeFilter);
+    final profile = await ProfileService.getProfile();
     if (mounted) {
       setState(() {
         _workouts = workouts;
         _weeklyStats = weekly;
+        _userName = profile[ProfileService.keyName] as String? ?? '';
         _isLoading = false;
       });
     }
@@ -275,7 +278,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Dwiky Rezza', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                        Text(_userName.isNotEmpty ? _userName : 'Athlete', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                         Text(
                           '${DateFormat('MMMM d, yyyy').format(workout.date)} • Strava App',
                           style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
@@ -285,7 +288,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
                   ],
                 ),
                 SizedBox(height: 16),
-                Text(workout.type == 'running' ? 'Afternoon Run' : 'Workout session', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w900)),
+                Text(workout.title ?? _workoutTitle(workout), style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w900)),
                 SizedBox(height: 12),
                 Row(
                   children: [
@@ -329,6 +332,30 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
     final mn = m.truncate() % 60;
     if (hr > 0) return '${hr}h ${mn}m';
     return '${mn}m';
+  }
+
+  /// Generates time-aware fallback title for workouts without a title
+  String _workoutTitle(Workout w) {
+    final hour = w.date.hour;
+    String timeLabel;
+    if (hour >= 5 && hour < 10) {
+      timeLabel = 'Morning';
+    } else if (hour >= 10 && hour < 14) {
+      timeLabel = 'Midday';
+    } else if (hour >= 14 && hour < 17) {
+      timeLabel = 'Afternoon';
+    } else if (hour >= 17 && hour < 20) {
+      timeLabel = 'Evening';
+    } else {
+      timeLabel = 'Night';
+    }
+    switch (w.type) {
+      case 'running':       return '$timeLabel Run';
+      case 'weightlifting': return '$timeLabel Workout';
+      case 'basketball':    return '$timeLabel Basketball';
+      case 'walking':       return '$timeLabel Walk';
+      default:              return '$timeLabel Activity';
+    }
   }
 
   Widget _filterChip(String label, String type) {

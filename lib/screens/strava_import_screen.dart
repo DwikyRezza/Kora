@@ -47,23 +47,43 @@ class _StravaImportScreenState extends State<StravaImportScreen> {
 
   Future<void> _connectStrava() async {
     setState(() => _isConnecting = true);
-    final success = await StravaService.connectStrava();
-    if (success) {
-      setState(() {
-        _isConnected = true;
-        _isConnecting = false;
-      });
-      await _loadActivities();
-    } else {
-      setState(() => _isConnecting = false);
-      if (mounted) {
+    try {
+      final success = await StravaService.connectStrava();
+      if (!mounted) return;
+      if (success) {
+        setState(() {
+          _isConnected = true;
+          _isConnecting = false;
+        });
+        await _loadActivities();
+      } else {
+        // User membatalkan / menutup browser
+        setState(() => _isConnecting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Gagal terhubung ke Strava. Coba lagi.'),
-            backgroundColor: Colors.red,
+            content: Text('Login dibatalkan.'),
+            backgroundColor: Colors.orange,
           ),
         );
       }
+    } on StravaTokenExpiredException {
+      if (!mounted) return;
+      setState(() => _isConnecting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sesi Strava kadaluwarsa. Silakan hubungkan ulang.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isConnecting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
