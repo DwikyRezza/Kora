@@ -9,9 +9,10 @@ class LocationService {
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'running_tracker_channel',
         channelName: 'Running Tracker',
-        channelDescription: 'GPS aktif saat sesi lari berjalan.',
-        channelImportance: NotificationChannelImportance.HIGH,
-        priority: NotificationPriority.HIGH,
+        channelDescription: 'Notifikasi aktif selama sesi lari berlangsung.',
+        // LOW = tidak bunyi/vibrate saat update, tapi tetap tampil di status bar
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -50,11 +51,11 @@ class LocationService {
 
     await FlutterForegroundTask.startService(
       serviceId: 256,
-      notificationTitle: 'AthleteSync — Sesi Lari',
+      notificationTitle: 'Lari  ·  0:00  ·  0.00 km',
       notificationText: 'Mempersiapkan GPS...',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
-        NotificationButton(id: 'finish_btn', text: 'Finish'),
+        NotificationButton(id: 'finish_btn', text: 'Stop'),
       ],
       // ← Ini yang membuat TaskHandler berjalan di dalam service
       callback: startRunningTaskCallback,

@@ -50,23 +50,12 @@ class RunningTaskHandler extends TaskHandler {
 
     _elapsedSeconds = DateTime.now().difference(_runStartTime!).inSeconds;
 
-    // Update notifikasi setiap 3 detik
-    if (_elapsedSeconds % 3 == 0) {
-      final paceStr = _distanceKm > 0.01
-          ? () {
-              final paceMins = (_movingSeconds / 60.0) / _distanceKm;
-              if (paceMins > 99) return '--:--';
-              final m = paceMins.truncate();
-              final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
-              return '$m:$s';
-            }()
-          : '--:--';
-      FlutterForegroundTask.updateService(
-        notificationTitle: 'Sesi Lari Sedang Berjalan 🏃',
-        notificationText:
-            '${_distanceKm.toStringAsFixed(2)} km · ${_formattedTime()} · $paceStr /km',
-      );
-    }
+    // Update notifikasi setiap detik — format seperti Strava
+    final paceStr = _buildPaceStr();
+    FlutterForegroundTask.updateService(
+      notificationTitle: 'Lari  ·  ${_formattedTime()}  ·  ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: 'Pace $paceStr /km',
+    );
 
     // Kirim data ke UI
     FlutterForegroundTask.sendDataToMain({
@@ -146,12 +135,11 @@ class RunningTaskHandler extends TaskHandler {
     _isRunning = false;
     print('⏸️ [SERVICE] Paused at ${_elapsedSeconds}s, dist: ${_distanceKm.toStringAsFixed(3)} km');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Sesi Lari Dijeda ⏸️',
-      notificationText:
-          '${_distanceKm.toStringAsFixed(2)} km · ${_formattedTime()}',
+      notificationTitle: 'Lari dijeda  ·  ${_formattedTime()}  ·  ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: 'Ketuk untuk kembali ke sesi lari',
       notificationButtons: const [
-        NotificationButton(id: 'resume_btn', text: 'Lanjut'),
-        NotificationButton(id: 'finish_btn', text: 'Finish'),
+        NotificationButton(id: 'resume_btn', text: 'Lanjutkan'),
+        NotificationButton(id: 'finish_btn', text: 'Stop'),
       ],
     );
   }
@@ -164,12 +152,11 @@ class RunningTaskHandler extends TaskHandler {
     _lastValidPosition = null; // Reset agar tidak ada lompatan jarak saat resume
     print('▶️ [SERVICE] Resumed, elapsed: ${_elapsedSeconds}s');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Sesi Lari Sedang Berjalan 🏃',
-      notificationText:
-          '${_distanceKm.toStringAsFixed(2)} km · ${_formattedTime()}',
+      notificationTitle: 'Lari  ·  ${_formattedTime()}  ·  ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: 'Pace ${_buildPaceStr()} /km',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
-        NotificationButton(id: 'finish_btn', text: 'Finish'),
+        NotificationButton(id: 'finish_btn', text: 'Stop'),
       ],
     );
   }
@@ -296,6 +283,15 @@ class RunningTaskHandler extends TaskHandler {
     final m = ((_elapsedSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
     final s = (_elapsedSeconds % 60).toString().padLeft(2, '0');
     if (h > 0) return '$h:$m:$s';
+    return '$m:$s';
+  }
+
+  String _buildPaceStr() {
+    if (_distanceKm < 0.01 || _movingSeconds == 0) return '--:--';
+    final paceMins = (_movingSeconds / 60.0) / _distanceKm;
+    if (paceMins > 99) return '--:--';
+    final m = paceMins.truncate();
+    final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
     return '$m:$s';
   }
 }

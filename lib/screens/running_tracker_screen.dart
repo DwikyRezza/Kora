@@ -69,10 +69,6 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   DateTime? _uiRunStartTime;
   int _elapsedBeforePause = 0;
 
-  // ── Splits tracking (dihitung di screen langsung) ─────────────────────
-  int _lastSplitKm = 0;
-  int _lastSplitTimeSeconds = 0;
-
   // ── Data final untuk disimpan ─────────────────────────────────────────
   String? _finalSplitsJson;
   String? _finalRouteJson;
@@ -159,66 +155,69 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     final type = map['type'] as String?;
 
     if (type == 'location') {
+      // Gunakan event 'location' HANYA untuk update marker di peta
+      // Kalkulasi jarak sepenuhnya dilakukan oleh background service
       final lat = map['lat'] as double?;
       final lng = map['lng'] as double?;
-      final accuracy = (map['accuracy'] as num?)?.toDouble() ?? 100.0;
       if (lat == null || lng == null) return;
 
       final newLoc = LatLng(lat, lng);
       if (!mounted) return;
+      setState(() => _currentLocation = newLoc);
+      if (_isRunning) _animateCameraToLocation(newLoc);
 
+    } else if (type == 'update') {
+      // ── SUMBER KEBENARAN utama: semua data tracking dari service ──────
+      // Ini yang memastikan distance & pace tetap jalan saat app di background
+      if (!mounted) return;
       setState(() {
-        _currentLocation = newLoc;
+        _distanceKm    = (map['distanceKm']    as num?)?.toDouble() ?? _distanceKm;
+        _movingSeconds = (map['movingSeconds']  as num?)?.toInt()    ?? _movingSeconds;
+        _elevationGain = (map['elevationGain']  as num?)?.toDouble() ?? _elevationGain;
+        _maxElevation  = (map['maxElevation']   as num?)?.toDouble() ?? _maxElevation;
 
-        // Kalkulasi jarak LANGSUNG di screen dari event lokasi yang sudah terbukti bekerja
-        if (_isRunning && accuracy <= 60.0) {
-          if (_routePoints.isEmpty) {
-            _routePoints.add(newLoc);
-          } else {
-            final lastPt = _routePoints.last;
-            final segmentM = Geolocator.distanceBetween(
-              lastPt.latitude, lastPt.longitude,
-              newLoc.latitude, newLoc.longitude,
-            );
-            // Filter noise GPS (<1m) & GPS teleport (>200m)
-            if (segmentM >= 1.0 && segmentM < 200.0) {
-              _distanceKm += segmentM / 1000.0;
-              _movingSeconds++;
-              _routePoints.add(newLoc);
+        // Sync elapsed time dari service, HANYA jika timer UI sedang mati (saat di background)
+        // Ini yang menjaga timer tetap akurat setelah kembali dari background
+        if (_uiTimer == null || !_uiTimer!.isActive) {
+          _elapsedSeconds = (map['elapsedSeconds'] as num?)?.toInt() ?? _elapsedSeconds;
+        }
 
-              // Splits per km
-              final currentKm = _distanceKm.floor();
-              if (currentKm > _lastSplitKm) {
-                final splitTime = _elapsedSeconds - _lastSplitTimeSeconds;
-                final m = (splitTime ~/ 60).toString().padLeft(2, '0');
-                final s = (splitTime % 60).toString().padLeft(2, '0');
-                _splits.add('$m:$s');
-                _lastSplitKm = currentKm;
-                _lastSplitTimeSeconds = _elapsedSeconds;
-              }
-            }
-          }
+        // Sync splits dari service
+        final rawSplits = map['splits'];
+        if (rawSplits is List) {
+          _splits = List<String>.from(rawSplits);
+        }
+
+        // Sync rute dari service untuk polyline di peta
+        final rawRoute = map['routePoints'];
+        if (rawRoute is List && rawRoute.isNotEmpty) {
+          _routePoints = rawRoute
+              .whereType<List>()
+              .map((p) => LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()))
+              .toList();
         }
       });
 
-      if (_isRunning) {
-        _animateCameraToLocation(newLoc);
-      }
-
-    } else if (type == 'update') {
-      // Hanya ambil data elevasi dari service
-      if (!mounted) return;
-      setState(() {
-        _elevationGain = (map['elevationGain'] as num?)?.toDouble() ?? _elevationGain;
-        _maxElevation  = (map['maxElevation']  as num?)?.toDouble() ?? _maxElevation;
-      });
-
     } else if (type == 'final') {
-      // Simpan elevasi dari service, jarak & rute dari perhitungan lokal
-      _elevationGain = (map['elevationGain'] as num?)?.toDouble() ?? _elevationGain;
-      _maxElevation  = (map['maxElevation']  as num?)?.toDouble() ?? _maxElevation;
-      _finalSplitsJson = null; // pakai _splits lokal
-      _finalRouteJson  = null; // pakai _routePoints lokal
+      // Saat selesai: ambil semua data final dari service
+      if (!mounted) return;
+      _distanceKm    = (map['distanceKm']    as num?)?.toDouble() ?? _distanceKm;
+      _movingSeconds = (map['movingSeconds']  as num?)?.toInt()    ?? _movingSeconds;
+      _elevationGain = (map['elevationGain']  as num?)?.toDouble() ?? _elevationGain;
+      _maxElevation  = (map['maxElevation']   as num?)?.toDouble() ?? _maxElevation;
+
+      // Decode splits & route dari service (sudah di-encode JSON)
+      try {
+        final splitsJson = map['splits'] as String?;
+        if (splitsJson != null) {
+          _finalSplitsJson = splitsJson;
+        }
+        final routeJson = map['routePoints'] as String?;
+        if (routeJson != null) {
+          _finalRouteJson = routeJson;
+        }
+      } catch (_) {}
+
       _saveRunToDatabase();
 
     } else if (type == 'pause_from_notif') {
@@ -315,44 +314,11 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     ).listen((pos) {
       if (!mounted) return;
       final loc = LatLng(pos.latitude, pos.longitude);
-
-      if (_isRunning) {
-        // ── Saat lari: hitung jarak, rute, splits di sini ──────────────
-        setState(() {
-          _currentLocation = loc;
-          // Filter akurasi buruk (longgar 65m untuk HP biasa)
-          if (pos.accuracy <= 65.0) {
-            if (_routePoints.isEmpty) {
-              _routePoints.add(loc);
-            } else {
-              final lastPt = _routePoints.last;
-              final segmentM = Geolocator.distanceBetween(
-                lastPt.latitude, lastPt.longitude,
-                loc.latitude, loc.longitude,
-              );
-              // Tambah jika >= 1m dan < 200m (filter GPS teleport)
-              if (segmentM >= 1.0 && segmentM < 200.0) {
-                _distanceKm += segmentM / 1000.0;
-                _movingSeconds++;
-                _routePoints.add(loc);
-                // Splits per km
-                final currentKm = _distanceKm.floor();
-                if (currentKm > _lastSplitKm) {
-                  final splitTime = _elapsedSeconds - _lastSplitTimeSeconds;
-                  final mStr = (splitTime ~/ 60).toString().padLeft(2, '0');
-                  final sStr = (splitTime % 60).toString().padLeft(2, '0');
-                  _splits.add('$mStr:$sStr');
-                  _lastSplitKm = currentKm;
-                  _lastSplitTimeSeconds = _elapsedSeconds;
-                }
-              }
-            }
-          }
-        });
-        _animateCameraToLocation(loc);
-      } else {
-        // ── Sebelum lari: hanya update marker
-        setState(() => _currentLocation = loc);
+      // Stream ini HANYA untuk update posisi marker di peta.
+      // Saat lari, kalkulasi jarak sepenuhnya dilakukan oleh
+      // RunningTaskHandler di dalam background service melalui 'update' events.
+      setState(() => _currentLocation = loc);
+      if (_isRunning || !_hasStarted) {
         _animateCameraToLocation(loc);
       }
     }, cancelOnError: false);
@@ -362,8 +328,13 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused && _isRunning) {
+      // Simpan elapsed sebelum layar mati; service akan terus hitung jarak
       _stopUiTimer();
+      _elapsedBeforePause = _elapsedSeconds;
     } else if (state == AppLifecycleState.resumed && _isRunning) {
+      // Saat kembali ke foreground, sinkronkan waktu dari service
+      // Timer UI dilanjut dari waktu yang sudah berjalan
+      _uiRunStartTime = DateTime.now().subtract(Duration(seconds: _elapsedSeconds));
       _startUiTimer();
       _startInitialLocationStream();
     }
@@ -388,14 +359,10 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       _maxElevation   = 0.0;
       _splits.clear();
       _elapsedBeforePause = 0;
-      _lastSplitKm = 0;
-      _lastSplitTimeSeconds = 0;
     });
 
     _uiRunStartTime = DateTime.now();
     _startUiTimer();
-    // JANGAN cancel _initialLocationStream — kita pakai untuk kalkulasi jarak
-    // Stream ini tetap jalan dan menggerakkan marker DAN menghitung jarak
     await LocationService.startService();
 
   }
@@ -413,7 +380,8 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
   // ── Resume Run ────────────────────────────────────────────────────────
   Future<void> _resumeRun() async {
-    _uiRunStartTime = DateTime.now();
+    // Lanjutkan timer dari elapsed yang sudah ada (tidak mulai dari 0)
+    _uiRunStartTime = DateTime.now().subtract(Duration(seconds: _elapsedSeconds));
     _startUiTimer();
     await LocationService.sendCommand({'command': 'resume'});
     setState(() {
@@ -429,8 +397,9 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       _isRunning = false;
       _showPauseStopScreen = false;
     });
+    // Kirim stop ke service -> service mengirim event 'final' -> _onReceiveTaskData
+    // memanggil _saveRunToDatabase(). Jangan panggil langsung (double-save).
     await LocationService.sendCommand({'command': 'stop'});
-    await _saveRunToDatabase();
   }
 
   // ── Simpan ke Database ────────────────────────────────────────────────
