@@ -425,7 +425,7 @@ class _StravaShareOverlayState extends State<StravaShareOverlay> {
             ),
           ] else ...[
             // Error state
-            Text('⚠️', style: const TextStyle(fontSize: 40)),
+            const Text('⚠️', style: TextStyle(fontSize: 40)),
             const SizedBox(height: 12),
             Text(
               _message,

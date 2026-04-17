@@ -115,7 +115,9 @@ class ProteinEntry {
     if (n.contains('strawberry')) return '🍓';
     if (n.contains('blueberry') ||
         n.contains('blackberry') ||
-        n.contains('raspberry')) return '🫐';
+        n.contains('raspberry')) {
+      return '🫐';
+    }
     if (n.contains('kiwi')) return '🥝';
     if (n.contains('peach') || n.contains('persik')) return '🍑';
     if (n.contains('ceri')) return '🍒';
@@ -131,7 +133,9 @@ class ProteinEntry {
         n.contains('rendang') ||
         n.contains('rawon') ||
         n.contains('steak') ||
-        n.contains('sei')) return '🥩';
+        n.contains('sei')) {
+      return '🥩';
+    }
     if (n.contains('kambing')) return '🥩';
     if (n.contains('bebek')) return '🦆';
     if (n.contains('sosis')) return '🌭';
@@ -142,12 +146,15 @@ class ProteinEntry {
         n.contains('bandeng') ||
         n.contains('patin') ||
         n.contains('lele') ||
-        n.contains('gurame')) return '🐟';
+        n.contains('gurame')) {
+      return '🐟';
+    }
     if (n.contains('udang')) return '🦐';
     if (n.contains('cumi')) return '🦑';
     if (n.contains('kepiting')) return '🦀';
-    if (n.contains('kerang') || n.contains('scallop') || n.contains('lobster'))
+    if (n.contains('kerang') || n.contains('scallop') || n.contains('lobster')) {
       return '🦪';
+    }
     if (n.contains('susu') && !n.contains('jagung')) return '🥛';
     if (n.contains('keju')) return '🧀';
     if (n.contains('sate')) return '🍢';
@@ -165,7 +172,9 @@ class ProteinEntry {
         n.contains('kelor') ||
         n.contains('pepaya') ||
         n.contains('rebung') ||
-        n.contains('pare')) return '🥬';
+        n.contains('pare')) {
+      return '🥬';
+    }
     if (n.contains('wortel')) return '🥕';
     if (n.contains('tomat')) return '🍅';
     if (n.contains('jagung') && !n.contains('nasi')) return '🌽';
@@ -180,8 +189,9 @@ class ProteinEntry {
 
     if (n.contains('nasi')) return '🍚';
     if (n.contains('roti')) return '🍞';
-    if (n.contains('pancake') || n.contains('waffle') || n.contains('serabi'))
+    if (n.contains('pancake') || n.contains('waffle') || n.contains('serabi')) {
       return '🥞';
+    }
     if (n.contains('mie') ||
         n.contains('spaghetti') ||
         n.contains('pasta') ||
@@ -189,7 +199,9 @@ class ProteinEntry {
         n.contains('soun') ||
         n.contains('ramen') ||
         n.contains('udon') ||
-        n.contains('soba')) return '🍜';
+        n.contains('soba')) {
+      return '🍜';
+    }
     if (n.contains('burger')) return '🍔';
     if (n.contains('pizza')) return '🍕';
     if (n.contains('hotdog')) return '🌭';
@@ -211,7 +223,9 @@ class ProteinEntry {
         n.contains('pallubasa') ||
         n.contains('kimchi jjigae') ||
         n.contains('tom yum') ||
-        n.contains('tekwan')) return '🍲';
+        n.contains('tekwan')) {
+      return '🍲';
+    }
     if (n.contains('bubur')) return '🥣';
     if (n.contains('quinoa') || n.contains('couscous')) return '🌾';
     if (n.contains('garlic bread')) return '🥖';
@@ -224,10 +238,14 @@ class ProteinEntry {
         n.contains('bika') ||
         n.contains('pukis') ||
         n.contains('pancong') ||
-        n.contains('cubit')) return '🍰';
+        n.contains('cubit')) {
+      return '🍰';
+    }
     if (n.contains('cokelat') ||
         n.contains('coklat') ||
-        n.contains('dark chocolate')) return '🍫';
+        n.contains('dark chocolate')) {
+      return '🍫';
+    }
     if (n.contains('es krim') ||
         n.contains('pudding') ||
         n.contains('cendol') ||
@@ -235,35 +253,49 @@ class ProteinEntry {
         n.contains('es teler') ||
         n.contains('es campur') ||
         n.contains('es pisang ijo') ||
-        n.contains('es pallu butung')) return '🍧';
+        n.contains('es pallu butung')) {
+      return '🍧';
+    }
     if (n.contains('donat')) return '🍩';
     if (n.contains('biskuit') ||
         n.contains('cookies') ||
-        n.contains('granola bar')) return '🍪';
+        n.contains('granola bar')) {
+      return '🍪';
+    }
     if (n.contains('kerupuk')) return '🍘';
     if (n.contains('molen') ||
         n.contains('piscok') ||
-        n.contains('pisang aroma')) return '🍌';
+        n.contains('pisang aroma')) {
+      return '🍌';
+    }
     if (n.contains('madu')) return '🍯';
 
     if (n.contains('kopi') ||
         n.contains('latte') ||
         n.contains('cappuccino') ||
-        n.contains('matcha')) return '☕';
+        n.contains('matcha')) {
+      return '☕';
+    }
     if (n.contains('teh') ||
         n.contains('wedang') ||
         n.contains('bajigur') ||
         n.contains('bandrek') ||
-        n.contains('stmj')) return '🍵';
+        n.contains('stmj')) {
+      return '🍵';
+    }
     if (n.contains('thai tea')) return '🧋';
     if (n.contains('soda') ||
         n.contains('cola') ||
         n.contains('sprite') ||
-        n.contains('isotonik')) return '🥤';
+        n.contains('isotonik')) {
+      return '🥤';
+    }
     if (n.contains('kelapa muda') || n.contains('es kelapa')) return '🥥';
     if (n.contains('susu kedelai') ||
         n.contains('susu almond') ||
-        n.contains('susu oat')) return '🥛';
+        n.contains('susu oat')) {
+      return '🥛';
+    }
     if (n.contains('infused water')) return '🫗';
     if (n.contains('air mineral')) return '💧';
 
