@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'running_task_handler.dart'; // untuk startRunningTaskCallback
 
@@ -7,12 +8,11 @@ class LocationService {
   static void initialize() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'running_tracker_channel',
+        channelId: 'running_tracker_channel_v2',
         channelName: 'Running Tracker',
         channelDescription: 'Notifikasi aktif selama sesi lari berlangsung.',
-        // LOW = tidak bunyi/vibrate saat update, tapi tetap tampil di status bar
-        channelImportance: NotificationChannelImportance.LOW,
-        priority: NotificationPriority.LOW,
+        channelImportance: NotificationChannelImportance.DEFAULT,
+        priority: NotificationPriority.DEFAULT,
         onlyAlertOnce: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
@@ -46,20 +46,41 @@ class LocationService {
   }
 
   /// Mulai foreground service dengan TaskHandler yang berjalan di dalam service.
-  static Future<void> startService() async {
-    if (await FlutterForegroundTask.isRunningService) return;
+  static Future<bool> startService() async {
+    // Jika service masih jalan, stop dulu dan tunggu sampai benar-benar berhenti
+    if (await FlutterForegroundTask.isRunningService) {
+      debugPrint('⚠️ [LocationService] Service masih jalan, stop dulu...');
+      await FlutterForegroundTask.stopService();
+      // Tunggu sampai service benar-benar berhenti
+      for (int i = 0; i < 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (!await FlutterForegroundTask.isRunningService) break;
+      }
+    }
 
-    await FlutterForegroundTask.startService(
+    debugPrint('🚀 [LocationService] Memulai foreground service...');
+    final result = await FlutterForegroundTask.startService(
       serviceId: 256,
-      notificationTitle: 'Lari  ·  0:00  ·  0.00 km',
-      notificationText: 'Mempersiapkan GPS...',
+      notificationTitle: 'Run · 0:00 · 0.00 km',
+      notificationText: 'GPS aktif',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
         NotificationButton(id: 'finish_btn', text: 'Stop'),
       ],
-      // ← Ini yang membuat TaskHandler berjalan di dalam service
       callback: startRunningTaskCallback,
     );
+
+    if (result is ServiceRequestSuccess) {
+      debugPrint('✅ [LocationService] Foreground service berhasil dimulai!');
+      return true;
+    } else if (result is ServiceRequestFailure) {
+      debugPrint('❌ [LocationService] Service GAGAL start!');
+      debugPrint('❌ [LocationService] Error detail: ${result.error}');
+      return false;
+    } else {
+      debugPrint('❌ [LocationService] Service GAGAL start (unknown): $result');
+      return false;
+    }
   }
 
   /// Kirim perintah ke TaskHandler di dalam service.

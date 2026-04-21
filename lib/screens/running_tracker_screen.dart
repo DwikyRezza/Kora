@@ -84,6 +84,8 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   // ── Flag background ────────────────────────────────────────────────────
   bool _isInBackground = false;
   DateTime? _backgroundStartTime; // Waktu tepat saat app di-minimize
+  int _lastServiceElapsed = 0;   // Elapsed terakhir diterima dari service
+  double _lastServiceDistance = 0.0; // Distance terakhir dari service
 
   @override
   void initState() {
@@ -176,38 +178,39 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       setState(() => _currentLocation = newLoc);
       if (_isRunning) _animateCameraToLocation(newLoc);
     } else if (type == 'update') {
-      // ── Merge data service ke UI ──────────────────────────────────────
+      // ── Selalu simpan nilai terbaru dari service ke variabel tracking ────
+      // Ini penting agar saat UI resume dari background, data sudah tersedia
+      final svcElapsedRaw = (map['elapsedSeconds'] as num?)?.toInt() ?? 0;
+      final svcDistRaw = (map['distanceKm'] as num?)?.toDouble() ?? 0.0;
+      if (svcElapsedRaw > 0) _lastServiceElapsed = svcElapsedRaw;
+      if (svcDistRaw > 0) _lastServiceDistance = svcDistRaw;
+
+      // ── Merge data service ke UI (hanya jika mounted) ─────────────────
       if (!mounted) return;
       setState(() {
         if (_isInBackground) {
           // Saat di background: service adalah sumber kebenaran penuh
-          // Terima semua nilai dari service langsung (bukan hanya jika lebih besar)
-          final svcDist = (map['distanceKm'] as num?)?.toDouble();
-          if (svcDist != null && svcDist > 0) _distanceKm = svcDist;
+          if (svcDistRaw > 0) _distanceKm = svcDistRaw;
 
           final svcMoving = (map['movingSeconds'] as num?)?.toInt();
           if (svcMoving != null) _movingSeconds = svcMoving;
 
-          // Sync elapsed dari service saat background
-          final svcElapsed = (map['elapsedSeconds'] as num?)?.toInt();
-          if (svcElapsed != null && svcElapsed > 0) {
-            _elapsedSeconds = svcElapsed;
-            // Update _elapsedBeforePause agar timer tidak loncat saat foreground kembali
-            _elapsedBeforePause = svcElapsed;
+          // Update elapsed background agar saat resume tidak perlu hitung ulang
+          if (svcElapsedRaw > 0) {
+            _elapsedSeconds = svcElapsedRaw;
+            _elapsedBeforePause = svcElapsedRaw;
           }
         } else {
           // Saat foreground: UI menghitung jarak sendiri, tapi terima
-          // nilai service jika lebih besar (service lebih akurat untuk jarak panjang)
-          final svcDist = (map['distanceKm'] as num?)?.toDouble() ?? 0.0;
-          if (svcDist > _distanceKm) _distanceKm = svcDist;
+          // nilai service jika lebih besar
+          if (svcDistRaw > _distanceKm) _distanceKm = svcDistRaw;
 
           final svcMoving = (map['movingSeconds'] as num?)?.toInt() ?? 0;
           if (svcMoving > _movingSeconds) _movingSeconds = svcMoving;
 
           // Sync elapsed HANYA jika UI timer mati
           if (_uiTimer == null || !_uiTimer!.isActive) {
-            final svcElapsed = (map['elapsedSeconds'] as num?)?.toInt();
-            if (svcElapsed != null) _elapsedSeconds = svcElapsed;
+            if (svcElapsedRaw > 0) _elapsedSeconds = svcElapsedRaw;
           }
         }
 
@@ -458,34 +461,57 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.paused && _isRunning) {
-      // App masuk background
+
+    if ((state == AppLifecycleState.paused ||
+            state == AppLifecycleState.inactive) &&
+        _isRunning &&
+        !_isInBackground) {
+      // ── Layar mati / app ke background ──────────────────────────────
       _stopUiTimer();
       _elapsedBeforePause = _elapsedSeconds;
       _isInBackground = true;
-      _backgroundStartTime =
-          DateTime.now(); // Catat waktu tepat masuk background
-      // Matikan UI GPS stream — hemat baterai, biarkan service yang tracking
+      _backgroundStartTime = DateTime.now();
+
+      // Matikan UI GPS stream — hemat baterai, biarkan foreground service
+      // yang terus merekam GPS & menghitung jarak di background
       _initialLocationStream?.cancel();
       _initialLocationStream = null;
-    } else if (state == AppLifecycleState.resumed && _isRunning) {
-      // App kembali ke foreground
+
+      debugPrint('📱 [UI] App ke background — foreground service tetap tracking');
+
+    } else if (state == AppLifecycleState.resumed) {
+      if (!_isInBackground) return; // Sudah resumed, skip
       _isInBackground = false;
 
-      // Hitung berapa lama di background menggunakan system clock (selalu akurat)
-      if (_backgroundStartTime != null) {
-        final bgElapsed =
-            DateTime.now().difference(_backgroundStartTime!).inSeconds;
-        _elapsedSeconds += bgElapsed; // Tambah waktu background ke elapsed
-        _elapsedBeforePause = _elapsedSeconds; // Sync sebelum timer start
-        _backgroundStartTime = null;
-      }
+      if (_isRunning) {
+        // ── Layar menyala kembali — sync dari service ──────────────────
+        // Gunakan elapsed dari service jika tersedia (paling akurat)
+        // karena service terus menghitung di background
+        if (_lastServiceElapsed > _elapsedSeconds) {
+          // Service punya data lebih baru — pakai itu
+          _elapsedSeconds = _lastServiceElapsed;
+          debugPrint('✅ [UI] Sync elapsed dari service: ${_elapsedSeconds}s');
+        } else if (_backgroundStartTime != null) {
+          // Fallback: hitung sendiri dari wall clock
+          final bgElapsed =
+              DateTime.now().difference(_backgroundStartTime!).inSeconds;
+          _elapsedSeconds += bgElapsed;
+          debugPrint('✅ [UI] Elapsed dari wall clock: +${bgElapsed}s = ${_elapsedSeconds}s');
+        }
 
-      // Mulai timer dari nilai elapsed yang sudah mencakup waktu background
-      _uiRunStartTime = DateTime.now();
-      _startUiTimer();
-      // Hidupkan kembali UI GPS stream
-      _startInitialLocationStream();
+        // Sync jarak dari service jika lebih besar
+        if (_lastServiceDistance > _distanceKm) {
+          _distanceKm = _lastServiceDistance;
+          debugPrint('✅ [UI] Sync distance dari service: ${_distanceKm.toStringAsFixed(3)} km');
+        }
+
+        _backgroundStartTime = null;
+        _elapsedBeforePause = _elapsedSeconds;
+        _uiRunStartTime = DateTime.now();
+        _startUiTimer();
+        _startInitialLocationStream();
+        debugPrint('📱 [UI] App kembali foreground — UI timer & GPS stream restart');
+      }
     } else if (state == AppLifecycleState.detached) {
       _isInBackground = false;
     }
@@ -518,7 +544,11 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     _startUiTimer();
     // JANGAN cancel _initialLocationStream — kita pakai untuk kalkulasi jarak
     // Stream ini tetap jalan dan menggerakkan marker DAN menghitung jarak
-    await LocationService.startService();
+    final started = await LocationService.startService();
+    if (!started && mounted) {
+      _showSnackBar('⚠️ Gagal memulai background tracking. Coba lagi.');
+      debugPrint('❌ [UI] Foreground service gagal start!');
+    }
   }
 
   // ── Pause Run ─────────────────────────────────────────────────────────

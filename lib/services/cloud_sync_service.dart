@@ -85,6 +85,17 @@ class CloudSyncService {
     }
   }
 
+  /// Hapus satu workout dari Firestore
+  static Future<void> deleteWorkout(int workoutId) async {
+    if (!AuthService.isLoggedIn) return;
+    try {
+      await _userDoc.collection('workouts').doc(workoutId.toString()).delete();
+      print('[CloudSync] ✅ Workout $workoutId deleted from Firestore');
+    } catch (e) {
+      print('[CloudSync] ⚠️ Delete workout failed: $e');
+    }
+  }
+
   /// Sync schedule events → Firestore
   static Future<void> syncScheduleToCloud() async {
     if (!AuthService.isLoggedIn) return;

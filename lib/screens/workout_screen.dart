@@ -8,8 +8,9 @@ import '../theme/app_theme.dart';
 import '../utils/responsive.dart';
 import '../services/profile_service.dart';
 import '../services/strava_service.dart';
+import '../services/cloud_sync_service.dart';
 import 'running_tracker_screen.dart';
-import 'weightlifting_screen.dart';
+import 'workout_setup_screen.dart';
 import 'workout_detail_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
@@ -269,8 +270,45 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
   }
 
   Widget _activityCard(Workout workout) {
-    return Column(
-      children: [
+    return Dismissible(
+      key: Key(workout.id?.toString() ?? UniqueKey().toString()),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: AppTheme.accentRed,
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 30),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.surface,
+            title: const Text('Hapus Aktivitas?', style: TextStyle(color: Colors.white)),
+            content: const Text('Aktivitas ini akan dihapus secara permanen dari perangkat dan cloud.', style: TextStyle(color: Colors.white70)),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal', style: TextStyle(color: Colors.white70))),
+              TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Hapus', style: TextStyle(color: AppTheme.accentRed, fontWeight: FontWeight.bold))),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        if (workout.id != null) {
+          await _db.deleteWorkout(workout.id!);
+          await CloudSyncService.deleteWorkout(workout.id!);
+          _loadData();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Aktivitas berhasil dihapus'),
+              backgroundColor: AppTheme.accentRed,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: Column(
+        children: [
         InkWell(
           onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => WorkoutDetailScreen(workout: workout))).then((_) => _loadData());
@@ -312,6 +350,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
         ),
         Divider(height: 1, color: AppTheme.border),
       ],
+    ),
     );
   }
 
@@ -653,11 +692,13 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
               }),
 
               SizedBox(height: 16),
-              _menuItem(context, 'Angkat Beban', 'Catat Reps, Sets, Beban', '', AppTheme.weightliftingColor, () async {
+              _menuItem(context, 'Angkat Beban', 'Pilih Mode, Otot, & Gerakan', '', AppTheme.weightliftingColor, () async {
                 Navigator.pop(context);
                 final profile = await ProfileService.getProfile();
                 final weight = profile[ProfileService.keyWeight] ?? 70.0;
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => WeightliftingScreen(userWeight: weight))).then((_) => _loadData());
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => WorkoutSetupScreen(userWeight: weight),
+                )).then((_) => _loadData());
               }),
               SizedBox(height: 16),
               _menuItem(context, 'Import dari Strava', 'Sinkronkan data lari/sepeda dari cloud', '', Color(0xFFFC5200), () async {

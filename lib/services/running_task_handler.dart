@@ -14,6 +14,7 @@ class RunningTaskHandler extends TaskHandler {
   bool _isRunning = false;
   DateTime? _runStartTime;
   int _elapsedSeconds = 0;
+  int _elapsedAtPause = 0; // Elapsed yang tersimpan saat pause
   int _movingSeconds = 0;
   double _distanceKm = 0.0;
   double _elevationGain = 0.0;
@@ -48,13 +49,18 @@ class RunningTaskHandler extends TaskHandler {
   void onRepeatEvent(DateTime timestamp) {
     if (!_isRunning || _runStartTime == null) return;
 
-    _elapsedSeconds = DateTime.now().difference(_runStartTime!).inSeconds;
+    // Elapsed = waktu sejak _runStartTime (sudah di-adjust saat resume)
+    _elapsedSeconds = _elapsedAtPause +
+        DateTime.now().difference(_runStartTime!).inSeconds;
 
     // Update notifikasi setiap detik — format seperti Strava
-    final paceStr = _buildPaceStr();
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Lari  ·  ${_formattedTime()}  ·  ${_distanceKm.toStringAsFixed(2)} km',
-      notificationText: 'Pace $paceStr /km',
+      notificationTitle: 'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: '',
+      notificationButtons: const [
+        NotificationButton(id: 'pause_btn', text: 'Pause'),
+        NotificationButton(id: 'finish_btn', text: 'Stop'),
+      ],
     );
 
     // Kirim data ke UI
@@ -105,6 +111,7 @@ class RunningTaskHandler extends TaskHandler {
     } else if (id == 'finish_btn') {
       _handleStop();
       FlutterForegroundTask.sendDataToMain({'type': 'stop_from_notif'});
+      FlutterForegroundTask.launchApp(); // Otomatis buka app saat di stop
     }
   }
 
@@ -116,6 +123,7 @@ class RunningTaskHandler extends TaskHandler {
   void _handleStart(Map data) {
     _isRunning = true;
     _runStartTime = DateTime.now();
+    _elapsedAtPause = 0;
     _elapsedSeconds = 0;
     _movingSeconds = 0;
     _distanceKm = 0.0;
@@ -133,27 +141,29 @@ class RunningTaskHandler extends TaskHandler {
 
   void _handlePause() {
     _isRunning = false;
+    _elapsedAtPause = _elapsedSeconds; // Simpan elapsed saat ini sebelum pause
+    _runStartTime = null; // Reset agar onRepeatEvent skip
     print('⏸️ [SERVICE] Paused at ${_elapsedSeconds}s, dist: ${_distanceKm.toStringAsFixed(3)} km');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Lari dijeda  ·  ${_formattedTime()}  ·  ${_distanceKm.toStringAsFixed(2)} km',
-      notificationText: 'Ketuk untuk kembali ke sesi lari',
+      notificationTitle: 'Paused · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: '',
       notificationButtons: const [
-        NotificationButton(id: 'resume_btn', text: 'Lanjutkan'),
+        NotificationButton(id: 'resume_btn', text: 'Resume'),
         NotificationButton(id: 'finish_btn', text: 'Stop'),
       ],
     );
   }
 
   void _handleResume(Map data) {
-    // Adjust runStartTime agar elapsed time tetap kontinyu
-    _runStartTime =
-        DateTime.now().subtract(Duration(seconds: _elapsedSeconds));
+    // _runStartTime di-set ke NOW agar onRepeatEvent mulai menghitung dari 0
+    // lalu elapsed final = _elapsedAtPause + diff(now, _runStartTime)
+    _runStartTime = DateTime.now();
     _isRunning = true;
     _lastValidPosition = null; // Reset agar tidak ada lompatan jarak saat resume
-    print('▶️ [SERVICE] Resumed, elapsed: ${_elapsedSeconds}s');
+    print('▶️ [SERVICE] Resumed, elapsed so far: ${_elapsedAtPause}s');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Lari  ·  ${_formattedTime()}  ·  ${_distanceKm.toStringAsFixed(2)} km',
-      notificationText: 'Pace ${_buildPaceStr()} /km',
+      notificationTitle: 'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: '',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
         NotificationButton(id: 'finish_btn', text: 'Stop'),
@@ -181,18 +191,13 @@ class RunningTaskHandler extends TaskHandler {
     _positionStream?.cancel();
     print(' [SERVICE] Starting GPS stream...');
 
-    // Gunakan AndroidSettings untuk kontrol penuh di Android
+    // Gunakan AndroidSettings tanpa ForegroundNotificationConfig
+    // karena notifikasi sudah dihandle oleh FlutterForegroundTask
     final locationSettings = AndroidSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 1,       // update setiap 1 meter bergerak
+      distanceFilter: 1,
       intervalDuration: const Duration(seconds: 1),
       forceLocationManager: false,
-      // Tetap jalan saat layar mati
-      foregroundNotificationConfig: const ForegroundNotificationConfig(
-        notificationText: 'GPS aktif merekam rute lari',
-        notificationTitle: 'AthleteSync Tracking',
-        enableWakeLock: true,
-      ),
     );
 
     _positionStream = Geolocator.getPositionStream(
