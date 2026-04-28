@@ -7,6 +7,7 @@ import '../services/notification_service.dart';
 import '../services/meal_recommender_service.dart';
 import '../services/profile_service.dart';
 import '../services/settings_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
 import 'weekly_report_screen.dart';
 
@@ -63,6 +64,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (act == true && event.id != null) {
       await _db.deleteScheduleEvent(event.id!);
       await NotificationService().cancelEventReminder(event.id!);
+      // Sync ke Firestore di background
+      CloudSyncService.syncScheduleToCloud().catchError((_) {});
       _loadEvents();
     }
   }
@@ -100,6 +103,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 advanceMinutes: advanceMinutes,
               );
             }
+            // Sync ke Firestore di background
+            CloudSyncService.syncScheduleToCloud().catchError((_) {});
           } else {
             final updatedEvent =
                 newEvent.copyWith(isCompleted: event.isCompleted);
@@ -113,6 +118,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 advanceMinutes: advanceMinutes,
               );
             }
+            // Sync ke Firestore di background
+            CloudSyncService.syncScheduleToCloud().catchError((_) {});
           }
           _loadEvents();
         },
@@ -237,6 +244,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       onPressed: () async {
                                         await _db.updateScheduleEventCompletion(
                                             event.id!, true);
+                                        // Sync ke Firestore di background
+                                        CloudSyncService.syncScheduleToCloud().catchError((_) {});
                                         _loadEvents();
                                         if (mounted) {
                                           ScaffoldMessenger.of(context)

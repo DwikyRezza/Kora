@@ -10,7 +10,7 @@ import 'auth_service.dart';
 /// Alur:
 /// - WRITE: tulis ke SQLite dulu → langsung trigger background sync ke Firestore
 /// - READ: selalu dari SQLite (cepat)
-/// - LOGIN (device baru): jika SQLite kosong → restore semua dari Firestore
+/// - LOGIN (device baru): restore semua dari Firestore → tulis ke SQLite → UI load
 class CloudSyncService {
   static final _firestore = FirebaseFirestore.instance;
   static final _db = DatabaseHelper();
@@ -102,19 +102,44 @@ class CloudSyncService {
     try {
       final db = await _db.database;
       final events = await db.query('schedule_events');
-      if (events.isEmpty) return;
+
+      // Ambil semua doc yang ada di Firestore untuk deteksi yang dihapus
+      final snapshot = await _userDoc.collection('schedule_events').get();
+      final cloudIds = snapshot.docs.map((d) => d.id).toSet();
+      final localIds = events.map((e) => e['id'].toString()).toSet();
 
       final batch = _firestore.batch();
+
+      // Upsert semua event lokal
       for (final e in events) {
         batch.set(
           _userDoc.collection('schedule_events').doc(e['id'].toString()),
           Map.from(e),
         );
       }
+
+      // Hapus dari Firestore yang sudah tidak ada di lokal
+      for (final cloudId in cloudIds) {
+        if (!localIds.contains(cloudId)) {
+          batch.delete(_userDoc.collection('schedule_events').doc(cloudId));
+        }
+      }
+
       await batch.commit();
       print('[CloudSync] ✅ Schedule synced: ${events.length} events');
     } catch (e) {
       print('[CloudSync] ⚠️ Schedule sync failed: $e');
+    }
+  }
+
+  /// Hapus satu schedule event dari Firestore
+  static Future<void> deleteScheduleEvent(int eventId) async {
+    if (!AuthService.isLoggedIn) return;
+    try {
+      await _userDoc.collection('schedule_events').doc(eventId.toString()).delete();
+      print('[CloudSync] ✅ Schedule event $eventId deleted from Firestore');
+    } catch (e) {
+      print('[CloudSync] ⚠️ Delete schedule event failed: $e');
     }
   }
 
@@ -144,17 +169,27 @@ class CloudSyncService {
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Cek apakah SQLite lokal kosong (belum ada data untuk user ini)
+  /// Mengecek SEMUA koleksi utama — jika salah satu ada data cloud, perlu restore
   static Future<bool> isLocalDataEmpty() async {
     try {
       final workouts = await _db.getAllWorkouts();
-      return workouts.isEmpty;
+      if (workouts.isNotEmpty) return false;
+
+      final db = await _db.database;
+      final schedules = await db.query('schedule_events', limit: 1);
+      if (schedules.isNotEmpty) return false;
+
+      final nutrition = await db.query('protein_entries', limit: 1);
+      if (nutrition.isNotEmpty) return false;
+
+      return true;
     } catch (_) {
       return true;
     }
   }
 
-  /// Restore semua data dari Firestore ke SQLite lokal
-  /// Dipanggil saat login di device baru (jika SQLite kosong)
+  /// Restore semua data dari Firestore ke SQLite lokal.
+  /// Selalu dijalankan saat login — data cloud SELALU menang (merge strategy).
   static Future<void> restoreAllFromCloud() async {
     if (!AuthService.isLoggedIn) return;
     print('[CloudSync] 🔄 Restoring all data from Firestore...');

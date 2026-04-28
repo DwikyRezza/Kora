@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/workout.dart';
 import '../models/exercise_definition.dart';
 import '../services/database_helper.dart';
+import '../services/cloud_sync_service.dart';
 import 'active_workout_screen.dart' show SetLog;
 
 class WorkoutSummaryScreen extends StatefulWidget {
@@ -129,8 +130,10 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
       notes: '${_notesCtrl.text.isNotEmpty ? 'Catatan: ${_notesCtrl.text}\n' : ''}Intensitas (RPE): ${_rpe.toInt()}/10\n\nDetail Latihan:\n$detailLogs',
     );
     
-    // Simpan ke DB Lokal dan tersinkronisasi ke Cloud Supabase
+    // Simpan ke DB Lokal dan sinkronkan ke Cloud Firestore
     await DatabaseHelper().insertWorkout(workout);
+    // Sync ke Firestore di background
+    CloudSyncService.syncWorkoutsToCloud().catchError((_) {});
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

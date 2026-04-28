@@ -69,13 +69,13 @@ class _LandingScreenState extends State<LandingScreen>
       if (!mounted) return;
 
       if (exists) {
-        // ✅ Terdaftar — restore profil dari cloud lalu masuk
-        // Jika SQLite lokal kosong (device baru), restore semua data dari Firestore
-        final isEmpty = await CloudSyncService.isLocalDataEmpty();
-        if (isEmpty) {
-          print('[LandingScreen] SQLite kosong, restore data dari Firestore...');
-          // Restore di background, tidak perlu tunggu selesai untuk masuk app
-          CloudSyncService.restoreAllFromCloud().catchError((_) {});
+        // ✅ Terdaftar — restore semua data dari Firestore ke SQLite SEBELUM navigasi
+        // Di-await agar SQLite sudah terisi saat screen pertama kali dibuka
+        print('[LandingScreen] Memulihkan data dari Firestore...');
+        try {
+          await CloudSyncService.restoreAllFromCloud();
+        } catch (e) {
+          print('[LandingScreen] Restore gagal (mungkin offline): $e');
         }
 
         if (!mounted) return;

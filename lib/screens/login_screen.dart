@@ -66,10 +66,10 @@ class _LoginScreenState extends State<LoginScreen>
         await ProfileService.syncToDatabase();
       }
 
-      // ── Auto-restore semua data dari Firestore (untuk HP baru / pertama login) ──
-      // Dilakukan di background agar tidak blocking navigasi
+      // ── Restore semua data dari Firestore ke SQLite SEBELUM navigasi ──
+      // Harus di-await agar SQLite sudah terisi sebelum screen merender
       if (!mounted) return;
-      _autoRestoreFromCloud();
+      await _restoreFromCloudWithFeedback();
 
       if (!mounted) return;
 
@@ -95,12 +95,14 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  /// Restore data dari cloud secara silent di background
-  Future<void> _autoRestoreFromCloud() async {
+  /// Restore data dari Firestore ke SQLite lokal.
+  /// Dijalankan sebelum navigasi agar data sudah tersedia saat screen dibuka.
+  Future<void> _restoreFromCloudWithFeedback() async {
     try {
-      await CloudSyncService.restoreDataFromCloud();
+      await CloudSyncService.restoreAllFromCloud();
     } catch (e) {
-      // Silent fail — tidak ganggu user
+      // Silent fail — tidak ganggu user jika offline
+      print('[Login] Cloud restore failed (mungkin offline): $e');
     }
   }
 
