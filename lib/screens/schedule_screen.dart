@@ -10,6 +10,7 @@ import '../services/settings_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
 import 'weekly_report_screen.dart';
+import '../main.dart' show AppSyncNotifier;
 
 class ScheduleScreen extends StatefulWidget {
   ScheduleScreen({super.key});
@@ -27,6 +28,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void initState() {
     super.initState();
     _loadEvents();
+    // Reload otomatis saat ada sync cloud dari background
+    AppSyncNotifier.addListener(_onCloudSync);
+  }
+
+  void _onCloudSync() => _loadEvents();
+
+  @override
+  void dispose() {
+    AppSyncNotifier.removeListener(_onCloudSync);
+    super.dispose();
   }
 
   /// Dipanggil saat pull-to-refresh — sync jadwal dari Firestore dulu

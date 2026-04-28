@@ -14,6 +14,7 @@ import 'workout_setup_screen.dart';
 import 'workout_detail_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
+import '../main.dart' show AppSyncNotifier;
 
 class WorkoutScreen extends StatefulWidget {
   WorkoutScreen({super.key});
@@ -38,10 +39,15 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
+    // Reload otomatis saat ada sync cloud dari background
+    AppSyncNotifier.addListener(_onCloudSync);
   }
+
+  void _onCloudSync() => _loadData();
 
   @override
   void dispose() {
+    AppSyncNotifier.removeListener(_onCloudSync);
     _tabController.dispose();
     super.dispose();
   }

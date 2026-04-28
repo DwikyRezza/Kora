@@ -21,6 +21,11 @@ import 'services/notification_service.dart';
 import 'services/location_service.dart';
 import 'services/auth_service.dart';
 import 'services/settings_service.dart';
+import 'services/cloud_sync_service.dart';
+
+/// Notifier global — di-increment setiap kali ada sync dari cloud
+/// Screen bisa listen ke ini untuk reload otomatis
+final AppSyncNotifier = ValueNotifier<int>(0);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,10 +109,12 @@ class MainNavigation extends StatefulWidget {
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> with SingleTickerProviderStateMixin {
+class _MainNavigationState extends State<MainNavigation>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
   final GlobalKey<WorkoutScreenState> _workoutScreenKey = GlobalKey<WorkoutScreenState>();
   late AnimationController _pulseController;
+  DateTime? _lastCloudSync; // throttle: hindari sync terlalu sering
 
   void _goToTab(int index) {
     setState(() => _currentIndex = index);
@@ -127,6 +134,8 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -151,7 +160,37 @@ class _MainNavigationState extends State<MainNavigation> with SingleTickerProvid
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _syncOnResume();
+    }
+  }
+
+  /// Dipanggil otomatis saat app dibuka dari background.
+  /// Sync data terbaru dari Firestore ke SQLite secara non-blocking,
+  /// lalu notifikasi semua screen untuk reload.
+  void _syncOnResume() {
+    if (!AuthService.isLoggedIn) return;
+
+    // Throttle: jangan sync jika baru sync < 60 detik yang lalu
+    final now = DateTime.now();
+    if (_lastCloudSync != null &&
+        now.difference(_lastCloudSync!).inSeconds < 60) {
+      return;
+    }
+    _lastCloudSync = now;
+
+    // Jalankan di background — UI tidak freeze
+    CloudSyncService.restoreAllFromCloud().then((_) {
+      // Notifikasi semua screen yang listen AppSyncNotifier untuk reload
+      AppSyncNotifier.value++;
+    }).catchError((_) {}); // silent fail jika offline
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     super.dispose();
   }
