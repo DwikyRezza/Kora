@@ -29,6 +29,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _loadEvents();
   }
 
+  /// Dipanggil saat pull-to-refresh — sync jadwal dari Firestore dulu
+  Future<void> _refreshEvents() async {
+    try {
+      await CloudSyncService.restoreAllFromCloud();
+    } catch (_) {} // silent fail jika offline
+    await _loadEvents();
+  }
+
   Future<void> _loadEvents() async {
     setState(() => _isLoading = true);
     final events = await _db.getUpcomingEvents();
@@ -162,7 +170,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: AppTheme.neonGreen))
           : RefreshIndicator(
-              onRefresh: _loadEvents,
+              onRefresh: _refreshEvents,
               color: AppTheme.neonGreen,
               backgroundColor: AppTheme.surface,
               child: _events.isEmpty

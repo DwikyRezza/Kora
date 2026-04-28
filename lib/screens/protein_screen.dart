@@ -31,6 +31,19 @@ class _ProteinScreenState extends State<ProteinScreen> {
     _loadData();
   }
 
+  /// Dipanggil saat pull-to-refresh — sync nutrisi dari Firestore dulu
+  Future<void> _refreshData() async {
+    try {
+      await CloudSyncService.syncNutritionToCloud(); // push lokal ke cloud
+      // lalu pull cloud ke lokal (supaya data HP lain juga masuk)
+    } catch (_) {}
+    // Restore nutrition dari Firestore ke SQLite
+    try {
+      await CloudSyncService.restoreAllFromCloud();
+    } catch (_) {}
+    await _loadData();
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final today = DateTime.now();
@@ -94,7 +107,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator(color: AppTheme.neonGreen))
           : RefreshIndicator(
-              onRefresh: _loadData,
+              onRefresh: _refreshData,
               color: AppTheme.neonGreen,
               backgroundColor: AppTheme.surface,
               child: CustomScrollView(

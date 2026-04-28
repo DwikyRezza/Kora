@@ -46,6 +46,14 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     super.dispose();
   }
 
+  /// Dipanggil saat pull-to-refresh — sync dari Firestore dulu
+  Future<void> _refreshData() async {
+    try {
+      await CloudSyncService.restoreAllFromCloud();
+    } catch (_) {} // silent fail jika offline
+    await _loadData();
+  }
+
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final workouts = await _db.getRecentWorkouts(limit: 50);
@@ -300,7 +308,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     if (_workouts.isEmpty) return Center(child: Text('No activities yet.', style: TextStyle(color: AppTheme.textMuted)));
 
     return RefreshIndicator(
-      onRefresh: _loadData,
+      onRefresh: _refreshData,
       color: Color(0xFFFC5200),
       child: ListView.builder(
         padding: EdgeInsets.only(bottom: 100),

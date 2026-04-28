@@ -7,6 +7,7 @@ import '../models/protein_entry.dart';
 import '../models/schedule_event.dart';
 import '../services/database_helper.dart';
 import '../services/profile_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../services/whistleblower_service.dart';
 import '../theme/app_theme.dart';
 import 'dart:async';
@@ -122,6 +123,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
+  /// Dipanggil saat pull-to-refresh — sync dari Firestore dulu, lalu load SQLite
+  Future<void> _refreshData() async {
+    try {
+      await CloudSyncService.restoreAllFromCloud();
+    } catch (_) {} // silent fail jika offline
+    await _loadData();
+  }
+
+  /// Load data dari SQLite lokal (cepat, tidak request Firestore)
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final today = DateTime.now();
@@ -163,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: _refreshData,
         color: AppTheme.neonGreen,
         backgroundColor: AppTheme.surface,
         child: CustomScrollView(

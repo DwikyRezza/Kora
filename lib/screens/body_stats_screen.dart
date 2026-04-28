@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../models/body_measurement.dart';
 import '../services/database_helper.dart';
 import '../services/profile_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
 
 class BodyStatsScreen extends StatefulWidget {
@@ -22,6 +23,14 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  /// Dipanggil saat pull-to-refresh — sync dari Firestore dulu
+  Future<void> _refreshData() async {
+    try {
+      await CloudSyncService.restoreAllFromCloud();
+    } catch (_) {} // silent fail jika offline
+    await _loadData();
   }
 
   Future<void> _loadData() async {
@@ -75,7 +84,7 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
       body: _isLoading 
         ? Center(child: CircularProgressIndicator(color: AppTheme.electricBlue))
         : RefreshIndicator(
-            onRefresh: _loadData,
+            onRefresh: _refreshData,
             color: AppTheme.electricBlue,
             backgroundColor: AppTheme.surface,
             child: CustomScrollView(
