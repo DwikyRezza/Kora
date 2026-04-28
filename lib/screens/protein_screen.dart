@@ -9,7 +9,6 @@ import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
 import 'weekly_report_screen.dart';
-import '../main.dart' show AppSyncNotifier;
 
 class ProteinScreen extends StatefulWidget {
   const ProteinScreen({super.key});
@@ -30,16 +29,6 @@ class _ProteinScreenState extends State<ProteinScreen> {
   void initState() {
     super.initState();
     _loadData();
-    // Reload otomatis saat ada sync cloud dari background
-    AppSyncNotifier.addListener(_onCloudSync);
-  }
-
-  void _onCloudSync() => _loadData();
-
-  @override
-  void dispose() {
-    AppSyncNotifier.removeListener(_onCloudSync);
-    super.dispose();
   }
 
   /// Dipanggil saat pull-to-refresh — sync nutrisi dari Firestore dulu

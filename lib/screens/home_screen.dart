@@ -14,7 +14,6 @@ import 'dart:async';
 import '../utils/responsive.dart';
 import '../widgets/common_widgets.dart';
 import 'setting_screen.dart';
-import '../main.dart' show AppSyncNotifier;
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onGoToWorkout;
@@ -66,15 +65,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _checkWhistleblower();
     });
     _loadData();
-    // Reload otomatis saat ada sync cloud dari background (app dibuka kembali)
-    AppSyncNotifier.addListener(_onCloudSync);
   }
-
-  void _onCloudSync() => _loadData();
 
   @override
   void dispose() {
-    AppSyncNotifier.removeListener(_onCloudSync);
     _pulseController.dispose();
     _whistleTimer?.cancel();
     super.dispose();
