@@ -77,7 +77,7 @@ class _AiNutritionScreenState extends State<AiNutritionScreen> {
 
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.0-flash', // Model terbaru yang didukung oleh API key baru
+        model: 'gemini-2.5-flash', // Gemini 2.5 Flash (dikonfirmasi tersedia)
         apiKey: geminiApiKey, // Key dari secrets.dart
       );
 
@@ -126,8 +126,19 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
         _isAnalyzing = false;
       });
     } catch (e) {
+      String errorMsg;
+      final errStr = e.toString();
+      if (errStr.contains('quota') || errStr.contains('RESOURCE_EXHAUSTED') || errStr.contains('rate limit')) {
+        errorMsg = 'Kuota API Gemini habis. Silakan coba lagi beberapa saat, atau ganti API key di Google AI Studio (aistudio.google.com).';
+      } else if (errStr.contains('API_KEY_INVALID') || errStr.contains('invalid')) {
+        errorMsg = 'API key tidak valid. Periksa kembali key di lib/secrets.dart.';
+      } else if (errStr.contains('network') || errStr.contains('SocketException')) {
+        errorMsg = 'Tidak ada koneksi internet. Pastikan perangkat terhubung ke internet.';
+      } else {
+        errorMsg = 'Gagal menganalisis: $e';
+      }
       setState(() {
-        _errorMsg = 'Gagal menganalisis: $e';
+        _errorMsg = errorMsg;
         _isAnalyzing = false;
       });
     }
