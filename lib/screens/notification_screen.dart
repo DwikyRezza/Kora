@@ -1,0 +1,167 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
+import '../theme/app_theme.dart';
+import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class NotificationScreen extends StatefulWidget {
+  const NotificationScreen({super.key});
+
+  @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
+  List<Map<String, dynamic>> _notifications = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() => _isLoading = true);
+    final notifs = await NotificationService.getNotifications();
+    
+    // Tandai semua sudah dibaca saat layar ini dibuka
+    await NotificationService.markAllAsRead();
+    
+    setState(() {
+      _notifications = notifs;
+      _isLoading = false;
+    });
+  }
+
+  String _formatTimestamp(Timestamp? ts) {
+    if (ts == null) return '';
+    final now = DateTime.now();
+    final date = ts.toDate();
+    final diff = now.difference(date);
+    
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}j';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays}h';
+    } else {
+      return DateFormat('dd MMM').format(date);
+    }
+  }
+
+  Widget _buildAvatar(String? photoUrl, String type) {
+    if (type == 'follow' && photoUrl != null && photoUrl.isNotEmpty) {
+      if (photoUrl.startsWith('data:image')) {
+        return ClipOval(
+          child: Image.memory(base64Decode(photoUrl.split(',')[1]), fit: BoxFit.cover, width: 48, height: 48),
+        );
+      } else {
+        return ClipOval(
+          child: Image.network(photoUrl, fit: BoxFit.cover, width: 48, height: 48),
+        );
+      }
+    }
+    
+    // Default system/reminder icon
+    IconData iconData = Icons.notifications;
+    Color iconColor = const Color(0xFF2F2F2F);
+    Color bgColor = const Color(0xFFF5F5F5);
+    
+    if (type == 'follow') {
+      iconData = Icons.person_add;
+      iconColor = const Color(0xFF0099F9); // pending-blue
+      bgColor = const Color(0xFF0099F9).withOpacity(0.1);
+    } else if (type == 'reminder') {
+      iconData = Icons.alarm;
+      iconColor = const Color(0xFFFF5406); // ember-orange
+      bgColor = const Color(0xFFFF5406).withOpacity(0.1);
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: bgColor,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(iconData, color: iconColor),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.surface,
+      appBar: AppBar(
+        backgroundColor: AppTheme.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF2F2F2F)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Notifikasi',
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700),
+        ),
+      ),
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5406)))
+          : _notifications.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_off_outlined, size: 64, color: AppTheme.textSecondary.withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      Text('Belum ada notifikasi', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: _notifications.length,
+                  separatorBuilder: (context, index) => Divider(color: AppTheme.border, height: 1),
+                  itemBuilder: (context, index) {
+                    final notif = _notifications[index];
+                    final isRead = notif['isRead'] ?? true;
+                    
+                    return Container(
+                      color: isRead ? Colors.transparent : const Color(0xFFFF5406).withOpacity(0.05),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildAvatar(notif['relatedPhotoUrl'] as String?, notif['type'] as String? ?? ''),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  notif['title'] ?? 'Info Kora',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  notif['body'] ?? '',
+                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _formatTimestamp(notif['timestamp'] as Timestamp?),
+                                  style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}

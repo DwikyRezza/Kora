@@ -167,6 +167,7 @@ class _MainNavigationState extends State<MainNavigation>
       valueListenable: AppTheme.themeNotifier,
       builder: (context, _, __) {
         return Scaffold(
+          resizeToAvoidBottomInset: false,
           backgroundColor: AppTheme.background,
           body: IndexedStack(
             index: _currentIndex,
@@ -186,61 +187,8 @@ class _MainNavigationState extends State<MainNavigation>
               ProteinScreen(),
               WorkoutScreen(key: _workoutScreenKey),
               ScheduleScreen(),
-              SettingScreen(),
+              ProfileScreen(), // Diubah dari SettingScreen() menjadi ProfileScreen()
             ],
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    if (_currentIndex == 0) // only pulse when on Home
-                      BoxShadow(
-                        color: Colors.orangeAccent.withValues(alpha: 0.3 * _pulseController.value),
-                        blurRadius: 20 * _pulseController.value,
-                        spreadRadius: 10 * _pulseController.value,
-                      ),
-                  ],
-                ),
-                child: child,
-              );
-            },
-            child: GestureDetector(
-              onTap: _onFabTapped,
-              child: Container(
-                width: 72,
-                height: 72,
-                margin: const EdgeInsets.only(top: 30),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Colors.grey.shade300, Colors.white, Colors.grey.shade400],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))
-                  ],
-                ),
-                padding: const EdgeInsets.all(4), // ketebalan border metalik
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFFF5722), Color(0xFFD84315)], // Oranye-Merah menyala
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.fitness_center_rounded, color: Colors.white, size: 32),
-                  ),
-                ),
-              ),
-            ),
           ),
           bottomNavigationBar: _buildBottomNav(),
         );
@@ -249,31 +197,62 @@ class _MainNavigationState extends State<MainNavigation>
   }
 
   Widget _buildBottomNav() {
-    return BottomAppBar(
-      color: AppTheme.surface,
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 8,
-      child: SizedBox(
-        height: 65,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(0, Icons.home_rounded, 'Beranda'),
-            _buildNavItem(1, Icons.restaurant_menu_rounded, 'Nutrisi'),
-            // Ruang kosong untuk Notch FAB
-            SizedBox(
-              width: 72,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text('LATIHAN', style: TextStyle(color: AppTheme.textPrimary, fontSize: 10, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                ],
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface.withOpacity(0.95),
+        border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
+      ),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+            _buildNavItem(0, Icons.home_rounded, 'Home'),
+            _buildNavItem(1, Icons.restaurant_menu_rounded, 'Meal'),
+            
+            // Center Training Button
+            Expanded(
+              child: GestureDetector(
+                onTap: _onFabTapped,
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      margin: const EdgeInsets.only(bottom: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.textPrimary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.add_rounded, color: AppTheme.background, size: 24),
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'TRAINING',
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            _buildNavItem(3, Icons.calendar_month_rounded, 'Jadwal'),
-            _buildNavItem(4, Icons.settings_rounded, 'Pengaturan'),
+            
+            _buildNavItem(3, Icons.calendar_month_rounded, 'Plan'),
+            _buildNavItem(4, Icons.person_rounded, 'Profil'),
           ],
+        ),
         ),
       ),
     );
@@ -281,30 +260,67 @@ class _MainNavigationState extends State<MainNavigation>
 
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isActive = _currentIndex == index;
-    final color = isActive ? AppTheme.neonGreen : AppTheme.textMuted;
+    
+    if (isActive) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => _goToTab(index),
+          child: Align(
+            alignment: Alignment.center,
+            heightFactor: 1.0,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 60),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF5406), // ember-orange
+                borderRadius: BorderRadius.circular(26), // rounded-athlete
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: Colors.white, size: 24),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label.toUpperCase(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Expanded(
       child: GestureDetector(
         onTap: () => _goToTab(index),
         behavior: HitTestBehavior.opaque,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              decoration: BoxDecoration(
-                color: isActive ? color.withValues(alpha: 0.15) : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
+            Icon(icon, color: AppTheme.textMuted, size: 24),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ],

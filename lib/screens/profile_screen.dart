@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import '../services/auth_service.dart';
+import 'dart:io';
+import 'package:intl/intl.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import '../models/workout.dart';
 import '../services/profile_service.dart';
-import '../services/cloud_sync_service.dart';
-import '../services/storage_service.dart';
+import '../services/auth_service.dart';
+import '../services/social_service.dart';
+import '../services/database_helper.dart';
 import '../theme/app_theme.dart';
-import '../utils/responsive.dart';
-import 'landing_screen.dart';
+import 'setting_screen.dart';
+import 'edit_profile_screen.dart';
+import 'social_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final void Function(Future<bool> Function()?)? onRegisterLeaveGuard;
-  const ProfileScreen({super.key, this.onRegisterLeaveGuard});
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -23,920 +23,780 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
-  bool _isSaving = false;
-  bool _isUploadingPhoto = false; // loading saat upload foto ke Storage
-  bool _hasUnsavedChanges = false;
   Map<String, dynamic> _profile = {};
-  String? _localPhotoPath;  // path lokal sementara sebelum upload selesai
-  String? _uploadedPhotoUrl; // URL Firebase Storage setelah upload
+  int _followersCount = 0;
+  int _followingCount = 0;
+  int _activitiesCount = 0;
+  List<Workout> _activitiesList = [];
 
-  final _nameController = TextEditingController();
-  final _ageController = TextEditingController();
-  final _heightController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _budgetController = TextEditingController();
-  final _statusController = TextEditingController();
-  String _selectedGender = 'Laki-laki';
-  String _selectedGoal = 'Bulking';
+  // State untuk Fitur Sosial (Lokal/Simulasi)
+  final Map<int, int> _likesCount = {};
+  final Map<int, bool> _isLiked = {};
+  final Map<int, List<Map<String, String>>> _comments = {};
 
-  final List<String> _goals = ['Runner', 'Weightlifter', 'Diet', 'Bulking'];
-  final List<String> _genders = ['Laki-laki', 'Perempuan'];
+  // Constants for custom colors
+  static const Color primaryColor = Color(0xFFA83300);
 
   @override
   void initState() {
     super.initState();
-    _loadProfile();
-    // Pantau perubahan pada semua field teks
-    _nameController.addListener(_markUnsaved);
-    _ageController.addListener(_markUnsaved);
-    // Height & weight also trigger BMI card rebuild
-    _heightController.addListener(_onBodyDataChanged);
-    _weightController.addListener(_onBodyDataChanged);
-    _budgetController.addListener(_markUnsaved);
-    _statusController.addListener(_markUnsaved);
-    // Daftarkan guard pindah tab ke MainNavigation
-    widget.onRegisterLeaveGuard?.call(checkUnsavedChanges);
+    _loadData();
   }
 
-  void _markUnsaved() {
-    // Always call setState so BMI card and other computed UI elements re-render
-    setState(() => _hasUnsavedChanges = true);
-  }
-
-  void _onBodyDataChanged() {
-    // Triggers rebuild so BMI card updates in real-time
-    setState(() => _hasUnsavedChanges = true);
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
-    _heightController.dispose();
-    _weightController.dispose();
-    _budgetController.dispose();
-    _statusController.dispose();
-    // Hapus guard saat screen di-dispose
-    widget.onRegisterLeaveGuard?.call(null);
-    super.dispose();
-  }
-
-  Future<void> _loadProfile() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    try {
-      final profile = await ProfileService.getProfile();
-      print('[ProfileScreen] getProfile() returned photoUrl: ${profile["photoUrl"]}');
-
-      // Load foto base64 dari Firestore secara paralel
-      final photoDataUri = await StorageService.getProfilePhotoDataUri();
-
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _nameController.text = profile[ProfileService.keyName] ?? '';
-          _ageController.text = (profile[ProfileService.keyAge] ?? 0).toString();
-          _heightController.text =
-              (profile[ProfileService.keyHeight] ?? 0.0).toString();
-          _weightController.text =
-              (profile[ProfileService.keyWeight] ?? 0.0).toString();
-          _budgetController.text =
-              (profile[ProfileService.keyDailyBudget] ?? 50000).toString();
-          _statusController.text = profile[ProfileService.keyStatus] ?? '';
-          _selectedGender =
-              profile[ProfileService.keyGender] ?? 'Laki-laki';
-          _selectedGoal = profile[ProfileService.keyGoal] ?? 'Bulking';
-
-          // Prioritas foto yang di-load dari cloud:
-          // 1. Data URI dari Firestore (base64) — foto yang di-upload user
-          // 2. URL https dari profil (Google atau Firebase Storage)
-          if (photoDataUri != null) {
-            _uploadedPhotoUrl = photoDataUri; // data:image/jpeg;base64,...
-            _localPhotoPath = null;
-          } else {
-            final savedPhoto = profile['photoUrl'] as String?;
-            if (savedPhoto != null && savedPhoto.startsWith('https://')) {
-              _uploadedPhotoUrl = savedPhoto;
-              _localPhotoPath = null;
-            } else {
-              _uploadedPhotoUrl = null;
-              _localPhotoPath = null;
-            }
-          }
-
-          _isLoading = false;
-          _hasUnsavedChanges = false;
-        });
-      }
-    } catch (e) {
-      print('[ProfileScreen] ERROR load: $e');
-      if (mounted) setState(() => _isLoading = false);
+    
+    // Load profile
+    final profile = await ProfileService.getProfile();
+    
+    // Load social stats
+    final uid = AuthService.uid;
+    int followers = 0;
+    int following = 0;
+    if (uid != null && uid.isNotEmpty) {
+      followers = await SocialService.getFollowersCount(uid);
+      following = await SocialService.getFollowingCount(uid);
     }
+    
+    // Load activities
+    final allWorkouts = await DatabaseHelper().getAllWorkouts();
+    
+    if (!mounted) return;
+    setState(() {
+      _profile = profile;
+      _followersCount = followers;
+      _followingCount = following;
+      _activitiesList = allWorkouts;
+      _activitiesCount = allWorkouts.length;
+      _isLoading = false;
+    });
   }
 
-  Future<void> _pickPhoto() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 512,
-      maxHeight: 512,
-      imageQuality: 85,
-    );
-
-    if (pickedFile != null) {
-      // Simpan file lokal sementara untuk preview instan
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final savedPath = p.join(appDir.path, fileName);
-      await File(pickedFile.path).copy(savedPath);
-
-      setState(() {
-        _localPhotoPath = savedPath;   // tampilkan preview dulu
-        _uploadedPhotoUrl = null;      // URL belum ada sampai upload selesai
-        _isUploadingPhoto = true;
-      });
-
-      // Upload ke Firebase Storage
-      final url = await StorageService.uploadProfilePhoto(savedPath);
-
-      if (url != null) {
-        // ── Upload berhasil (foto tersimpan di Firestore sebagai base64) ──────
-        setState(() {
-          _uploadedPhotoUrl = url; // data:image/jpeg;base64,... → langsung tampil
-          _localPhotoPath = savedPath; // tetap ada untuk preview
-          _isUploadingPhoto = false;
-        });
-        // Simpan profil (foto sudah di Firestore terpisah, tidak perlu pass photoUrl)
-        await ProfileService.saveProfile(
-          name: _nameController.text.trim(),
-          age: int.tryParse(_ageController.text) ?? 0,
-          gender: _selectedGender,
-          height: double.tryParse(_heightController.text) ?? 0.0,
-          weight: double.tryParse(_weightController.text) ?? 0.0,
-          goal: _selectedGoal,
-          dailyBudget: int.tryParse(_budgetController.text) ?? 50000,
-          status: _statusController.text.trim(),
-          // photoUrl tidak dikirim — foto sudah tersimpan di Firestore via StorageService
-        );
-        CloudSyncService.backupToCloud().catchError((_) {});
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Foto profil berhasil disimpan! ✅'),
-              backgroundColor: AppTheme.neonGreen,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        }
-      } else {
-        // ── Upload cloud gagal — tetap tampil lokal, JANGAN hapus _localPhotoPath
-        setState(() {
-          _isUploadingPhoto = false;
-          // _localPhotoPath tetap = savedPath → foto tetap tampil di device ini
-        });
-        // Simpan data profil (tanpa photoUrl lokal — ProfileService akan pakai Google URL)
-        await ProfileService.saveProfile(
-          name: _nameController.text.trim(),
-          age: int.tryParse(_ageController.text) ?? 0,
-          gender: _selectedGender,
-          height: double.tryParse(_heightController.text) ?? 0.0,
-          weight: double.tryParse(_weightController.text) ?? 0.0,
-          goal: _selectedGoal,
-          dailyBudget: int.tryParse(_budgetController.text) ?? 50000,
-          status: _statusController.text.trim(),
-          // photoUrl tidak dikirim → ProfileService akan pakai Google URL
-        );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Foto tersimpan sementara. Akan sync ke cloud saat koneksi tersedia.'),
-              backgroundColor: AppTheme.accentOrange,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-        }
-      }
-    }
+  void _toggleLike(int index) {
+    setState(() {
+      final currentlyLiked = _isLiked[index] ?? false;
+      _isLiked[index] = !currentlyLiked;
+      final currentCount = _likesCount[index] ?? 0;
+      _likesCount[index] = currentlyLiked ? (currentCount > 0 ? currentCount - 1 : 0) : currentCount + 1;
+    });
   }
 
-  Future<void> _saveProfile() async {
-    setState(() => _isSaving = true);
-
-    try {
-      final name = _nameController.text.trim();
-      final age = int.tryParse(_ageController.text) ?? 0;
-      final height = double.tryParse(_heightController.text) ?? 0.0;
-      final weight = double.tryParse(_weightController.text) ?? 0.0;
-      final budget = int.tryParse(_budgetController.text) ?? 50000;
-
-      // Hanya kirim cloud URL ke ProfileService.
-      // Path lokal TIDAK dikirim — ProfileService akan pakai foto yang sudah ada di cloud.
-      final String? photoToSave = _uploadedPhotoUrl; // null jika belum upload ke cloud
-      print('[ProfileScreen] Saving profile with photoUrl: $photoToSave');
-
-      await ProfileService.saveProfile(
-        name: name,
-        age: age,
-        gender: _selectedGender,
-        height: height,
-        weight: weight,
-        goal: _selectedGoal,
-        dailyBudget: budget,
-        status: _statusController.text.trim(),
-        photoUrl: photoToSave,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Profil berhasil disimpan! ✅'),
-            backgroundColor: AppTheme.neonGreen,
-            behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-
-        // Simpan _localPhotoPath saat ini sebelum _loadProfile() menghapusnya
-        final currentLocalPath = _localPhotoPath;
-
-        await _loadProfile();
-        print('[ProfileScreen] Profil di-reload setelah disimpan. photoUrl = ${_profile["photoUrl"]}');
-
-        // Kembalikan _localPhotoPath jika _loadProfile tidak menemukan cloud URL
-        // (artinya Firebase Storage belum tersedia, foto lokal tetap ditampilkan)
-        if (mounted && _uploadedPhotoUrl == null && currentLocalPath != null) {
-          setState(() {
-            _localPhotoPath = currentLocalPath;
-          });
-        }
-
-        // Auto-backup profil ke Firestore
-        CloudSyncService.backupToCloud().catchError((_) {});
-      }
-    } catch (e) {
-      print('[ProfileScreen] ERROR simpan: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal menyimpan: $e'),
-            backgroundColor: AppTheme.accentRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() {
-        _isSaving = false;
-        _hasUnsavedChanges = false;
-      });
-    }
-  }
-
-  /// Periksa apakah ada perubahan belum disimpan, tampilkan dialog jika ada.
-  /// Return true = boleh pindah, false = user pilih tetap di sini.
-  Future<bool> checkUnsavedChanges() async {
-    if (!_hasUnsavedChanges) return true;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: AppTheme.accentRed, size: 24),
-            const SizedBox(width: 8),
-            Text('Perubahan Belum Disimpan',
-                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
-          ],
-        ),
-        content: Text(
-          'Kamu punya perubahan profil yang belum tersimpan.\nApakah ingin disimpan sebelum pindah tab?',
-          style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false), // Batal pindah
-            child: Text('Kembali & Simpan', style: TextStyle(color: AppTheme.neonGreen, fontWeight: FontWeight.w600)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true), // Tetap pindah, buang perubahan
-            child: Text('Abaikan', style: TextStyle(color: AppTheme.textMuted)),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
-
-  Future<void> _handleLogout() async {
+  void _deleteWorkout(Workout workout) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Keluar dari Akun?',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Text(
-          'Anda akan keluar dari akun Google. Data profil tetap tersimpan.',
-          style: TextStyle(color: AppTheme.textSecondary),
-        ),
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Aktivitas?'),
+        content: const Text('Tindakan ini tidak dapat dibatalkan.'),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accentRed,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child:
-                const Text('Keluar', style: TextStyle(color: Colors.white)),
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-
-    if (confirm == true) {
-      await AuthService.signOut();
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LandingScreen()),
-          (route) => false,
-        );
-      }
+    if (confirm == true && workout.id != null) {
+      await DatabaseHelper().deleteWorkout(workout.id!);
+      _loadData();
     }
+  }
+
+  void _shareWorkout(Workout workout) {
+    final title = workout.title ?? workout.typeLabel;
+    final text = 'Saya baru saja menyelesaikan $title selama ${workout.duration.toStringAsFixed(0)} menit dan membakar ${workout.caloriesBurned} kalori! #AthleteSync';
+    Share.share(text);
+  }
+
+  void _showComments(int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CommentBottomSheet(
+        comments: _comments[index] ?? [],
+        onCommentAdded: (text) {
+          setState(() {
+            if (_comments[index] == null) _comments[index] = [];
+            _comments[index]!.add({
+              'name': _profile[ProfileService.keyName] ?? 'Atlet Elit',
+              'text': text,
+              'time': 'Baru saja',
+            });
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildMap(String polylineStr) {
+    try {
+      final List<dynamic> decoded = jsonDecode(polylineStr);
+      if (decoded.isEmpty) return Container(color: Colors.grey[200]);
+      final List<LatLng> points = decoded.map((p) => LatLng(p[0] as double, p[1] as double)).toList();
+      
+      double minLat = points.first.latitude;
+      double maxLat = points.first.latitude;
+      double minLng = points.first.longitude;
+      double maxLng = points.first.longitude;
+      for (var p in points) {
+        if (p.latitude < minLat) minLat = p.latitude;
+        if (p.latitude > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+      
+      return GoogleMap(
+        initialCameraPosition: CameraPosition(target: points.first, zoom: 14),
+        liteModeEnabled: true,
+        zoomControlsEnabled: false,
+        myLocationButtonEnabled: false,
+        polylines: {
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: points,
+            color: const Color(0xFFFF5406),
+            width: 4,
+          )
+        },
+        onMapCreated: (controller) {
+          Future.delayed(const Duration(milliseconds: 200), () {
+            controller.animateCamera(CameraUpdate.newLatLngBounds(
+              LatLngBounds(
+                southwest: LatLng(minLat, minLng),
+                northeast: LatLng(maxLat, maxLng),
+              ),
+              20.0,
+            ));
+          });
+        },
+      );
+    } catch (e) {
+      return Container(color: Colors.grey[200]);
+    }
+  }
+
+  double _calculateBMI() {
+    final height = (_profile[ProfileService.keyHeight] as num?)?.toDouble() ?? 0.0;
+    final weight = (_profile[ProfileService.keyWeight] as num?)?.toDouble() ?? 0.0;
+    if (height > 0 && weight > 0) {
+      final h = height / 100;
+      return weight / (h * h);
+    }
+    return 0.0;
+  }
+
+  void _goToEditProfile() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+    );
+    if (result == true) {
+      _loadData(); // Reload if updated
+    }
+  }
+
+  void _goToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingScreen()),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: const Center(child: CircularProgressIndicator(color: primaryColor)),
+      );
+    }
+
+    final username = _profile[ProfileService.keyUsername] ?? '';
+    final displayName = _profile[ProfileService.keyName] ?? 'Atlet Elit';
+    final bio = _profile[ProfileService.keyStatus] ?? '';
+    final goal = _profile[ProfileService.keyGoal] ?? 'Bulking';
+    final photoUrl = _profile['photoUrl'] as String?;
+    final bmi = _calculateBMI();
+    
+    // BMI Status string formatter
+    String bmiStr = bmi > 0 ? bmi.toStringAsFixed(1) : '-';
+    String bmiStatus = ProfileService.getBMIStatus(bmi);
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Profil Saya'),
-        backgroundColor: AppTheme.background,
+        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
+        automaticallyImplyLeading: false, // since it's a bottom nav page
+        title: Row(
+          children: [
+            const Text(
+              'Profile',
+              style: TextStyle(
+                color: primaryColor,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '@$username',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout_rounded, color: AppTheme.accentRed),
-            tooltip: 'Keluar',
-            onPressed: _handleLogout,
+            icon: Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
+            onPressed: _goToSettings,
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: AppTheme.neonGreen))
-          : SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(context.spaceLG, 8, context.spaceLG, context.space2XL),
-              child: Column(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              
+              // Profile Header Section
+              Row(
                 children: [
-                  // Profile Photo
-                  _buildProfilePhoto(),
-                  const SizedBox(height: 8),
-
-                  // Email
-                  if (AuthService.isLoggedIn)
-                    Text(
-                      AuthService.email,
-                      style: TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 13,
-                      ),
+                  // Photo
+                  GestureDetector(
+                    onTap: _goToEditProfile,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Container(
+                          width: 96,
+                          height: 96,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFF5F5F5), width: 4),
+                          ),
+                          child: ClipOval(
+                            child: (photoUrl != null && photoUrl.isNotEmpty)
+                                ? (photoUrl.startsWith('data:image')
+                                    ? Image.memory(base64Decode(photoUrl.split(',')[1]), fit: BoxFit.cover)
+                                    : Image.network(photoUrl, fit: BoxFit.cover))
+                                : Container(
+                                    color: const Color(0xFFF5F5F5),
+                                    child: const Icon(Icons.person, size: 48, color: Colors.grey),
+                                  ),
+                          ),
+                        ),
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF5406),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(Icons.photo_camera, color: Colors.white, size: 14),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 24),
-
-                  // BMI Card
-                  _buildBMICard(),
-                  const SizedBox(height: 24),
-
-                  // Form Fields
-                  _buildSectionTitle('Informasi Pribadi'),
-                  const SizedBox(height: 12),
-                  _buildTextField(
-                    controller: _nameController,
-                    label: 'Nama / Username',
-                    icon: Icons.person_rounded,
-                    type: TextInputType.name,
                   ),
-                  const SizedBox(height: 12),
-                  _buildTextField(
-                    controller: _statusController,
-                    label: 'Status (Semester / Kampus)',
-                    icon: Icons.school_rounded,
-                    type: TextInputType.text,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _ageController,
-                          label: 'Usia',
-                          icon: Icons.cake_rounded,
-                          type: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildDropdown(
-                          label: 'Gender',
-                          icon: Icons.wc_rounded,
-                          value: _selectedGender,
-                          items: _genders,
-                          onChanged: (v) => setState(() {
-                              _selectedGender = v!;
-                              _hasUnsavedChanges = true;
-                            }),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildSectionTitle('Data Tubuh'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _heightController,
-                          label: 'Tinggi (cm)',
-                          icon: Icons.height_rounded,
-                          type: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _weightController,
-                          label: 'Berat (kg)',
-                          icon: Icons.monitor_weight_rounded,
-                          type: TextInputType.number,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildSectionTitle('Goal Latihan'),
-                  const SizedBox(height: 12),
-                  _buildGoalSelector(),
-                  const SizedBox(height: 24),
                   
-                  _buildSectionTitle('Budget Harian'),
-                  const SizedBox(height: 12),
-                  _buildTextField(
-                    controller: _budgetController,
-                    label: 'Estimasi Budget Makanan (Rp)',
-                    icon: Icons.account_balance_wallet_rounded,
-                    type: TextInputType.number,
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Save Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: context.buttonHeight,
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _saveProfile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.neonGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(context.radiusMD),
+                  const SizedBox(width: 16),
+                  
+                  // Stats
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final username = _profile[ProfileService.keyUsername] ?? _profile[ProfileService.keyName] ?? 'user';
+                              await Navigator.push(context, MaterialPageRoute(builder: (_) => SocialScreen(initialTab: 'following', username: username)));
+                              _loadData();
+                            },
+                            child: _buildStatColumn(_followingCount.toString(), 'Mengikuti'),
+                          ),
                         ),
-                        elevation: 0,
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.black,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Text(
-                              'Simpan Perubahan',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: context.fontMD,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                    ),
-                  ),
-                  SizedBox(height: context.space2XL),
-
-                  // Logout Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: context.buttonHeight,
-                    child: OutlinedButton.icon(
-                      onPressed: _handleLogout,
-                      icon: Icon(Icons.logout_rounded,
-                          color: AppTheme.accentRed, size: context.iconSM),
-                      label: Text(
-                        'Keluar dari Akun',
-                        style: TextStyle(
-                          color: AppTheme.accentRed,
-                          fontSize: context.fontBase,
-                          fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final username = _profile[ProfileService.keyUsername] ?? _profile[ProfileService.keyName] ?? 'user';
+                              await Navigator.push(context, MaterialPageRoute(builder: (_) => SocialScreen(initialTab: 'followers', username: username)));
+                              _loadData();
+                            },
+                            child: _buildStatColumn(_followersCount.toString(), 'Pengikut'),
+                          ),
                         ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                            color: AppTheme.accentRed.withOpacity(0.4)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(context.radiusMD),
-                        ),
-                      ),
+                        Expanded(child: _buildStatColumn(_activitiesCount.toString(), 'Aktivitas')),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-    );
-  }
-
-  Widget _buildProfilePhoto() {
-    // Prioritas foto:
-    // 1. File lokal (_localPhotoPath) — preview instan setelah user pilih foto
-    // 2. _uploadedPhotoUrl: bisa berupa:
-    //    a. data:image/jpeg;base64,... (foto dari Firestore)
-    //    b. https://... (Firebase Storage atau Google)
-    // 3. URL Google Sign-In — sama di semua device
-    // 4. Default avatar
-    final hasLocalPhoto = _localPhotoPath != null && File(_localPhotoPath!).existsSync();
-    final hasCloudPhoto = _uploadedPhotoUrl != null;
-    final googlePhotoUrl = AuthService.photoUrl;
-
-    Widget photoWidget;
-    if (hasLocalPhoto) {
-      photoWidget = Image.file(
-        File(_localPhotoPath!),
-        width: 94, height: 94, fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _googleOrDefaultAvatar(googlePhotoUrl),
-      );
-    } else if (hasCloudPhoto) {
-      if (_uploadedPhotoUrl!.startsWith('data:image')) {
-        // Base64 data URI — decode dan tampilkan sebagai bytes
-        final base64Str = _uploadedPhotoUrl!.split(',').last;
-        try {
-          final bytes = base64Decode(base64Str);
-          photoWidget = Image.memory(
-            bytes,
-            width: 94, height: 94, fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _googleOrDefaultAvatar(googlePhotoUrl),
-          );
-        } catch (_) {
-          photoWidget = _googleOrDefaultAvatar(googlePhotoUrl);
-        }
-      } else {
-        // URL https (Firebase Storage atau Google)
-        photoWidget = Image.network(
-          _uploadedPhotoUrl!,
-          width: 94, height: 94, fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _googleOrDefaultAvatar(googlePhotoUrl),
-        );
-      }
-    } else if (googlePhotoUrl != null && googlePhotoUrl.startsWith('http')) {
-      photoWidget = Image.network(
-        googlePhotoUrl,
-        width: 94, height: 94, fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _defaultAvatar(),
-      );
-    } else {
-      photoWidget = _defaultAvatar();
-    }
-
-    return GestureDetector(
-      onTap: _isUploadingPhoto ? null : _pickPhoto,
-      child: Stack(
-        children: [
-          Container(
-            width: context.avatarLG,
-            height: context.avatarLG,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: AppTheme.neonGreenGrad,
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.neonGreen.withOpacity(0.25),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
+              
+              const SizedBox(height: 20),
+              
+              // Bio Section
+              Text(
+                displayName,
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
-            ),
-            padding: const EdgeInsets.all(3),
-            child: ClipOval(
-              child: photoWidget,
-            ),
-          ),
-          // Overlay loading saat upload berlangsung
-          if (_isUploadingPhoto)
-            Positioned.fill(
-              child: Container(
+              ),
+              const SizedBox(height: 4),
+              Text(
+                bio.isNotEmpty ? '$bio • $goal Goal' : '$goal Goal',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // BMI Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.black54,
+                  color: const Color(0xFFE6F7EC),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF00B33F).withOpacity(0.2)),
                 ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.monitor_weight_rounded, color: Color(0xFF00B33F), size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'BMI $bmiStr $bmiStatus',
+                      style: const TextStyle(
+                        color: Color(0xFF00B33F),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Action Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _goToEditProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2F2F2F), // Graphite
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Edit Profil',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (!_isUploadingPhoto)
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppTheme.neonGreen,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.background, width: 3),
-                ),
-                child: const Icon(
-                  Icons.camera_alt_rounded,
-                  color: Colors.black,
-                  size: 16,
-                ),
-              ),
-            ),
-        ],
+              
+              const SizedBox(height: 48),
+              
+              // Feed Content
+              _buildListFeed(),
+              
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _defaultAvatar() {
-    final name = _nameController.text.isNotEmpty
-        ? _nameController.text[0].toUpperCase()
-        : (AuthService.displayName.isNotEmpty
-            ? AuthService.displayName[0].toUpperCase()
-            : 'A');
-    return Container(
-      width: 94,
-      height: 94,
-      color: AppTheme.surfaceVariant,
-      child: Center(
-        child: Text(
-          name,
+  Widget _buildStatColumn(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
           style: TextStyle(
             color: AppTheme.textPrimary,
-            fontSize: 36,
-            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
           ),
         ),
-      ),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 
-  /// Coba tampilkan foto Google, jika gagal fallback ke inisial
-  Widget _googleOrDefaultAvatar(String? googleUrl) {
-    if (googleUrl != null && googleUrl.startsWith('http')) {
-      return Image.network(
-        googleUrl,
-        width: 94,
-        height: 94,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _defaultAvatar(),
+
+
+  Widget _buildListFeed() {
+    if (_activitiesList.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Text('Belum ada aktivitas olahraga.', style: TextStyle(color: Colors.grey)),
+        ),
       );
     }
-    return _defaultAvatar();
-  }
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _activitiesList.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final workout = _activitiesList[index];
+        final hasPhoto = workout.photoPath != null && workout.photoPath!.isNotEmpty;
+        final dateStr = DateFormat('dd MMM yyyy • HH.mm').format(workout.date);
 
-  Widget _buildBMICard() {
-    final weight = double.tryParse(_weightController.text) ?? 0;
-    final height = double.tryParse(_heightController.text) ?? 0;
-    if (weight <= 0 || height <= 0) {
-      return const SizedBox.shrink();
-    }
+        final typeLower = workout.type.toLowerCase();
+        String defaultImage;
+        if (typeLower == 'running' || typeLower == 'lari') {
+          // Visual running track map / lari
+          defaultImage = 'https://images.unsplash.com/photo-1552674605-15c2145efa38?q=80&w=800&auto=format&fit=crop'; 
+        } else if (typeLower == 'weightlifting' || typeLower == 'beban' || typeLower == 'gym') {
+          // Visual angkat beban
+          defaultImage = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop';
+        } else if (typeLower == 'basketball' || typeLower == 'basket') {
+          // Visual basket
+          defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
+        } else {
+          defaultImage = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop';
+        }
 
-    final bmi = weight / ((height / 100) * (height / 100));
-    final status = ProfileService.getBMIStatus(bmi);
-    final statusColor = bmi < 18.5
-        ? AppTheme.electricBlue
-        : (bmi <= 24.9
-            ? AppTheme.neonGreen
-            : (bmi <= 29.9 ? AppTheme.accentOrange : AppTheme.accentRed));
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.monitor_heart_rounded,
-                color: statusColor, size: 24),
+        final title = workout.title ?? workout.typeLabel;
+        final profilePhoto = _profile?['photoUrl'] as String?;
+        final profileName = _profile?['name'] ?? 'User';
+        
+        return Container(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'BMI Anda',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+          padding: const EdgeInsets.only(top: 24, bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header User
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: (profilePhoto != null && profilePhoto.isNotEmpty)
+                          ? (profilePhoto.startsWith('data:image')
+                              ? Image.memory(base64Decode(profilePhoto.split(',')[1]), fit: BoxFit.cover)
+                              : Image.network(profilePhoto, fit: BoxFit.cover))
+                          : const Icon(Icons.person, color: Colors.grey),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profileName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600, 
+                            fontSize: 16, 
+                            color: AppTheme.textPrimary
+                          ),
+                        ),
+                        Text(
+                          dateStr,
+                          style: TextStyle(
+                            color: AppTheme.textSecondary, 
+                            fontSize: 12
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert, color: AppTheme.textSecondary),
+                    onSelected: (value) {
+                      if (value == 'share') _shareWorkout(workout);
+                      if (value == 'delete') _deleteWorkout(workout);
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'share', child: Text('Bagikan')),
+                      const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Judul Aktivitas
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700, 
+                  fontSize: 22, 
+                  color: AppTheme.textPrimary
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Baris Statistik
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (workout.type == 'running') ...[
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Jarak', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                        Text('${workout.distance?.toStringAsFixed(2) ?? "0.0"} km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Pace', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                        Text('${(workout.duration / (workout.distance == null || workout.distance == 0 ? 1 : workout.distance!)).toStringAsFixed(2)} /km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Waktu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                        Text('${workout.duration.toStringAsFixed(0)}m', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                  ] else ...[
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Durasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                        Text('${workout.duration.toStringAsFixed(0)} mnt', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Kalori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                        Text('${workout.caloriesBurned} kkal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      ],
+                    ),
+
+                  ],
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              if (typeLower == 'running' || typeLower == 'lari' || hasPhoto) ...[
+                // Gambar/Visual Aktivitas
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(26),
+                    color: const Color(0xFFF5F5F5),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: AspectRatio(
+                    aspectRatio: 4 / 3,
+                    child: hasPhoto 
+                      ? Image.file(File(workout.photoPath!), fit: BoxFit.cover)
+                      : ((typeLower == 'running' || typeLower == 'lari') && workout.polyline != null && workout.polyline!.isNotEmpty)
+                          ? _buildMap(workout.polyline!)
+                          : Image.network(defaultImage, fit: BoxFit.cover),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  '${bmi.toStringAsFixed(1)} - $status',
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                const SizedBox(height: 16),
+              ],
+              
+              // Aksi (Like & Komen)
+              Container(
+                padding: const EdgeInsets.only(top: 8),
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
+                ),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () => _toggleLike(index),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              (_isLiked[index] ?? false) ? Icons.favorite : Icons.favorite_border, 
+                              color: (_isLiked[index] ?? false) ? Colors.red : AppTheme.textSecondary, 
+                              size: 24
+                            ),
+                            const SizedBox(width: 8),
+                            Text('${_likesCount[index] ?? 0}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    InkWell(
+                      onTap: () => _showComments(index),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.chat_bubble_outline, color: AppTheme.textSecondary, size: 24),
+                            const SizedBox(width: 8),
+                            Text('${_comments[index]?.length ?? 0}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CommentBottomSheet extends StatefulWidget {
+  final List<Map<String, String>> comments;
+  final Function(String) onCommentAdded;
+  
+  const _CommentBottomSheet({required this.comments, required this.onCommentAdded});
+
+  @override
+  State<_CommentBottomSheet> createState() => _CommentBottomSheetState();
+}
+
+class _CommentBottomSheetState extends State<_CommentBottomSheet> {
+  final _controller = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: const EdgeInsets.only(top: kToolbarHeight),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      child: Column(
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const Text('Komentar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Divider(),
+          Expanded(
+            child: widget.comments.isEmpty
+                ? const Center(child: Text('Belum ada komentar. Jadilah yang pertama!', style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: widget.comments.length,
+                    itemBuilder: (context, i) {
+                      final c = widget.comments[i];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(radius: 16, backgroundColor: Colors.grey[300], child: const Icon(Icons.person, size: 20, color: Colors.grey)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(c['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      Text(c['time']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(c['text']!),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, bottomInset + 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: 'Tambahkan komentar...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Color(0xFFA83300)),
+                  onPressed: () {
+                    if (_controller.text.trim().isNotEmpty) {
+                      widget.onCommentAdded(_controller.text.trim());
+                      _controller.clear();
+                    }
+                  },
                 ),
               ],
             ),
-          ),
-          Text(
-            status == 'Ideal' ? '✅' : '⚠️',
-            style: const TextStyle(fontSize: 28),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: TextStyle(
-          color: AppTheme.textPrimary,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required TextInputType type,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: type,
-        style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
-          prefixIcon: Icon(icon, color: AppTheme.neonGreen, size: 20),
-          border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required IconData icon,
-    required String value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: DropdownButtonFormField<String>(
-        isExpanded: true,
-        value: value,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
-          prefixIcon: Icon(icon, color: AppTheme.neonGreen, size: 20),
-          border: InputBorder.none,
-        ),
-        dropdownColor: AppTheme.surface,
-        style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-        items: items
-            .map((g) => DropdownMenuItem(value: g, child: Text(g)))
-            .toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
-
-  Widget _buildGoalSelector() {
-    final goalData = {
-      'Runner':      {'emoji': '🏃', 'icon': Icons.directions_run_rounded},
-      'Weightlifter':{'emoji': '🏋️', 'icon': Icons.fitness_center_rounded},
-      'Diet':        {'emoji': '🥗', 'icon': Icons.eco_rounded},
-      'Bulking':     {'emoji': '💪', 'icon': Icons.show_chart_rounded},
-    };
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _goals.map((goal) {
-        final isSelected = _selectedGoal == goal;
-        final data = goalData[goal]!;
-        return GestureDetector(
-          onTap: () => setState(() {
-            _selectedGoal = goal;
-            _hasUnsavedChanges = true;
-          }),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppTheme.neonGreen.withOpacity(0.15)
-                  : AppTheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isSelected ? AppTheme.neonGreen : AppTheme.border,
-                width: isSelected ? 2 : 1,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: AppTheme.neonGreen.withOpacity(0.25),
-                        blurRadius: 12,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(data['emoji'] as String, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 8),
-                Text(
-                  goal,
-                  style: TextStyle(
-                    color: isSelected
-                        ? AppTheme.neonGreen
-                        : AppTheme.textSecondary,
-                    fontSize: 13,
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                if (isSelected) ...[
-                  const SizedBox(width: 6),
-                  Icon(Icons.check_circle_rounded,
-                      color: AppTheme.neonGreen, size: 14),
-                ],
-              ],
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }

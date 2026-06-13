@@ -9,6 +9,7 @@ import '../models/workout.dart';
 import '../services/database_helper.dart';
 import '../services/location_service.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/social_service.dart';
 import '../utils/responsive.dart';
 import 'strava_import_screen.dart';
 
@@ -644,6 +645,9 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     // Auto-backup ke Firestore setelah sesi selesai disimpan
     CloudSyncService.backupToCloud().catchError((_) {});
 
+    // Publish ke Social Feed
+    SocialService.publishWorkoutToFeed(workout.toMap()).catchError((_) {});
+
     if (mounted) {
       _showSnackBar('Sesi lari berhasil disimpan! ');
       Navigator.pop(context);
@@ -697,7 +701,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
         if (!didPop) _handleBackPress();
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.white,
         body:
             _showPauseStopScreen ? _buildPauseStopScreen() : _buildMainScreen(),
       ),
@@ -707,7 +711,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   // ─── PAUSE/STOP SCREEN ────────────────────────────────────────────────
   Widget _buildPauseStopScreen() {
     return Container(
-      color: const Color(0xFF111111),
+      color: Colors.white,
       child: SafeArea(
         child: Column(
           children: [
@@ -716,17 +720,17 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
               margin: const EdgeInsets.symmetric(horizontal: 24),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
-                borderRadius: BorderRadius.circular(20),
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(26),
               ),
               child: Column(
                 children: [
                   const Text(
                     'Sesi Lari Dijeda',
                     style: TextStyle(
-                      color: Color(0xFFFFD12B),
+                      color: Color(0xFF2F2F2F),
                       fontSize: 20,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -754,24 +758,24 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
             ),
             const Spacer(),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: GestureDetector(
                 onTap: _isSaving ? null : _resumeRun,
                 child: Container(
                   height: 64,
                   decoration: BoxDecoration(
-                    color: _isSaving ? Colors.grey[800] : const Color(0xFFFC5200),
-                    borderRadius: BorderRadius.circular(32),
+                    color: _isSaving ? const Color(0xFFF5F5F5) : const Color(0xFFFF5406),
+                    borderRadius: BorderRadius.circular(26),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.play_arrow, color: _isSaving ? Colors.grey[500] : Colors.white, size: 32),
+                      Icon(Icons.play_arrow, color: _isSaving ? Colors.grey : Colors.white, size: 32),
                       const SizedBox(width: 8),
                       Text('Resume',
                           style: TextStyle(
-                              color: _isSaving ? Colors.grey[500] : Colors.white,
-                              fontSize: 22,
+                              color: _isSaving ? Colors.grey : Colors.white,
+                              fontSize: 20,
                               fontWeight: FontWeight.w900)),
                     ],
                   ),
@@ -780,30 +784,30 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
             ),
             const SizedBox(height: 16),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: GestureDetector(
                 onTap: _isSaving ? null : _stopRun,
                 child: Container(
                   height: 64,
                   decoration: BoxDecoration(
-                    color: _isSaving ? Colors.grey : Colors.white,
-                    borderRadius: BorderRadius.circular(32),
+                    color: _isSaving ? const Color(0xFFF5F5F5) : const Color(0xFF00A9DD),
+                    borderRadius: BorderRadius.circular(26),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: _isSaving
                         ? const [
-                            SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 3)),
+                            SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.grey, strokeWidth: 3)),
                             SizedBox(width: 12),
-                            Text('Menyimpan...', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w900)),
+                            Text('Menyimpan...', style: TextStyle(color: Colors.grey, fontSize: 20, fontWeight: FontWeight.w900)),
                           ]
                         : const [
-                            Icon(Icons.stop, color: Colors.black, size: 32),
+                            Icon(Icons.stop, color: Colors.white, size: 32),
                             SizedBox(width: 8),
                             Text('Finish & Simpan',
                                 style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 22,
+                                    color: Colors.white,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w900)),
                           ],
                   ),
@@ -822,13 +826,13 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       children: [
         Text(value,
             style: const TextStyle(
-                color: Colors.white,
+                color: Color(0xFF2F2F2F),
                 fontSize: 24,
                 fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
         Text(label,
-            style: TextStyle(
-                color: Colors.grey[500],
+            style: const TextStyle(
+                color: Colors.grey,
                 fontSize: 12,
                 fontWeight: FontWeight.w600)),
       ],
@@ -887,7 +891,6 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
             zoomControlsEnabled: false,
             compassEnabled: false,
             mapToolbarEnabled: false,
-            style: _mapStyleDark,
             polylines: polylines,
             markers: markers,
             mapType: MapType.normal,
@@ -1028,28 +1031,28 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
               if (!_isRunning && _hasStarted)
                 Container(
                   width: double.infinity,
-                  color: const Color(0xFFFFD12B),
+                  color: const Color(0xFFF5F5F5),
                   padding: EdgeInsets.symmetric(vertical: context.spaceMD),
                   child: Center(
                     child: Text('Dijeda',
                         style: TextStyle(
-                            color: Colors.black,
+                            color: Colors.grey,
                             fontWeight: FontWeight.w900,
                             fontSize: context.fontLG)),
                   ),
                 ),
               Container(
-                color: const Color(0xFF191919),
+                color: Colors.white,
                 padding: EdgeInsets.fromLTRB(context.spaceLG, context.space2XL, context.spaceLG, context.spaceLG),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _statItem('Time', _formattedTime),
+                        _statItem('Waktu', _formattedTime),
                         _statItemPace('Avg pace (/km)', _pace),
                         _statItem(
-                            'Distance (km)', _distanceKm.toStringAsFixed(2)),
+                            'Jarak (km)', _distanceKm.toStringAsFixed(2)),
                       ],
                     ),
                     SizedBox(height: context.spaceLG),
@@ -1057,7 +1060,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       width: 32,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[700],
+                        color: const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1065,7 +1068,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                 ),
               ),
               Container(
-                color: Colors.black,
+                color: Colors.white,
                 padding: EdgeInsets.fromLTRB(context.spaceLG, context.spaceMD, context.spaceLG, context.spaceXL),
                 child: Row(
                   children: [
@@ -1073,25 +1076,25 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       Expanded(
                           child: _actionButton(
                         label: 'Resume',
-                        color: _isSaving ? Colors.grey[800]! : const Color(0xFFFC5200),
+                        color: _isSaving ? const Color(0xFFF5F5F5) : const Color(0xFFFF5406),
                         icon: Icons.play_arrow,
-                        textColor: _isSaving ? Colors.grey[500]! : Colors.white,
+                        textColor: _isSaving ? Colors.grey : Colors.white,
                         onTap: _isSaving ? () {} : _resumeRun,
                       )),
                       const SizedBox(width: 16),
                       Expanded(
                           child: _actionButton(
                         label: _isSaving ? 'Menyimpan...' : 'Finish',
-                        color: _isSaving ? Colors.grey : Colors.white,
+                        color: _isSaving ? const Color(0xFFF5F5F5) : const Color(0xFF00A9DD),
                         icon: _isSaving ? Icons.hourglass_empty : Icons.stop,
-                        textColor: Colors.black,
+                        textColor: _isSaving ? Colors.grey : Colors.white,
                         onTap: _isSaving ? () {} : _stopRun,
                       )),
                     ] else if (_isRunning) ...[
                       Expanded(
                           child: _actionButton(
                         label: 'Pause',
-                        color: const Color(0xFFFC5200),
+                        color: const Color(0xFFFF5406),
                         icon: Icons.pause,
                         textColor: Colors.white,
                         onTap: _pauseRun,
@@ -1101,12 +1104,12 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                           child: _actionButton(
                         label: _currentLocation == null
                             ? 'Mencari GPS...'
-                            : 'Start',
+                            : 'Mulai Lari',
                         color: _currentLocation == null
-                            ? Colors.grey
-                            : const Color(0xFFFC5200),
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFFFF5406),
                         icon: Icons.play_arrow,
-                        textColor: Colors.white,
+                        textColor: _currentLocation == null ? Colors.grey : Colors.white,
                         onTap: _currentLocation == null ? () {} : _startRun,
                       )),
                     ],
@@ -1138,12 +1141,12 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       children: [
         Text(value,
             style: TextStyle(
-                color: Colors.white,
+                color: const Color(0xFF2F2F2F),
                 fontSize: context.fontXL,
                 fontWeight: FontWeight.w900)),
         Text(label,
             style: TextStyle(
-                color: Colors.grey[500],
+                color: Colors.grey,
                 fontSize: context.fontXS,
                 fontWeight: FontWeight.w600)),
       ],
@@ -1156,18 +1159,18 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.more_horiz, color: Colors.white, size: context.iconSM),
+            Icon(Icons.speed, color: Colors.grey, size: context.iconSM),
             const SizedBox(width: 4),
             Text(value,
                 style: TextStyle(
-                    color: Colors.white,
+                    color: const Color(0xFF2F2F2F),
                     fontSize: context.fontXL,
                     fontWeight: FontWeight.w900)),
           ],
         ),
         Text(label,
             style: TextStyle(
-                color: Colors.grey[500],
+                color: Colors.grey,
                 fontSize: context.fontXS,
                 fontWeight: FontWeight.w600)),
       ],
@@ -1184,10 +1187,10 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: context.buttonHeight,
+        height: 60,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(context.buttonHeight / 2),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

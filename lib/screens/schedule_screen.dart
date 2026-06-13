@@ -8,7 +8,6 @@ import '../services/meal_recommender_service.dart';
 import '../services/profile_service.dart';
 import '../services/settings_service.dart';
 import '../services/cloud_sync_service.dart';
-import '../theme/app_theme.dart';
 import 'weekly_report_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -29,11 +28,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _loadEvents();
   }
 
-  /// Dipanggil saat pull-to-refresh — sync jadwal dari Firestore dulu
   Future<void> _refreshEvents() async {
     try {
       await CloudSyncService.restoreAllFromCloud();
-    } catch (_) {} // silent fail jika offline
+    } catch (_) {} 
     await _loadEvents();
   }
 
@@ -52,27 +50,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final act = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-              backgroundColor: AppTheme.surface,
-              title: Text('Hapus Jadwal?',
-                  style: TextStyle(color: AppTheme.textPrimary)),
-              content: Text('Apakah Anda yakin ingin menghapus jadwal ini?',
-                  style: TextStyle(color: AppTheme.textMuted)),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+              title: const Text('Hapus Jadwal?', style: TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
+              content: const Text('Apakah Anda yakin ingin menghapus jadwal ini?', style: TextStyle(color: Colors.grey)),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-                    child: Text('Batal',
-                        style: TextStyle(color: AppTheme.textSecondary))),
+                    child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: Text('Hapus',
-                        style: TextStyle(color: AppTheme.accentRed))),
+                    child: const Text('Hapus', style: TextStyle(color: Color(0xFFFF3400), fontWeight: FontWeight.bold))),
               ],
             ));
 
     if (act == true && event.id != null) {
       await _db.deleteScheduleEvent(event.id!);
       await NotificationService().cancelEventReminder(event.id!);
-      // Sync ke Firestore di background
       CloudSyncService.syncScheduleToCloud().catchError((_) {});
       _loadEvents();
     }
@@ -86,17 +80,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       builder: (context) => _AddEditEventForm(
         event: event,
         onSubmit: (newEvent, isReminderOn) async {
-          // Cek master switch dari Settings
           final masterNotifOn = await SettingsService.getNotifWorkout();
-          final advanceMinutes =
-              await SettingsService.getWorkoutAdvanceMinutes();
+          final advanceMinutes = await SettingsService.getWorkoutAdvanceMinutes();
 
           if (event == null) {
             int id = await _db.insertScheduleEvent(newEvent);
-            // Gunakan isReminderOn dari form ATAU master switch dari Settings
             if (isReminderOn && masterNotifOn) {
               final savedEvent = newEvent.copyWith(isCompleted: false);
-              // Buat event baru dengan id yang baru disimpan
               final eventWithId = ScheduleEvent(
                 id: id,
                 title: savedEvent.title,
@@ -111,22 +101,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 advanceMinutes: advanceMinutes,
               );
             }
-            // Sync ke Firestore di background
             CloudSyncService.syncScheduleToCloud().catchError((_) {});
           } else {
-            final updatedEvent =
-                newEvent.copyWith(isCompleted: event.isCompleted);
+            final updatedEvent = newEvent.copyWith(isCompleted: event.isCompleted);
             await _db.updateScheduleEvent(updatedEvent);
-            // Selalu batalkan dulu notif lama
             await NotificationService().cancelEventReminder(event.id!);
-            // Jadwalkan ulang jika toggle form aktif DAN master switch aktif
             if (isReminderOn && masterNotifOn) {
               await NotificationService().scheduleEventReminder(
                 updatedEvent,
                 advanceMinutes: advanceMinutes,
               );
             }
-            // Sync ke Firestore di background
             CloudSyncService.syncScheduleToCloud().catchError((_) {});
           }
           _loadEvents();
@@ -138,126 +123,147 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(' Jadwal & Pengingat'),
-        backgroundColor: AppTheme.background,
+        title: Row(
+          children: const [
+            Text('Agenda ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00A9DD), letterSpacing: -1)),
+            Text('Hari Ini', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F), letterSpacing: -1)),
+          ],
+        ),
+        backgroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.bar_chart, color: AppTheme.neonGreen),
+            icon: const Icon(Icons.bar_chart, color: Color(0xFF2F2F2F), size: 28),
             tooltip: 'Laporan Mingguan',
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => WeeklyReportScreen(),
+                builder: (context) => const WeeklyReportScreen(),
               ));
             },
-          )
+          ),
+          const SizedBox(width: 16),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'scheduleFab',
-        onPressed: () {
-          HapticFeedback.lightImpact();
-          _showAddEditEventSheet();
-        },
-        backgroundColor: AppTheme.neonGreen,
-        foregroundColor: Colors.black,
-        icon: Icon(Icons.add_rounded),
-        label:
-            Text('Buat Jadwal', style: TextStyle(fontWeight: FontWeight.w700)),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: SizedBox(
+          width: double.infinity,
+          child: FloatingActionButton.extended(
+            heroTag: 'scheduleFab',
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showAddEditEventSheet();
+            },
+            backgroundColor: const Color(0xFF00A9DD),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('Buat Jadwal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+          ),
+        ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.neonGreen))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A9DD)))
           : RefreshIndicator(
               onRefresh: _refreshEvents,
-              color: AppTheme.neonGreen,
-              backgroundColor: AppTheme.surface,
+              color: const Color(0xFF00A9DD),
+              backgroundColor: Colors.white,
               child: _events.isEmpty
                   ? ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 100),
                       children: [
                         Column(
-                          children: [
-                            Icon(Icons.event_seat_rounded, color: AppTheme.textMuted, size: 80),
-                            const SizedBox(height: 24),
+                          children: const [
+                            Icon(Icons.event_seat_rounded, color: Colors.grey, size: 80),
+                            SizedBox(height: 24),
                             Text(
-                              'Belum ada agenda, Za.',
+                              'Belum ada agenda.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
+                                  color: Color(0xFF2F2F2F), fontSize: 20, fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             Text(
                               'Mau buat jadwal baru atau lanjut istirahat?',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: AppTheme.textMuted, fontSize: 14),
+                                  color: Colors.grey, fontSize: 14),
                             ),
                           ],
                         )
                       ],
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
                       itemCount: _events.length,
                       itemBuilder: (context, index) {
                         final event = _events[index];
-                        return Card(
-                          color: AppTheme.surface,
-                          margin: EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => _showAddEditEventSheet(event: event),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppTheme.surfaceVariant,
-                                  child: Icon(event.typeIcon, size: 20),
+                        return InkWell(
+                          onTap: () => _showAddEditEventSheet(event: event),
+                          borderRadius: BorderRadius.circular(26),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48, height: 48,
+                                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                  child: Icon(event.typeIcon, size: 24, color: _getColorForType(event.type)),
                                 ),
-                                title: Text(event.title,
-                                    style: TextStyle(
-                                        color: AppTheme.textPrimary,
-                                        fontWeight: FontWeight.bold)),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(height: 4),
-                                    Text(
-                                        '${DateFormat('d MMM yyyy • HH:mm').format(event.dateTime)}',
-                                        style: TextStyle(
-                                            color: AppTheme.electricBlue,
-                                            fontWeight: FontWeight.w600)),
-                                    if (event.durationMinutes > 0)
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(event.title,
+                                          style: const TextStyle(
+                                              color: Color(0xFF2F2F2F),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 4),
                                       Text(
-                                          'Durasi: ${event.durationMinutes} menit',
-                                          style: TextStyle(
-                                              color: AppTheme.textMuted)),
-                                  ],
+                                          '${DateFormat('d MMM yyyy • HH:mm').format(event.dateTime)}',
+                                          style: const TextStyle(
+                                              color: Color(0xFF00A9DD),
+                                              fontWeight: FontWeight.bold, fontSize: 12)),
+                                      if (event.durationMinutes > 0)
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                              'Durasi: ${event.durationMinutes} menit',
+                                              style: const TextStyle(
+                                                  color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                                trailing: Row(
+                                Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: Icon(Icons.delete_outline,
-                                          color: AppTheme.accentRed),
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Color(0xFFFF3400)),
                                       onPressed: () => _deleteEvent(event),
                                     ),
                                     IconButton(
-                                      icon: Icon(Icons.check_circle_outline,
-                                          color: AppTheme.neonGreen),
+                                      icon: const Icon(Icons.check_circle_outline,
+                                          color: Color(0xFF00B33F)),
                                       onPressed: () async {
                                         await _db.updateScheduleEventCompletion(
                                             event.id!, true);
-                                        // Sync ke Firestore di background
                                         CloudSyncService.syncScheduleToCloud().catchError((_) {});
                                         _loadEvents();
                                         if (mounted) {
                                           ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(
+                                              .showSnackBar(const SnackBar(
                                                   content: Text(
                                                       'Aktivitas ditandai selesai!')));
                                         }
@@ -265,7 +271,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
+                              ],
                             ),
                           ),
                         );
@@ -273,6 +279,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
             ),
     );
+  }
+
+  Color _getColorForType(String type) {
+    switch (type) {
+      case 'workout': return const Color(0xFF00B33F);
+      case 'meal': return const Color(0xFFFF5406);
+      case 'rest': return const Color(0xFFBD4BE5);
+      default: return const Color(0xFF00A9DD);
+    }
   }
 }
 
@@ -313,8 +328,6 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
           : widget.event!.workoutType;
       _selectedDate = widget.event!.dateTime;
       _selectedTime = TimeOfDay.fromDateTime(widget.event!.dateTime);
-      // For simplicity, we assume reminder is on if editing.
-      // A more complex app would store reminder boolean in DB.
       _isReminderOn = true;
     }
   }
@@ -332,14 +345,14 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.dark(
-            primary: AppTheme.neonGreen,
-            onPrimary: Colors.black,
-            surface: AppTheme.surface,
-            onSurface: AppTheme.textPrimary,
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF00A9DD),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            onSurface: Color(0xFF2F2F2F),
           ),
         ),
         child: child!,
@@ -356,11 +369,11 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
       initialTime: _selectedTime,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.dark(
-            primary: AppTheme.neonGreen,
-            onPrimary: Colors.black,
-            surface: AppTheme.surface,
-            onSurface: AppTheme.textPrimary,
+          colorScheme: const ColorScheme.light(
+            primary: Color(0xFF00A9DD),
+            onPrimary: Colors.white,
+            surface: Colors.white,
+            onSurface: Color(0xFF2F2F2F),
           ),
         ),
         child: child!,
@@ -401,19 +414,19 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 20,
-        right: 20,
-        top: 20,
+        left: 24,
+        right: 24,
+        top: 24,
       ),
-      decoration: BoxDecoration(
-        color: AppTheme.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: Form(
         key: _formKey,
         child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Center(
@@ -421,123 +434,131 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                          color: AppTheme.surfaceVariant,
+                          color: const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: 20),
-              Text(widget.event == null ? 'Buat Jadwal Baru' : 'Edit Jadwal',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary)),
-              SizedBox(height: 20),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(widget.event == null ? 'Buat Jadwal Baru' : 'Edit Jadwal',
+                      style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2F2F2F))),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
 
               TextFormField(
                 controller: _titleController,
-                style: TextStyle(color: AppTheme.textPrimary),
+                style: const TextStyle(color: Color(0xFF2F2F2F)),
                 decoration: InputDecoration(
                   labelText: 'Judul Aktivitas',
-                  fillColor: AppTheme.surface,
+                  fillColor: const Color(0xFFF5F5F5),
                   filled: true,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(26),
                       borderSide: BorderSide.none),
                 ),
                 validator: (val) => val == null || val.isEmpty
                     ? 'Judul tidak boleh kosong'
                     : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
                 value: _type,
-                dropdownColor: AppTheme.surface,
-                style: TextStyle(color: AppTheme.textPrimary),
+                dropdownColor: Colors.white,
+                style: const TextStyle(color: Color(0xFF2F2F2F)),
                 decoration: InputDecoration(
                   labelText: 'Kategori',
-                  fillColor: AppTheme.surface,
+                  fillColor: const Color(0xFFF5F5F5),
                   filled: true,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(26),
                       borderSide: BorderSide.none),
                 ),
-                items: [
-                  DropdownMenuItem(value: 'workout', child: Text(' Workout')),
-                  DropdownMenuItem(
-                      value: 'meal', child: Text(' Makanan/Nutrisi')),
+                items: const [
+                  DropdownMenuItem(value: 'workout', child: Text(' Latihan (Workout)')),
+                  DropdownMenuItem(value: 'meal', child: Text(' Nutrisi/Makan')),
                   DropdownMenuItem(value: 'rest', child: Text(' Istirahat')),
-                  DropdownMenuItem(
-                      value: 'reminder', child: Text(' Pengingat Umum')),
+                  DropdownMenuItem(value: 'reminder', child: Text(' Pengingat Umum')),
                 ],
                 onChanged: (val) => setState(() => _type = val!),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               if (_type == 'workout') ...[
                 DropdownButtonFormField<String>(
                   value: _workoutType,
-                  dropdownColor: AppTheme.surface,
-                  style: TextStyle(color: AppTheme.textPrimary),
+                  dropdownColor: Colors.white,
+                  style: const TextStyle(color: Color(0xFF2F2F2F)),
                   decoration: InputDecoration(
                     labelText: 'Jenis Latihan',
-                    fillColor: AppTheme.surface,
+                    fillColor: const Color(0xFFF5F5F5),
                     filled: true,
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(26),
                         borderSide: BorderSide.none),
                   ),
-                  items: [
-                    DropdownMenuItem(
-                        value: 'running', child: Text('Lari / Running')),
-                    DropdownMenuItem(
-                        value: 'basketball', child: Text('Basket')),
-                    DropdownMenuItem(
-                        value: 'weightlifting', child: Text('Angkat Beban')),
-                    DropdownMenuItem(
-                        value: 'custom', child: Text('Spesifik Lainnya')),
+                  items: const [
+                    DropdownMenuItem(value: 'running', child: Text('Lari / Running')),
+                    DropdownMenuItem(value: 'basketball', child: Text('Basket')),
+                    DropdownMenuItem(value: 'weightlifting', child: Text('Angkat Beban')),
+                    DropdownMenuItem(value: 'custom', child: Text('Spesifik Lainnya')),
                   ],
                   onChanged: (val) => setState(() => _workoutType = val!),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
 
               if (_type == 'meal') ...[
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final profile = await ProfileService.getProfile();
-                    final goal = profile[ProfileService.keyGoal] ?? 'Bulking';
-                    final budget =
-                        profile[ProfileService.keyDailyBudget] ?? 50000;
-
-                    final rec =
-                        MealRecommenderService.getRecommendation(goal, budget);
-                    setState(() {
-                      _titleController.text = rec.title;
-                      _notesController.text =
-                          '${rec.description}\n\nEstimasi Harga: Rp${rec.estimatedCost.toInt()} (${rec.category})';
-                    });
-                  },
-                  icon: Icon(Icons.auto_awesome, color: AppTheme.neonGreen),
-                  label: Text('Dapatkan Rekomendasi Menu (AI)'),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppTheme.neonGreen),
-                    foregroundColor: AppTheme.neonGreen,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final profile = await ProfileService.getProfile();
+                      final goal = profile[ProfileService.keyGoal] ?? 'Bulking';
+                      final budget = profile[ProfileService.keyDailyBudget] ?? 50000;
+  
+                      final rec = MealRecommenderService.getRecommendation(goal, budget);
+                      setState(() {
+                        _titleController.text = rec.title;
+                        _notesController.text =
+                            '${rec.description}\n\nEstimasi Harga: Rp${rec.estimatedCost.toInt()} (${rec.category})';
+                      });
+                    },
+                    icon: const Icon(Icons.auto_awesome, color: Color(0xFFFF5406)),
+                    label: const Text('Dapatkan Rekomendasi Menu (AI)', style: TextStyle(color: Color(0xFFFF5406), fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF5406).withOpacity(0.1),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                    ),
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _notesController,
-                  style: TextStyle(color: AppTheme.textPrimary),
+                  style: const TextStyle(color: Color(0xFF2F2F2F)),
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Catatan / Menu Spesifik',
-                    fillColor: AppTheme.surface,
+                    fillColor: const Color(0xFFF5F5F5),
                     filled: true,
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(26),
                         borderSide: BorderSide.none),
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
 
               Row(
@@ -545,41 +566,43 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   Expanded(
                     child: InkWell(
                       onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(26),
                       child: Container(
-                        padding:
-                            EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                         decoration: BoxDecoration(
-                            color: AppTheme.surface,
-                            borderRadius: BorderRadius.circular(12)),
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(26)),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.calendar_today,
-                                color: AppTheme.neonGreen, size: 20),
-                            SizedBox(width: 8),
-                            Text(DateFormat('d MMM yyyy').format(_selectedDate),
-                                style: TextStyle(color: AppTheme.textPrimary)),
+                            const Icon(Icons.calendar_today,
+                                color: Color(0xFF00A9DD), size: 20),
+                            const SizedBox(width: 8),
+                            Text(DateFormat('d MMM').format(_selectedDate),
+                                style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: InkWell(
                       onTap: _pickTime,
+                      borderRadius: BorderRadius.circular(26),
                       child: Container(
-                        padding:
-                            EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                         decoration: BoxDecoration(
-                            color: AppTheme.surface,
-                            borderRadius: BorderRadius.circular(12)),
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(26)),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.access_time,
-                                color: AppTheme.neonGreen, size: 20),
-                            SizedBox(width: 8),
+                            const Icon(Icons.access_time,
+                                color: Color(0xFF00A9DD), size: 20),
+                            const SizedBox(width: 8),
                             Text(_selectedTime.format(context),
-                                style: TextStyle(color: AppTheme.textPrimary)),
+                                style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -587,26 +610,26 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   ),
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               TextFormField(
                 controller: _durationController,
-                style: TextStyle(color: AppTheme.textPrimary),
+                style: const TextStyle(color: Color(0xFF2F2F2F)),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                 ],
                 decoration: InputDecoration(
                   labelText: 'Estimasi Durasi (Menit)',
-                  fillColor: AppTheme.surface,
+                  fillColor: const Color(0xFFF5F5F5),
                   filled: true,
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(26),
                       borderSide: BorderSide.none),
                 ),
               ),
-              SizedBox(height: 10),
-              // Duration quick presets
+              const SizedBox(height: 16),
+              
               Wrap(
                 spacing: 8,
                 children: [15, 30, 45, 60, 90].map((minutes) {
@@ -621,61 +644,60 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.neonGreen.withOpacity(0.15)
-                            : AppTheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color:
-                              isSelected ? AppTheme.neonGreen : AppTheme.border,
-                          width: isSelected ? 1.5 : 1,
-                        ),
+                            ? const Color(0xFF00A9DD)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(26),
                       ),
                       child: Text(
                         label,
                         style: TextStyle(
                           color: isSelected
-                              ? AppTheme.neonGreen
-                              : AppTheme.textSecondary,
+                              ? Colors.white
+                              : Colors.grey,
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   );
                 }).toList(),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 24),
 
               SwitchListTile(
-                title: Text('Aktifkan Notifikasi Pengingat',
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Notifikasi Pengingat',
                     style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: Color(0xFF2F2F2F),
                         fontWeight: FontWeight.bold)),
-                subtitle: Text('Alarm akan berbunyi di waktu terjadwal',
-                    style: TextStyle(color: AppTheme.textMuted)),
-                activeColor: AppTheme.neonGreen,
+                subtitle: const Text('Alarm akan berbunyi di waktu terjadwal',
+                    style: TextStyle(color: Colors.grey, fontSize: 12)),
+                activeColor: const Color(0xFF00A9DD),
                 value: _isReminderOn,
                 onChanged: (val) => setState(() => _isReminderOn = val),
               ),
 
-              SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.neonGreen,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00A9DD),
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(26)),
+                  ),
+                  child: const Text('Simpan Jadwal',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
-                child: Text('Simpan Jadwal',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
             ],
           ),
         ),

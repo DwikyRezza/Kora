@@ -1,5 +1,5 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/workout.dart';
@@ -9,11 +9,13 @@ import '../services/database_helper.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/whistleblower_service.dart';
+import '../services/notification_service.dart';
+import '../services/social_service.dart';
 import '../theme/app_theme.dart';
 import 'dart:async';
-import '../utils/responsive.dart';
-import '../widgets/common_widgets.dart';
-import 'setting_screen.dart';
+import 'search_screen.dart';
+import 'notification_screen.dart';
+import '../widgets/feed_post_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onGoToWorkout;
@@ -40,10 +42,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<ScheduleEvent> _upcomingEvents = [];
   bool _isLoading = true;
   String _userName = '';
+  String? _userPhotoUrl;
   double _baseTargetProtein = 0.0;
   DateTime _selectedScheduleDate = DateTime.now();
+  int _unreadNotifs = 0;
+  List<Map<String, dynamic>> _feedPosts = [];
+  bool _isLoadingFeed = true;
 
-  late AnimationController _pulseController;
   Timer? _whistleTimer;
 
   double get _totalProteinToday =>
@@ -57,10 +62,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
     _whistleTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       _checkWhistleblower();
     });
@@ -69,14 +70,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _whistleTimer?.cancel();
     super.dispose();
   }
 
   void _checkWhistleblower() async {
     final now = DateTime.now();
-    // Fetch specifically today's upcoming to ensure we don't miss if UI is on another date
     final events = await _db.getUpcomingEvents();
     for (var event in events) {
       if (event.status == 'pending' &&
@@ -96,8 +95,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             backgroundColor: AppTheme.surface,
             title: Row(
               children: [
-                Icon(Icons.sports, color: AppTheme.accentOrange),
-                SizedBox(width: 8),
+                const Icon(Icons.sports, color: Color(0xFFFF5406)),
+                const SizedBox(width: 8),
                 Text('Waktunya Action!', style: TextStyle(color: AppTheme.textPrimary)),
               ],
             ),
@@ -112,26 +111,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   WhistleblowerService.stopAlarm();
                   Navigator.pop(ctx);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonGreen),
-                child: Text('OK', style: TextStyle(color: Colors.black)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B33F)),
+                child: const Text('OK', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
         );
-        break; // Only play once per minute
+        break; 
       }
     }
   }
 
-  /// Dipanggil saat pull-to-refresh — sync dari Firestore dulu, lalu load SQLite
   Future<void> _refreshData() async {
     try {
       await CloudSyncService.restoreAllFromCloud();
-    } catch (_) {} // silent fail jika offline
+    } catch (_) {} 
     await _loadData();
   }
 
-  /// Load data dari SQLite lokal (cepat, tidak request Firestore)
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final today = DateTime.now();
@@ -139,9 +136,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       await _db.checkLateSchedules();
       final workouts = await _db.getWorkoutsByDate(today);
       final protein = await _db.getProteinEntriesByDate(today);
-      // Fetch events for selected date
       final events = await _db.getScheduleEventsByDate(_selectedScheduleDate);
       final profile = await ProfileService.getProfile();
+      final unread = await NotificationService.getUnreadCount();
+      
+      final posts = await SocialService.getFeedPosts();
       
       if (mounted) {
         setState(() {
@@ -149,11 +148,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _todayProtein = protein;
           _upcomingEvents = events;
           _userName = profile[ProfileService.keyName] ?? '';
+          _userPhotoUrl = profile[ProfileService.keyPhotoUrl];
           _baseTargetProtein = profile[ProfileService.keyTargetProtein] ?? 0.0;
+          _unreadNotifs = unread;
+          _feedPosts = posts;
+          _isLoadingFeed = false;
         });
       }
     } catch (e) {
       debugPrint("Error loading home data: $e");
+      if (mounted) setState(() => _isLoadingFeed = false);
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -165,306 +169,313 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     if (value == null) return;
     HapticFeedback.lightImpact();
     await _db.updateScheduleEventCompletion(event.id!, value);
-    _loadData(); // reload
+    _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: RefreshIndicator(
-        onRefresh: _refreshData,
-        color: AppTheme.neonGreen,
-        backgroundColor: AppTheme.surface,
-        child: CustomScrollView(
-          slivers: [
-            _buildHomeHeader(context),
-            if (_isLoading)
-              _buildSkeletonLoader(context)
-            else
-              SliverPadding(
-                padding: EdgeInsets.fromLTRB(context.spaceLG, 0, context.spaceLG, 100),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    _buildProteinSummaryCard(),
-                    const SizedBox(height: 20),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refreshData,
+          color: const Color(0xFF00B33F),
+          backgroundColor: Colors.white,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  
+                  if (_isLoading)
+                    const Center(child: CircularProgressIndicator(color: Color(0xFFFF5406)))
+                  else ...[
+                    _buildProteinCard(),
+                    const SizedBox(height: 32),
+                    
+                    _buildQuickActions(),
+                    const SizedBox(height: 32),
                     
                     _buildStatGrid(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     
-                    _buildQuickActionRow(),
-                    const SizedBox(height: 24),
+                    _buildKoraAssistant(),
+                    const SizedBox(height: 32),
                     
-                    _buildUpcomingScheduleList(),
-                    const SizedBox(height: 24),
-
-                    // ---- TODAY WORKOUTS ----
-                    SectionHeader(
-                      title: 'Latihan Hari Ini',
-                      action: 'Tambah',
-                      onAction: widget.onGoToWorkout,
-                    ),
-                    const SizedBox(height: 12),
-                    if (_todayWorkouts.isEmpty) ...[
-                      _buildWorkoutRecommendation(),
-                      const SizedBox(height: 12),
-                      _buildEmptyState(
-                        'Belum ada latihan',
-                        'Mulai catat sesi latihan kamu!',
-                        Icons.fitness_center_rounded,
-                      ),
-                    ] else
-                      ...(_todayWorkouts.map((w) => _buildWorkoutTile(w))),
-                  ]),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHomeHeader(BuildContext context) {
-    final now = DateTime.now();
-    final greeting = now.hour < 11
-        ? 'Selamat Pagi'
-        : now.hour < 15
-            ? 'Selamat Siang'
-            : now.hour < 18
-                ? 'Selamat Sore'
-                : 'Selamat Malam';
-
-    return SliverAppBar(
-      expandedHeight: 170,
-      floating: false,
-      pinned: true,
-      backgroundColor: AppTheme.background,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          padding: EdgeInsets.fromLTRB(context.spaceLG, 60, context.spaceLG, context.spaceMD),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$greeting, ${_userName.isNotEmpty ? _userName : "Atlet"}! 👋',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: context.fontSM,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        ShaderMask(
-                          shaderCallback: (bounds) =>
-                              AppTheme.neonGreenGrad.createShader(bounds),
-                          child: Text(
-                            'Kora',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: context.font2XL,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: widget.onGoToBodyStats,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surfaceVariant,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppTheme.border),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.monitor_weight_rounded, color: AppTheme.electricBlue, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Cek Tubuh',
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    _buildTodayWorkouts(),
+                    const SizedBox(height: 32),
+                    
+                    _buildSocialFeed(),
+                    const SizedBox(height: 100), // padding bottom
+                  ],
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildProteinSummaryCard() {
+  Widget _buildAvatar() {
+    if (_userPhotoUrl != null && _userPhotoUrl!.isNotEmpty) {
+      if (_userPhotoUrl!.startsWith('data:image')) {
+        return ClipOval(child: Image.memory(base64Decode(_userPhotoUrl!.split(',')[1]), fit: BoxFit.cover, width: 40, height: 40));
+      }
+      return ClipOval(child: Image.network(_userPhotoUrl!, fit: BoxFit.cover, width: 40, height: 40));
+    }
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: const BoxDecoration(color: Color(0xFFF5F5F5), shape: BoxShape.circle),
+      child: const Icon(Icons.person, color: Colors.grey, size: 24),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'KORA',
+          style: TextStyle(
+            color: Color(0xFF00B33F),
+            fontWeight: FontWeight.w800,
+            fontSize: 24,
+            letterSpacing: -1,
+          ),
+        ),
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.search, color: Color(0xFF2F2F2F)),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+              },
+            ),
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none, color: Color(0xFF2F2F2F)),
+                  onPressed: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
+                    _loadData();
+                  },
+                ),
+                if (_unreadNotifs > 0)
+                  Positioned(
+                    right: 12,
+                    top: 12,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF3400),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 8),
+            _buildAvatar(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProteinCard() {
     final gap = _totalProteinNeeded - _totalProteinToday;
     final isSufficient = gap <= 0;
     final progress = _totalProteinNeeded > 0
         ? (_totalProteinToday / _totalProteinNeeded).clamp(0.0, 1.0)
         : 0.0;
-    
-    final eggs = (gap > 0) ? (gap / 6).ceil() : 0;
-    
-    String motivationText;
-    if (isSufficient) {
-      motivationText = 'Target protein tercapai! Kamu luar biasa hari ini.';
-    } else if (progress >= 0.5) {
-      motivationText = 'Sedikit lagi! Hanya butuh $eggs butir telur untuk capai target.';
-    } else {
-      motivationText = 'Butuh sekitar $eggs butir telur lagi untuk penuhi ototmu hari ini!';
-    }
-
-    // Color logic
-    Color progressBarColor;
-    if (isSufficient || progress > 0.8) {
-      progressBarColor = AppTheme.neonGreen;
-    } else {
-      progressBarColor = AppTheme.electricBlue;
-    }
-
+        
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isSufficient 
-            ? (AppTheme.isDarkMode ? const Color(0xFF0D3320) : const Color(0xFFE8F5E9))
-            : (AppTheme.isDarkMode ? const Color(0xFF16213E) : const Color(0xFFE3F2FD)),
-        gradient: AppTheme.isDarkMode ? LinearGradient(
-          colors: isSufficient
-              ? [const Color(0xFF0D3320), const Color(0xFF0A2918)]
-              : [const Color(0xFF16213E), const Color(0xFF1A1A2E)], // Dark Blue to Light Blue
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ) : null,
-        borderRadius: BorderRadius.circular(20), // premium
-        border: Border.all(
-          color: isSufficient
-              ? AppTheme.neonGreen.withOpacity(0.4)
-              : AppTheme.electricBlue.withOpacity(0.3),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isSufficient ? AppTheme.neonGreen : AppTheme.electricBlue).withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: const Color(0xFFF5F5F5), // fog
+        borderRadius: BorderRadius.circular(26),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: (isSufficient ? AppTheme.neonGreen : AppTheme.electricBlue)
-                      .withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  isSufficient ? Icons.check_circle : Icons.bolt,
-                  size: 20,
-                  color: isSufficient ? AppTheme.neonGreen : AppTheme.electricBlue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isSufficient
-                          ? 'Protein Tercukupi!'
-                          : 'Sinkronisasi Protein',
-                      style: TextStyle(
-                        color: AppTheme.isDarkMode ? Colors.white : (isSufficient ? Colors.green[800] : Colors.blue[900]),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      motivationText,
-                      style: TextStyle(
-                        color: isSufficient
-                            ? AppTheme.neonGreen
-                            : AppTheme.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('CAPAIAN PROTEIN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.5)),
+                  const SizedBox(height: 4),
+                  Text(
+                    isSufficient ? 'Target tercapai!' : 'Di bawah target harian',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSufficient ? const Color(0xFF00B33F) : const Color(0xFFFF3400)),
+                  ),
+                ],
               ),
               Text(
                 '${(progress * 100).round()}%',
-                style: TextStyle(
-                  color: progressBarColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F)),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Container(
-              height: 8,
-              width: double.infinity,
-              decoration: BoxDecoration(color: AppTheme.border),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: progress,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: progressBarColor == AppTheme.neonGreen
-                          ? [AppTheme.neonGreen.withOpacity(0.7), AppTheme.neonGreen]
-                          : [Colors.blue[700]!, Colors.blue[300]!], // Premium dynamic gradient
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+          const SizedBox(height: 24),
+          Container(
+            height: 12,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: progress,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSufficient ? const Color(0xFF00B33F) : const Color(0xFFFF3400),
+                  borderRadius: BorderRadius.circular(6),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${_totalProteinToday.toStringAsFixed(1)}g dikonsumsi',
-                style: TextStyle(
-                    color: AppTheme.textMuted, fontSize: 11),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('TERKUMPUL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text('${_totalProteinToday.toStringAsFixed(1)}g', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                ],
               ),
-              const Spacer(),
-              Text(
-                'Target: ${_totalProteinNeeded.toStringAsFixed(1)}g',
-                style: TextStyle(
-                    color: AppTheme.textMuted, fontSize: 11),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text('TARGET', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text('${_totalProteinNeeded.toStringAsFixed(1)}g', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                ],
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(26),
+            ),
+            child: Text(
+              isSufficient 
+                  ? 'Pertahankan performa ini! Otot Anda berterima kasih.' 
+                  : 'Tingkatkan asupan protein Anda di makan berikutnya untuk pemulihan optimal.',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF2F2F2F), height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          _buildPillAction(
+            title: 'Latihan',
+            icon: Icons.fitness_center,
+            color: const Color(0xFF00B33F), // achievement-neon
+            onTap: widget.onGoToWorkout,
+          ),
+          const SizedBox(width: 12),
+          _buildPillAction(
+            title: 'Nutrisi',
+            icon: Icons.restaurant,
+            color: const Color(0xFFFF6D00), // calorie-orange
+            onTap: widget.onGoToProtein,
+          ),
+          const SizedBox(width: 12),
+          _buildPillAction(
+            title: 'Jadwal',
+            icon: Icons.calendar_today,
+            color: const Color(0xFF0099F9), // pending-blue
+            onTap: widget.onGoToSchedule,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPillAction({required String title, required IconData icon, required Color color, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(26),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatGrid() {
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.5,
+      children: [
+        _buildStatBox(title: 'Nutrisi', value: '${_totalProteinToday.toStringAsFixed(0)}g', color: const Color(0xFF00B33F)),
+        _buildStatBox(title: 'Energi', value: '$_totalCaloriesToday', subValue: 'Kkal', color: const Color(0xFFFF6D00)),
+        _buildStatBox(title: 'Durasi', value: '$_totalWorkoutMinutes', subValue: 'Menit', color: const Color(0xFF0099F9)),
+        _buildStatBox(title: 'Sesi', value: '${_todayWorkouts.length} Sesi', color: const Color(0xFFBD4BE5)),
+      ],
+    );
+  }
+
+  Widget _buildStatBox({required String title, required String value, String? subValue, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(26),
+        border: Border(left: BorderSide(color: color, width: 4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(title.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F))),
+              if (subValue != null) ...[
+                const SizedBox(width: 4),
+                Text(subValue, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+              ],
             ],
           ),
         ],
@@ -472,675 +483,253 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildStatGrid() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(title: 'Ringkasan Hari Ini'),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                label: 'Nutrisi Dikonsumsi',
-                value: _totalProteinToday.toStringAsFixed(1),
-                unit: 'g',
-                icon: Icons.restaurant_menu_rounded,
-                gradient: AppTheme.neonGreenGrad,
-                subtitle: 'Target: ${_totalProteinNeeded.toStringAsFixed(1)}g',
-                onTap: widget.onGoToProtein,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatCard(
-                label: 'Kalori Terbakar',
-                value: _totalCaloriesToday.toString(),
-                unit: 'kal',
-                icon: Icons.local_fire_department_rounded,
-                gradient: AppTheme.orangeGrad,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                label: 'Durasi Latihan',
-                value: _totalWorkoutMinutes.toString(),
-                unit: 'menit',
-                icon: Icons.timer_rounded,
-                gradient: AppTheme.electricBlueGrad,
-                onTap: widget.onGoToWorkout,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatCard(
-                label: 'Sesi Latihan',
-                value: _todayWorkouts.length.toString(),
-                unit: 'sesi',
-                icon: Icons.fitness_center_rounded,
-                gradient: AppTheme.purpleGrad,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionRow() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionHeader(title: 'Aksi Cepat'),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildQuickAction(
-                icon: Icons.fitness_center_rounded, // Same as Latihan tab
-                label: 'Catat\nLatihan',
-                color: AppTheme.electricBlue,
-                onTap: widget.onGoToWorkout,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildQuickAction(
-                icon: Icons.restaurant_menu_rounded, // Same as Nutrisi tab
-                label: 'Catat\nNutrisi',
-                color: AppTheme.neonGreen,
-                onTap: widget.onGoToProtein,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildQuickAction(
-                icon: Icons.calendar_month_rounded, // Same as Jadwal tab
-                label: 'Tambah\nJadwal',
-                color: AppTheme.accentPurple,
-                onTap: widget.onGoToSchedule,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickAction({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: context.spaceLG),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20), // premium
-          border: Border.all(color: color.withOpacity(0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: context.iconMD, color: color),
-            SizedBox(height: context.spaceXS),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: color,
-                fontSize: context.fontXS,
-                fontWeight: FontWeight.w600,
-                height: 1.3,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpcomingScheduleList() {
-    return _buildScheduleDashboard();
-  }
-
-  Widget _buildScheduleDashboard() {
-    // 1. Interactive Calendar (Horizontal Date Picker)
-    final days = List.generate(7, (i) => DateTime.now().add(Duration(days: i - 3))); // 3 days ago to 3 days future
+  Widget _buildKoraAssistant() {
+    final days = List.generate(7, (i) => DateTime.now().add(Duration(days: i - 2))); 
     
-    // Sort events
     final sortedEvents = List<ScheduleEvent>.from(_upcomingEvents)
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
-    // Get selected date's events
     final selectedDateEvents = sortedEvents.where((e) {
       return e.dateTime.year == _selectedScheduleDate.year &&
              e.dateTime.month == _selectedScheduleDate.month &&
              e.dateTime.day == _selectedScheduleDate.day;
     }).toList();
 
-    // The Hero Card is the first pending event today. If none, the first event.
     final pendingEvents = selectedDateEvents.where((e) => e.status == 'pending').toList();
     final heroEvent = pendingEvents.isNotEmpty ? pendingEvents.first : (selectedDateEvents.isNotEmpty ? selectedDateEvents.first : null);
-    
-    final carouselEvents = heroEvent != null 
-        ? selectedDateEvents.where((e) => e.id != heroEvent.id).toList()
-        : <ScheduleEvent>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SectionHeader(
-          title: 'The Personal Assistant',
-          action: 'Tambah',
-          onAction: widget.onGoToSchedule,
-        ),
-        const SizedBox(height: 16),
-        
-        // Horizontal Date Picker
-        SizedBox(
-          height: 60,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: days.length,
-            itemBuilder: (context, index) {
-              final date = days[index];
+        // Date Picker
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: days.map((date) {
               final isSelected = date.year == _selectedScheduleDate.year && 
                                  date.month == _selectedScheduleDate.month && 
                                  date.day == _selectedScheduleDate.day;
               return GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _selectedScheduleDate = date;
-                  });
+                  setState(() => _selectedScheduleDate = date);
                   _loadData();
                 },
                 child: Container(
-                  width: 50,
-                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.neonGreen : AppTheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isSelected ? AppTheme.neonGreen : AppTheme.border),
+                    color: isSelected ? const Color(0xFF00B33F) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(26),
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        DateFormat('E', 'id').format(date),
+                        DateFormat('E', 'id').format(date).toUpperCase(),
                         style: TextStyle(
-                          color: isSelected ? Colors.black : AppTheme.textMuted,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 9, 
+                          fontWeight: FontWeight.bold, 
+                          color: isSelected ? Colors.white.withOpacity(0.8) : Colors.grey
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${date.day}',
                         style: TextStyle(
-                          color: isSelected ? Colors.black : AppTheme.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 14, 
+                          fontWeight: FontWeight.bold, 
+                          color: isSelected ? Colors.white : const Color(0xFF2F2F2F)
                         ),
                       ),
                     ],
                   ),
                 ),
               );
-            },
+            }).toList(),
           ),
         ),
         const SizedBox(height: 24),
         
         // Hero Card
-        if (heroEvent != null)
-          _buildHeroCard(heroEvent)
-        else
-          _buildEmptyState('Belum ada jadwal', 'Santai dulu, atau tambah jadwal baru.', Icons.event_note_rounded),
-          
-        const SizedBox(height: 20),
-        
-        // Horizontal Carousel
-        if (carouselEvents.isNotEmpty) ...[
-          Text('Selanjutnya Hari Ini', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: carouselEvents.length,
-              itemBuilder: (context, index) {
-                return _buildCarouselCard(carouselEvents[index]);
-              },
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(26),
+          ),
+          child: heroEvent != null ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('SARAN KORA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00B33F), letterSpacing: 1.5)),
+                  Text(DateFormat('HH:mm').format(heroEvent.dateTime), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(heroEvent.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+              const SizedBox(height: 8),
+              Text(
+                heroEvent.notes.isNotEmpty ? heroEvent.notes : 'Fokus pada kontrol pernapasan dan postur tubuh yang stabil.',
+                style: const TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.timer, size: 18, color: Color(0xFF0099F9)),
+                      const SizedBox(width: 4),
+                      const Text('60 mnt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.local_fire_department, size: 18, color: Color(0xFFFF6D00)),
+                      const SizedBox(width: 4),
+                      const Text('320 kal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _toggleEventCompletion(heroEvent, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2F2F2F), // graphite
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text('MULAI', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  ),
+                ],
+              ),
+            ],
+          ) : const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Tidak ada saran jadwal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             ),
           ),
-        ],
+        ),
       ],
     );
   }
 
-  Widget _buildHeroCard(ScheduleEvent event) {
-    final isFailed = event.status == 'failed';
-    final isDone = event.status == 'done';
-    
-    Color cardColor = AppTheme.surface;
-    Color accentColor = AppTheme.neonGreen;
-    if (isFailed) {
-      cardColor = Colors.redAccent.withOpacity(0.1);
-      accentColor = Colors.redAccent;
-    } else if (isDone) {
-      cardColor = AppTheme.neonGreen.withOpacity(0.1);
-    }
-    
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isFailed ? Colors.redAccent.withOpacity(0.5) : AppTheme.border),
-        gradient: (!isFailed && !isDone) ? (AppTheme.isDarkMode ? const LinearGradient(
-          colors: [Color(0xFF1E1E1E), Color(0xFF2A2A2A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ) : null) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+  Widget _buildTodayWorkouts() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Text('Jadwal ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), letterSpacing: -0.5)),
+                const Text('Latih', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFFFF5406), letterSpacing: -0.5)),
+              ],
+            ),
+            GestureDetector(
+              onTap: widget.onGoToWorkout,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(26),
                 ),
-                child: Text(
-                  DateFormat('HH:mm').format(event.dateTime),
-                  style: TextStyle(color: accentColor, fontWeight: FontWeight.w900, fontSize: 14),
-                ),
+                child: const Text('TAMBAH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), letterSpacing: 1.5)),
               ),
-              if (isFailed)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(8)),
-                  child: const Text('GAGAL', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                )
-              else if (isDone)
-                Icon(Icons.check_circle_rounded, color: AppTheme.neonGreen)
-              else
-                Icon(event.typeIcon, color: AppTheme.textMuted, size: 20),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(event.title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w900)),
-          if (event.notes.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(event.notes, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            ),
           ],
-          const SizedBox(height: 20),
-          if (!isDone && !isFailed)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                   if (event.type == 'meal') {
-                     _showNutritionCompletionModal(event);
-                   } else {
-                     _toggleEventCompletion(event, true);
-                   }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.neonGreen,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Selesaikan', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCarouselCard(ScheduleEvent event) {
-    final isFailed = event.status == 'failed';
-    final isDone = event.status == 'done';
-    
-    return Container(
-      width: 160,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isFailed ? Colors.redAccent.withOpacity(0.05) : AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isFailed ? Colors.redAccent.withOpacity(0.3) : AppTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                DateFormat('HH:mm').format(event.dateTime),
-                style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-              Icon(isDone ? Icons.check_circle_rounded : event.typeIcon, 
-                color: isDone ? AppTheme.neonGreen : (isFailed ? Colors.redAccent : AppTheme.textMuted), 
-                size: 16,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            event.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNutritionCompletionModal(ScheduleEvent event) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.background,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Selesaikan Jadwal', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              Text(event.title, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _toggleEventCompletion(event, true);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.neonGreen,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Konfirmasi (Sudah Dimakan)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildWorkoutTile(Workout w) {
-    Color typeColor;
-    switch (w.type) {
-      case 'running':
-        typeColor = AppTheme.runningColor;
-        break;
-      case 'basketball':
-        typeColor = AppTheme.basketballColor;
-        break;
-      default:
-        typeColor = AppTheme.weightliftingColor;
-    }
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16), // premium
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: typeColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: typeColor.withOpacity(0.3)),
-            ),
-            child: Center(
-              child: Icon(w.typeIcon, size: 22),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  w.typeLabel,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${w.duration.round()} menit • ${w.caloriesBurned} kal',
-                  style: TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '+${w.proteinNeeded.toStringAsFixed(1)}g',
-                style: TextStyle(
-                  color: typeColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                'protein needed',
-                style: TextStyle(color: AppTheme.textMuted, fontSize: 10),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWorkoutRecommendation() {
-    final recommendations = [
-      {'icon': Icons.self_improvement_rounded, 'title': 'Peregangan 5 Menit', 'desc': 'Mulai hari dengan gerakan ringan untuk mengaktifkan otot', 'color': AppTheme.neonGreen},
-      {'icon': Icons.directions_walk_rounded, 'title': 'Jalan Santai 10 Menit', 'desc': 'Aktivitas ringan yang menjaga kebugaran sehari-hari', 'color': AppTheme.electricBlue},
-      {'icon': Icons.airline_seat_legroom_extra_rounded, 'title': 'Squat & Push-up Ringan', 'desc': '3 set × 10 repetisi untuk pemanasan tubuh', 'color': AppTheme.accentOrange},
-    ];
-
-    final rec = recommendations[DateTime.now().weekday % recommendations.length] as Map<String, dynamic>;
-    final color = rec['color'] as Color;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(16), // premium
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(rec['icon'] as IconData, color: color, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'REKOMENDASI',
-                        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  rec['title'] as String,
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  rec['desc'] as String,
-                  style: TextStyle(color: AppTheme.textMuted, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.heavyImpact();
-              widget.onGoToWorkout();
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text('Mulai', style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w800)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppTheme.surface.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.border.withOpacity(0.5)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.textMuted.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppTheme.textMuted.withOpacity(0.5), size: 48),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            title,
-            style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              subtitle,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSkeletonLoader(BuildContext context) {
-    return SliverPadding(
-      padding: EdgeInsets.all(context.spaceLG),
-      sliver: SliverList(
-        delegate: SliverChildListDelegate([
-          _skeletonBox(height: 180), // Protein Summary
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: _skeletonBox(height: 120)),
-              const SizedBox(width: 12),
-              Expanded(child: _skeletonBox(height: 120)),
-            ],
-          ),
-          const SizedBox(height: 24),
-          _skeletonBox(height: 150), // Schedule
-          const SizedBox(height: 24),
-          _skeletonBox(height: 200), // Recommendations
-        ]),
-      ),
-    );
-  }
-
-  Widget _skeletonBox({required double height}) {
-    return Shimmer.fromColors(
-      baseColor: AppTheme.surface,
-      highlightColor: AppTheme.border,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
         ),
-      ),
+        const SizedBox(height: 24),
+        if (_todayWorkouts.isEmpty)
+          const Center(child: Text('Belum ada latihan hari ini.', style: TextStyle(color: Colors.grey)))
+        else
+          ..._todayWorkouts.map((w) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(26)),
+                    child: const Icon(Icons.task_alt, color: Color(0xFF00B33F)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(w.type.substring(0, 1).toUpperCase() + w.type.substring(1), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), fontSize: 16)),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Selesai • ${DateFormat('HH:mm').format(w.date)} WIB',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey, letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
+                ],
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _buildSocialFeed() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('Aktivitas ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), letterSpacing: -0.5)),
+            const Text('Teman', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF00B33F), letterSpacing: -0.5)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        
+        if (_isLoadingFeed)
+          const Center(child: CircularProgressIndicator(color: Color(0xFF00B33F)))
+        else if (_feedPosts.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(26),
+            ),
+            child: const Column(
+              children: [
+                Icon(Icons.group_outlined, size: 48, color: Colors.grey),
+                SizedBox(height: 16),
+                Text(
+                  'Belum ada aktivitas',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2F2F2F)),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Ikuti lebih banyak teman untuk melihat aktivitas mereka di sini.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey, height: 1.5),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._feedPosts.map((post) {
+            return FeedPostCard(
+              post: post,
+              onDataChanged: () => _loadData(),
+            );
+          }),
+      ],
     );
   }
 }

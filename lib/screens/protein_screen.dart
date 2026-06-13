@@ -7,7 +7,6 @@ import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
-import 'package:liquid_progress_indicator_v2/liquid_progress_indicator.dart';
 import 'weekly_report_screen.dart';
 import 'ai_nutrition_screen.dart';
 
@@ -23,7 +22,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
   List<ProteinEntry> _entries = [];
   bool _isLoading = true;
   double _targetProtein = 150.0;
-  final double _targetCalories = 2500.0; // Estimate
+  final double _targetCalories = 2500.0; 
   int _targetWaterMl = 2000;
 
   @override
@@ -32,13 +31,10 @@ class _ProteinScreenState extends State<ProteinScreen> {
     _loadData();
   }
 
-  /// Dipanggil saat pull-to-refresh — sync nutrisi dari Firestore dulu
   Future<void> _refreshData() async {
     try {
-      await CloudSyncService.syncNutritionToCloud(); // push lokal ke cloud
-      // lalu pull cloud ke lokal (supaya data HP lain juga masuk)
+      await CloudSyncService.syncNutritionToCloud();
     } catch (_) {}
-    // Restore nutrition dari Firestore ke SQLite
     try {
       await CloudSyncService.restoreAllFromCloud();
     } catch (_) {}
@@ -58,8 +54,6 @@ class _ProteinScreenState extends State<ProteinScreen> {
         if (_targetProtein == 0) _targetProtein = 150.0;
         final weight = profile[ProfileService.keyWeight] ?? 70.0;
         _targetWaterMl = (weight * 35).round();
-        
-        // Target adjustments based on goal can be added here
         
         if (_totalProtein < _targetProtein * 0.9) {
           NotificationService().scheduleNutritionReminders();
@@ -84,264 +78,117 @@ class _ProteinScreenState extends State<ProteinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text(' Nutrition & Hydration', style: TextStyle(fontWeight: FontWeight.w800)),
-        backgroundColor: AppTheme.background,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.local_fire_department_rounded, color: AppTheme.accentOrange, size: 28),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyReportScreen())),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Tombol kiri: AI Nutrition dengan logo Groq
-            FloatingActionButton.extended(
-              heroTag: 'aiFab',
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AiNutritionScreen(),
-                  ),
-                );
-                // Jika ada data baru disimpan, reload
-                if (result == true) _loadData();
-              },
-              backgroundColor: AppTheme.surface,
-              foregroundColor: AppTheme.textPrimary,
-              elevation: 4,
-              icon: const _GroqIcon(),
-              label: const Text(
-                'Catat AI',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              ),
-            ),
-            // Tombol kanan: catat nutrisi manual
-            FloatingActionButton.extended(
-              heroTag: 'proteinFab',
-              onPressed: _showAddProteinSheet,
-              backgroundColor: AppTheme.neonGreen,
-              foregroundColor: Colors.black,
-              icon: const Icon(Icons.restaurant_menu_rounded),
-              label: const Text('Catat Nutrisi',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-            ),
-          ],
-        ),
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: AppTheme.neonGreen))
-          : RefreshIndicator(
-              onRefresh: _refreshData,
-              color: AppTheme.neonGreen,
-              backgroundColor: AppTheme.surface,
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildEnergyAndHydration(),
-                          const SizedBox(height: 16),
-                          _buildMacrosGrid(),
-                          const SizedBox(height: 16),
-                          _buildMicrosAndLimits(),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                     child: Padding(
-                       padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                       child: Text('Riwayat Konsumsi', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-                     ),
-                  ),
-                  if (_entries.isEmpty)
-                    SliverFillRemaining(
-                      child: Center(
-                        child: Text('Belum ada asupan yang dicatat hari ini.', style: TextStyle(color: AppTheme.textMuted)),
-                      ),
-                    )
-                  else
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final entry = _entries[index];
-                          final isWater = entry.waterMl > 0 && entry.calories == 0;
-                          
-                          return Dismissible(
-                            key: Key('nut_${entry.id}'),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              decoration: BoxDecoration(color: AppTheme.accentRed, borderRadius: BorderRadius.circular(16)),
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.only(right: 20),
-                              child: const Icon(Icons.delete_rounded, color: Colors.white),
-                            ),
-                            onDismissed: (_) async {
-                              await _db.deleteProteinEntry(entry.id!);
-                              // Sync ke Firestore di background
-                              CloudSyncService.syncNutritionToCloud().catchError((_) {});
-                              _loadData();
-                            },
-                            child: Card(
-                              color: AppTheme.cardBg,
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: AppTheme.border),
-                              ),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppTheme.surfaceVariant,
-                                  child: Icon(entry.foodIcon, size: 20),
-                                ),
-                                title: Text(entry.foodName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                                subtitle: Text(
-                                  isWater 
-                                    ? '${entry.waterMl} ml • Hidrasi' 
-                                    : '${entry.calories.toStringAsFixed(0)} kcal • ${entry.mealLabel}', 
-                                  style: TextStyle(color: AppTheme.textMuted, fontSize: 13)
-                                ),
-                                trailing: isWater 
-                                  ? Icon(Icons.water_drop, color: AppTheme.electricBlue)
-                                  : Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text('${entry.proteinGrams.toStringAsFixed(1)}g Pro', style: TextStyle(color: AppTheme.neonGreen, fontSize: 13, fontWeight: FontWeight.w800)),
-                                        Text('${entry.carbsGrams.toStringAsFixed(1)}g Carb', style: TextStyle(color: Colors.orange[300], fontSize: 11, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                              ),
-                            ),
-                          );
-                        },
-                        childCount: _entries.length,
-                      ),
-                    ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
-              ),
-            ),
-    );
-  }
-
-  Widget _buildEnergyAndHydration() {
-    double calProgress = (_totalCalories / _targetCalories).clamp(0.0, 1.0);
-    double waterProgress = (_totalWater / _targetWaterMl).clamp(0.0, 1.0);
-
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.border)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.local_fire_department_rounded, color: AppTheme.accentOrange, size: 20),
-                    const SizedBox(width: 8),
-                    Text('Kalori', style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(_totalCalories.toStringAsFixed(0), style: TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w900)),
-                Text('kcal dikonsumsi', style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
-                const SizedBox(height: 12),
-                LinearProgressIndicator(value: calProgress, backgroundColor: AppTheme.surfaceVariant, valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentOrange), borderRadius: BorderRadius.circular(4)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: GestureDetector(
-            onTap: _showAddWaterSheet,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.electricBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.electricBlue.withOpacity(0.3))),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.water_drop_rounded, color: AppTheme.electricBlue, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Air Putih', style: TextStyle(color: AppTheme.electricBlue, fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      Icon(Icons.add_circle, color: AppTheme.electricBlue, size: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text('$_totalWater', style: TextStyle(color: AppTheme.electricBlue, fontSize: 28, fontWeight: FontWeight.w900)),
-                  Text('dari $_targetWaterMl ml', style: TextStyle(color: AppTheme.electricBlue, fontSize: 11)),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 24,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: LiquidLinearProgressIndicator(
-                        value: waterProgress,
-                        valueColor: AlwaysStoppedAnimation(AppTheme.electricBlue.withOpacity(0.8)),
-                        backgroundColor: AppTheme.electricBlue.withOpacity(0.1),
-                        borderColor: Colors.transparent,
-                        borderWidth: 0,
-                        borderRadius: 12.0,
-                        direction: Axis.horizontal,
-                        center: Text(
-                          "${(waterProgress * 100).toInt()}%",
-                          style: TextStyle(
-                            color: waterProgress > 0.4 ? Colors.white : AppTheme.electricBlue,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+      backgroundColor: Colors.white, // Flat UI: Pure White
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5406)))
+            : RefreshIndicator(
+                onRefresh: _refreshData,
+                color: const Color(0xFFFF5406),
+                backgroundColor: Colors.white,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(),
+                            const SizedBox(height: 32),
+                            _buildHeroRings(),
+                            const SizedBox(height: 32),
+                            const Text('Riwayat Hari Ini', style: TextStyle(color: Color(0xFF2F2F2F), fontSize: 20, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 16),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    if (_entries.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(
+                          child: Text('Belum ada asupan yang dicatat.', style: TextStyle(color: Colors.grey)),
+                        ),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final entry = _entries[index];
+                            return _buildFoodRow(entry);
+                          },
+                          childCount: _entries.length,
+                        ),
+                      ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
+                ),
               ),
-            ),
-          ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: _buildStickyBottomActions(),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('Nutrisi', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFFFF5406), letterSpacing: -1)),
+            Text('Harian', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F), letterSpacing: -1, height: 0.9)),
+          ],
         ),
+        Row(
+          children: [
+             GestureDetector(
+                onTap: _showAddWaterSheet,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(26)),
+                  child: const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 24),
+                ),
+             ),
+             const SizedBox(width: 8),
+             GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyReportScreen())),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(26)),
+                  child: const Icon(Icons.calendar_month, color: Color(0xFF2F2F2F), size: 24),
+                ),
+             ),
+          ],
+        )
       ],
     );
   }
 
-  Widget _buildMacrosGrid() {
+  Widget _buildHeroRings() {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.border)),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5), // Fog Gray
+        borderRadius: BorderRadius.circular(26), // 26px radius everywhere
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Makronutrisi (Bahan Bakar)', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 20),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _macroCircle('Protein', _totalProtein, _targetProtein, AppTheme.neonGreen),
-              _macroCircle('Karbo', _totalCarbs, 250, Colors.orange[400]!),
-              _macroCircle('Lemak', _totalFat, 65, Colors.pink[400]!),
+              _macroRing('Kalori', _totalCalories, _targetCalories, const Color(0xFFFF3400), 'kcal'),
+              _macroRing('Protein', _totalProtein, _targetProtein, const Color(0xFFBD4BE5), 'g'),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _macroRing('Karbo', _totalCarbs, 250, const Color(0xFF00A9DD), 'g'),
+              _macroRing('Lemak', _totalFat, 65, const Color(0xFF00B33F), 'g'),
             ],
           ),
         ],
@@ -349,92 +196,173 @@ class _ProteinScreenState extends State<ProteinScreen> {
     );
   }
 
-  Widget _macroCircle(String label, double current, double target, Color color) {
-    double progress = (current / target).clamp(0.0, 1.0);
+  Widget _macroRing(String label, double current, double target, Color color, String unit) {
+    double progress = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
     return Column(
       children: [
         SizedBox(
-          width: 70,
-          height: 70,
+          width: 80,
+          height: 80,
           child: Stack(
             fit: StackFit.expand,
             children: [
               CircularProgressIndicator(
+                value: 1.0,
+                strokeWidth: 8,
+                color: Colors.white, // background track
+              ),
+              CircularProgressIndicator(
                 value: progress,
                 strokeWidth: 8,
-                backgroundColor: AppTheme.surfaceVariant,
-                valueColor: AlwaysStoppedAnimation<Color>(color),
+                backgroundColor: Colors.transparent,
+                color: color, // macro color
               ),
               Center(
-                child: Text('${current.toStringAsFixed(0)}g', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(current.toStringAsFixed(0), style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text(unit, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               )
             ],
           ),
         ),
         const SizedBox(height: 12),
-        Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _buildMicrosAndLimits() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.border)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-           Text('Mikro & Batasan (GGL)', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
-           const SizedBox(height: 16),
-           _microBar('Serat (Pencernaan)', _totalFiber, 30, Colors.green[400]!, 'g'),
-           const SizedBox(height: 12),
-           _microBar('Gula (Maks 50g)', _totalSugar, 50, AppTheme.accentRed, 'g', isLimit: true),
-           const SizedBox(height: 12),
-           _microBar('Garam (Maks 5g)', _totalSalt, 5, Colors.purple[300]!, 'g', isLimit: true),
-        ],
+  Widget _buildFoodRow(ProteinEntry entry) {
+    final isWater = entry.waterMl > 0 && entry.calories == 0;
+    
+    return Dismissible(
+      key: Key('nut_${entry.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        color: const Color(0xFFFF3400),
+        child: const Icon(Icons.delete_rounded, color: Colors.white),
+      ),
+      onDismissed: (_) async {
+        await _db.deleteProteinEntry(entry.id!);
+        CloudSyncService.syncNutritionToCloud().catchError((_) {});
+        _loadData();
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5), width: 1.5)), // Hairline separator
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(entry.foodName, style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(
+                    isWater 
+                      ? '${entry.waterMl} ml • Hidrasi' 
+                      : '${entry.calories.toStringAsFixed(0)} kcal • ${entry.mealLabel}', 
+                    style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600)
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  width: 8, height: 8,
+                  decoration: BoxDecoration(
+                    color: isWater ? const Color(0xFF00A9DD) : const Color(0xFFBD4BE5),
+                    shape: BoxShape.circle
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isWater ? 'Air' : '${entry.proteinGrams.toStringAsFixed(0)}g Pro',
+                  style: TextStyle(
+                    color: isWater ? const Color(0xFF00A9DD) : const Color(0xFFBD4BE5),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                )
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
 
-  Widget _microBar(String label, double current, double target, Color color, String unit, {bool isLimit = false}) {
-    double progress = (current / target).clamp(0.0, 1.0);
-    bool overLimit = isLimit && current > target;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-           children: [
-             Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
-             Text('${current.toStringAsFixed(1)}$unit / ${target.toStringAsFixed(0)}$unit', 
-              style: TextStyle(color: overLimit ? AppTheme.accentRed : AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-           ],
-        ),
-        const SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: AppTheme.surfaceVariant,
-          valueColor: AlwaysStoppedAnimation<Color>(overLimit ? AppTheme.accentRed : color),
-          minHeight: 6,
-          borderRadius: BorderRadius.circular(3),
-        )
-      ],
+  Widget _buildStickyBottomActions() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const AiNutritionScreen()));
+                if (result == true) _loadData();
+              },
+              icon: const _GroqIcon(),
+              label: const Text('Catat AI', style: TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 16)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFF5F5F5),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: _showAddProteinSheet,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF5406), // Ember Orange
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Text('Catat Makanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   void _showAddWaterSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
       builder: (_) {
         return Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(32.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Tambah Air Putih', style: TextStyle(color: AppTheme.electricBlue, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
+              const Text('Tambah Air Putih', style: TextStyle(color: Color(0xFF00A9DD), fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -443,7 +371,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                   _waterButton(1000, 'Botol Besar'),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
             ],
           ),
         );
@@ -463,23 +391,21 @@ class _ProteinScreenState extends State<ProteinScreen> {
           mealType: 'water',
           date: DateTime.now(),
         ));
-        // Sync ke Firestore di background
         CloudSyncService.syncNutritionToCloud().catchError((_) {});
         _loadData();
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(26),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         decoration: BoxDecoration(
-          color: AppTheme.electricBlue.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.electricBlue.withOpacity(0.5)),
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Column(
           children: [
-            Icon(Icons.water_drop, color: AppTheme.electricBlue, size: 32),
-            const SizedBox(height: 8),
-            Text('+$ml ml', style: TextStyle(color: AppTheme.electricBlue, fontWeight: FontWeight.bold, fontSize: 16)),
+            const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
+            const SizedBox(height: 12),
+            Text('+$ml ml', style: const TextStyle(color: Color(0xFF00A9DD), fontWeight: FontWeight.bold, fontSize: 16)),
           ],
         ),
       ),
@@ -553,11 +479,7 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
 
   Future<void> _loadFrequentFoods() async {
     final freq = await _db.getFrequentFoods(mealType: _selectedMealType);
-    if (mounted) {
-      setState(() {
-        _frequentFoods = freq;
-      });
-    }
+    if (mounted) setState(() => _frequentFoods = freq);
   }
 
   Future<void> _save() async {
@@ -584,43 +506,7 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
       date: DateTime.now(),
     );
 
-    final totalSugar = widget.currentSugar + entry.sugarGrams;
-    final totalSalt = widget.currentSalt + entry.saltGrams;
-    final totalFat = widget.currentFat + entry.fatGrams;
-
-    if (totalSugar > 50 || totalSalt > 5 || totalFat > 67) {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.surface,
-          title: Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: AppTheme.accentRed),
-              const SizedBox(width: 8),
-              Text('Peringatan GGL!', style: TextStyle(color: AppTheme.textPrimary)),
-            ],
-          ),
-          content: Text(
-            'Makanan ini akan membuat total harianmu melampaui batas aman medis (Gula 50g, Garam 5g, atau Lemak 67g). Risiko lonjakan insulin dan kalori berlebih! Yakin ingin melanjutkan?',
-            style: TextStyle(color: AppTheme.textSecondary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Batal', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Tetap Simpan', style: TextStyle(color: AppTheme.accentRed)),
-            ),
-          ],
-        )
-      );
-      if (proceed != true) return;
-    }
-
     await _db.insertProteinEntry(entry);
-    // Sync ke Firestore di background
     CloudSyncService.syncNutritionToCloud().catchError((_) {});
     widget.onSaved();
   }
@@ -628,21 +514,21 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      padding: EdgeInsets.fromLTRB(32, 24, 32, MediaQuery.of(context).viewInsets.bottom + 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Center(
-            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppTheme.border, borderRadius: BorderRadius.circular(2))),
+            child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(2))),
           ),
-          const SizedBox(height: 20),
-          Text('Catat Nutrisi Makanan', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+          const Text('Catat Makanan', style: TextStyle(color: Color(0xFF2F2F2F), fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 24),
           
           Autocomplete<Map<String, dynamic>>(
             optionsBuilder: (TextEditingValue textEditingValue) {
@@ -655,16 +541,7 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
                  return const Iterable<Map<String, dynamic>>.empty();
               }
               final query = textEditingValue.text.toLowerCase();
-              final matches = ProteinFoodDatabase.foods.where((food) => (food['name'] as String).toLowerCase().contains(query)).toList();
-              matches.sort((a, b) {
-                final idxA = _frequentFoods.indexOf(a['name'] as String);
-                final idxB = _frequentFoods.indexOf(b['name'] as String);
-                if (idxA != -1 && idxB != -1) return idxA.compareTo(idxB);
-                if (idxA != -1) return -1;
-                if (idxB != -1) return 1;
-                return 0;
-              });
-              return matches;
+              return ProteinFoodDatabase.foods.where((food) => (food['name'] as String).toLowerCase().contains(query)).toList();
             },
             displayStringForOption: (option) => option['name'],
             onSelected: (selection) => setState(() => _selectedFood = selection),
@@ -672,12 +549,14 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
               return TextField(
                 controller: controller,
                 focusNode: focusNode,
-                style: TextStyle(color: AppTheme.textPrimary),
+                style: const TextStyle(color: Color(0xFF2F2F2F)),
                 decoration: InputDecoration(
                   labelText: 'Cari Makanan', 
-                  hintText: 'Mis: Telur, Nasi, Ayam...',
-                  prefixIcon: Icon(Icons.search, color: AppTheme.textMuted),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: 'Mis: Nasi, Ayam...',
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F5),
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
                 ),
               );
             },
@@ -686,19 +565,19 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
           
           if (_selectedFood != null) ...[
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppTheme.border)),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(26)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _macroMini('Pro', _selectedFood!['protein'], AppTheme.neonGreen),
-                  _macroMini('Carb', _selectedFood!['carbs'] ?? 0.0, Colors.orange),
-                  _macroMini('Fat', _selectedFood!['fat'] ?? 0.0, Colors.pink),
-                  _macroMini('Cal', _selectedFood!['calories'], AppTheme.accentOrange),
+                  _macroMini('Pro', _selectedFood!['protein'], const Color(0xFFBD4BE5)),
+                  _macroMini('Carb', _selectedFood!['carbs'] ?? 0.0, const Color(0xFF00A9DD)),
+                  _macroMini('Fat', _selectedFood!['fat'] ?? 0.0, const Color(0xFF00B33F)),
+                  _macroMini('Cal', _selectedFood!['calories'], const Color(0xFFFF3400)),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
           ],
 
           Row(
@@ -707,17 +586,28 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
                 child: TextField(
                   controller: _amountCtrl,
                   keyboardType: TextInputType.number,
-                  style: TextStyle(color: AppTheme.textPrimary),
-                  decoration: const InputDecoration(labelText: 'Porsi (100g/butir)'),
+                  style: const TextStyle(color: Color(0xFF2F2F2F)),
+                  decoration: InputDecoration(
+                    labelText: 'Porsi',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
               Expanded(
+                flex: 2,
                 child: DropdownButtonFormField<String>(
                   initialValue: _selectedMealType,
-                  dropdownColor: AppTheme.surface,
-                  style: TextStyle(color: AppTheme.textPrimary),
-                  decoration: const InputDecoration(labelText: 'Waktu Makan'),
+                  dropdownColor: Colors.white,
+                  style: const TextStyle(color: Color(0xFF2F2F2F)),
+                  decoration: InputDecoration(
+                    labelText: 'Waktu',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(26), borderSide: BorderSide.none),
+                  ),
                   items: _mealTypes.map((m) => DropdownMenuItem(value: m['id'], child: Text(m['label']!))).toList(),
                   onChanged: (v) {
                     setState(() => _selectedMealType = v!);
@@ -727,22 +617,23 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _selectedFood == null ? null : _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.neonGreen,
-                disabledBackgroundColor: AppTheme.neonGreen.withOpacity(0.35),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                backgroundColor: const Color(0xFFFF5406),
+                disabledBackgroundColor: const Color(0xFFFF5406).withOpacity(0.3),
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                elevation: 0,
               ),
               child: Text(
                 'Simpan Makanan',
                 style: TextStyle(
-                  color: _selectedFood == null ? Colors.black45 : Colors.black,
+                  color: _selectedFood == null ? Colors.white54 : Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
@@ -757,24 +648,18 @@ class _AddNutritionSheetState extends State<_AddNutritionSheet> {
   Widget _macroMini(String label, double val, Color c) {
     return Column(
       children: [
-        Text('${val.toStringAsFixed(1)}g', style: TextStyle(color: c, fontWeight: FontWeight.bold)),
-        Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+        Text('${val.toStringAsFixed(0)}g', style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
       ],
     );
   }
 }
 
-/// Widget logo Groq untuk tombol FAB
 class _GroqIcon extends StatelessWidget {
   const _GroqIcon();
-
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      height: 22,
-      child: CustomPaint(painter: _GroqIconPainter()),
-    );
+    return SizedBox(width: 20, height: 20, child: CustomPaint(painter: _GroqIconPainter()));
   }
 }
 
@@ -782,7 +667,7 @@ class _GroqIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = AppTheme.neonGreen
+      ..color = const Color(0xFF2F2F2F)
       ..style = PaintingStyle.fill;
     
     final path = Path()
@@ -798,8 +683,6 @@ class _GroqIconPainter extends CustomPainter {
       ..arcToPoint(Offset(size.width * 0.5, size.height * 0.25), radius: Radius.circular(size.width * 0.25));
     canvas.drawPath(path, paint);
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

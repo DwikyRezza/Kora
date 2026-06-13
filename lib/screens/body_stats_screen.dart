@@ -317,15 +317,15 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
     final goal = prefs[ProfileService.keyGoal] ?? "Bulking";
     // Also update Profile Base target
     await ProfileService.saveProfile(
-      name: name, 
+      name: name,
+      username: name.toLowerCase().replaceAll(' ', '_'),
       age: age,
       gender: gender,
       weight: weight, 
       height: height, 
       goal: goal,
-    );
-
-    widget.onSaved();
+      status: prefs['status'] ?? "",
+    );widget.onSaved();
   }
 
   @override

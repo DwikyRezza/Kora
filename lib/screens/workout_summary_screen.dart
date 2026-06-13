@@ -5,6 +5,7 @@ import '../models/workout.dart';
 import '../models/exercise_definition.dart';
 import '../services/database_helper.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/social_service.dart';
 import 'active_workout_screen.dart' show SetLog;
 
 class WorkoutSummaryScreen extends StatefulWidget {
@@ -134,6 +135,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
     await DatabaseHelper().insertWorkout(workout);
     // Sync ke Firestore di background
     CloudSyncService.syncWorkoutsToCloud().catchError((_) {});
+    
+    // Publish ke Social Feed
+    SocialService.publishWorkoutToFeed(workout.toMap()).catchError((_) {});
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

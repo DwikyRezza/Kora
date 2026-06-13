@@ -2,6 +2,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/schedule_event.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'auth_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -10,6 +12,8 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  static final _firestore = FirebaseFirestore.instance;
 
   Future<void> init() async {
     tz.initializeTimeZones();
@@ -31,7 +35,7 @@ class NotificationService {
     }
   }
 
-  // ── Notifikasi instan ──────────────────────────────────────────────────────
+  // ── Notifikasi instan (Lokal) ──────────────────────────────────────────────
   Future<void> showNotification({
     required int id,
     required String title,
@@ -51,10 +55,8 @@ class NotificationService {
         payload: 'item x');
   }
 
-  // ── Jadwal dari ScheduleScreen ─────────────────────────────────────────────
+  // ── Jadwal dari ScheduleScreen (Lokal) ─────────────────────────────────────
 
-  /// Jadwalkan notifikasi untuk satu event jadwal.
-  /// [advanceMinutes] = berapa menit SEBELUM waktu event notifikasi dikirim.
   Future<void> scheduleEventReminder(
     ScheduleEvent event, {
     int advanceMinutes = 30,
@@ -87,33 +89,29 @@ class NotificationService {
     );
   }
 
-  /// Penjadwalan ulang semua event setelah setting advance notice berubah.
   Future<void> rescheduleAllEvents(
     List<ScheduleEvent> events, {
     int advanceMinutes = 30,
   }) async {
-    // Batalkan semua notif yang ada untuk event jadwal (ID < 900)
     for (final event in events) {
       if (event.id != null) {
         await flutterLocalNotificationsPlugin.cancel(event.id!);
       }
     }
-    // Jadwalkan ulang
     for (final event in events) {
       await scheduleEventReminder(event, advanceMinutes: advanceMinutes);
     }
   }
 
-  /// Batalkan notifikasi satu event
   Future<void> cancelEventReminder(int eventId) async {
     await flutterLocalNotificationsPlugin.cancel(eventId);
   }
 
-  // ── Notifikasi protein ─────────────────────────────────────────────────────
+  // ── Notifikasi protein (Lokal) ─────────────────────────────────────────────
   Future<void> scheduleNutritionReminders() async {
     final now = DateTime.now();
     
-    // Siang (12:00) - Santai
+    // Siang (12:00)
     var noonDate = DateTime(now.year, now.month, now.day, 12, 0);
     if (noonDate.isBefore(now)) {
       noonDate = noonDate.add(const Duration(days: 1));
@@ -131,7 +129,7 @@ class NotificationService {
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
 
-    // Sore (18:00) - Tegas
+    // Sore (18:00)
     var eveningDate = DateTime(now.year, now.month, now.day, 18, 0);
     if (eveningDate.isBefore(now)) {
       eveningDate = eveningDate.add(const Duration(days: 1));
@@ -155,7 +153,6 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.cancel(1000);
   }
 
-  // biarkan backward-compat ─ masih dipakai di schedule_screen lama
   Future<void> cancelWorkoutReminder(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
   }
@@ -197,5 +194,96 @@ class NotificationService {
 
   Future<void> cancelWeeklyProgressReminder() async {
     await flutterLocalNotificationsPlugin.cancel(998);
+  }
+
+  // ── Sosial & Cloud Notifications (Firebase) ────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    if (!AuthService.isLoggedIn) return [];
+    
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(AuthService.uid)
+          .collection('notifications')
+          .orderBy('timestamp', descending: true)
+          .limit(50)
+          .get();
+
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('[NotificationService] Error getNotifications: $e');
+      return [];
+    }
+  }
+
+  static Future<void> addNotification(String targetUid, {
+    required String title,
+    required String body,
+    required String type, // 'follow', 'reminder', 'system'
+    String? relatedUid,
+    String? relatedPhotoUrl,
+  }) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(targetUid)
+          .collection('notifications')
+          .add({
+        'title': title,
+        'body': body,
+        'type': type,
+        'relatedUid': relatedUid,
+        'relatedPhotoUrl': relatedPhotoUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+    } catch (e) {
+      print('[NotificationService] Error addNotification: $e');
+    }
+  }
+
+  static Future<void> markAllAsRead() async {
+    if (!AuthService.isLoggedIn) return;
+    
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(AuthService.uid)
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final batch = _firestore.batch();
+      for (var doc in snap.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
+    } catch (e) {
+      print('[NotificationService] Error markAllAsRead: $e');
+    }
+  }
+
+  static Future<int> getUnreadCount() async {
+    if (!AuthService.isLoggedIn) return 0;
+    
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .doc(AuthService.uid)
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .count()
+          .get();
+      return snap.count ?? 0;
+    } catch (e) {
+      return 0;
+    }
   }
 }

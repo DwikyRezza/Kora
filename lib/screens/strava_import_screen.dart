@@ -5,6 +5,7 @@ import '../models/workout.dart';
 import '../services/strava_service.dart';
 import '../services/database_helper.dart';
 import '../services/profile_service.dart';
+import '../services/social_service.dart';
 
 class StravaImportScreen extends StatefulWidget {
   const StravaImportScreen({super.key});
@@ -160,6 +161,10 @@ class _StravaImportScreenState extends State<StravaImportScreen> {
     );
 
     await DatabaseHelper().insertWorkout(workout);
+    
+    // Publish ke Social Feed
+    SocialService.publishWorkoutToFeed(workout.toMap()).catchError((_) {});
+
     setState(() => _importedIds.add(id));
 
     if (mounted) {

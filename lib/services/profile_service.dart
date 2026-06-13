@@ -6,6 +6,7 @@ import 'auth_service.dart';
 /// Tidak ada penyimpanan lokal (tidak pakai SQLite / SharedPreferences).
 class ProfileService {
   static const keyName = 'name';
+  static const keyUsername = 'username'; // Ditambahkan
   static const keyAge = 'age';
   static const keyGender = 'gender';
   static const keyHeight = 'height';
@@ -14,7 +15,7 @@ class ProfileService {
   static const keyTargetProtein = 'targetProtein';
   static const keyDailyBudget = 'dailyBudget';
   static const keyPhotoUrl = 'photoUrl';
-  static const keyStatus = 'status'; // semester/kampus
+  static const keyStatus = 'status'; // bio
   static const keyIsOnboarded = 'isOnboarded';
   static const keyStreakFreezeCount = 'streakFreezeCount';
   static const keyPoints = 'points';
@@ -51,6 +52,7 @@ class ProfileService {
   // ─── Simpan profil ke Firestore ────────────────────────────────────────────
   static Future<void> saveProfile({
     required String name,
+    required String username, // Ditambahkan
     required int age,
     required String gender,
     required double height,
@@ -76,18 +78,18 @@ class ProfileService {
 
       createdAt = oldProfile?['createdAt'] as String? ?? now;
 
-      // Tentukan foto: pakai yang baru jika https://, jaga yang lama jika valid, fallback Google
+      // Tentukan foto: pakai yang baru jika https:// atau data:image, jaga yang lama jika valid, fallback Google
       final oldPhoto = oldProfile?['photoUrl'] as String?;
-      if (photoUrl != null && photoUrl.startsWith('https://')) {
+      if (photoUrl != null && (photoUrl.startsWith('https://') || photoUrl.startsWith('data:image'))) {
         resolvedPhotoUrl = photoUrl;
-      } else if (oldPhoto != null && oldPhoto.startsWith('https://')) {
+      } else if (oldPhoto != null && (oldPhoto.startsWith('https://') || oldPhoto.startsWith('data:image'))) {
         resolvedPhotoUrl = oldPhoto;
       } else {
         resolvedPhotoUrl = AuthService.photoUrl;
       }
     } catch (_) {
       createdAt = now;
-      resolvedPhotoUrl = photoUrl?.startsWith('https://') == true
+      resolvedPhotoUrl = (photoUrl != null && (photoUrl.startsWith('https://') || photoUrl.startsWith('data:image')))
           ? photoUrl
           : AuthService.photoUrl;
     }
@@ -95,6 +97,7 @@ class ProfileService {
     final profileMap = {
       'uid': AuthService.uid,
       'name': name,
+      'username': username, // Ditambahkan
       'email': AuthService.email,
       'photoUrl': resolvedPhotoUrl,
       'age': age,
@@ -111,7 +114,7 @@ class ProfileService {
 
     // ── Simpan ke Firestore ───────────────────────────────────────────────────
     await _userDoc.set({'profile': profileMap}, SetOptions(merge: true));
-    print('[ProfileService] ✅ Profil tersimpan ke Firestore: $name');
+    print('[ProfileService] ✅ Profil tersimpan ke Firestore: $name (@$username)');
   }
 
   // ─── Ambil profil dari Firestore ───────────────────────────────────────────
@@ -126,6 +129,7 @@ class ProfileService {
           final p = data['profile'] as Map<String, dynamic>;
           return {
             keyName: p['name'] ?? AuthService.displayName,
+            keyUsername: p['username'] ?? '', // Ditambahkan
             keyAge: p['age'] ?? 0,
             keyGender: p['gender'] ?? 'Laki-laki',
             keyHeight: (p['height'] as num?)?.toDouble() ?? 0.0,
@@ -152,6 +156,7 @@ class ProfileService {
   // ─── Profil kosong (default) ───────────────────────────────────────────────
   static Map<String, dynamic> _emptyProfile() => {
     keyName: AuthService.displayName,
+    keyUsername: '', // Ditambahkan
     keyAge: 0,
     keyGender: 'Laki-laki',
     keyHeight: 0.0,

@@ -4,6 +4,7 @@ import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/responsive.dart';
 import '../main.dart';
+import '../services/auth_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -33,7 +34,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       // Simpan ke lokal + Firestore (via ProfileService yang sudah diupdate)
       await ProfileService.saveProfile(
-        name: _name,
+        name: AuthService.displayName,
+        username: AuthService.displayName.toLowerCase().replaceAll(' ', '_'),
         age: _age,
         gender: _gender,
         height: _height,
