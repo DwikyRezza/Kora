@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
@@ -16,6 +17,7 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String _name = '';
+  String _username = '';
   int _age = 0;
   String _gender = 'Laki-laki';
   double _height = 0.0;
@@ -32,10 +34,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       double bmi = _weight / ((_height / 100) * (_height / 100));
       String status = ProfileService.getBMIStatus(bmi);
 
-      // Simpan ke lokal + Firestore (via ProfileService yang sudah diupdate)
+      // Simpan ke lokal + Firestore
       await ProfileService.saveProfile(
-        name: AuthService.displayName,
-        username: AuthService.displayName.toLowerCase().replaceAll(' ', '_'),
+        name: _name.isNotEmpty ? _name : AuthService.displayName,
+        username: _username,
         age: _age,
         gender: _gender,
         height: _height,
@@ -51,19 +53,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            backgroundColor: AppTheme.surface,
+            backgroundColor: const Color(0xFFFFFFFF), // Paper White
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: AppTheme.neonGreen, size: 28),
+                Icon(Icons.check_circle_rounded, color: const Color(0xFF00B33F), size: 28), // Verdant Green
                 const SizedBox(width: 10),
                 Text('Profil Tersimpan!',
-                    style: TextStyle(color: AppTheme.neonGreen, fontWeight: FontWeight.w800)),
+                    style: TextStyle(color: const Color(0xFF00B33F), fontWeight: FontWeight.w800)),
               ],
             ),
             content: Text(
               'BMI Anda: ${bmi.toStringAsFixed(1)} — $status\n\nData profil Anda telah disimpan ke cloud. Selamat datang di Kora! 🎉',
-              style: TextStyle(color: AppTheme.textSecondary, height: 1.5),
+              style: TextStyle(color: const Color(0xFF2F2F2F), height: 1.5), // Graphite
             ),
             actions: [
               ElevatedButton(
@@ -74,11 +76,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.neonGreen,
+                  backgroundColor: const Color(0xFFFF5406), // Ember Orange
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 child: const Text('Mulai Sekarang',
-                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -90,14 +92,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFFFFFFF), // Paper White
       appBar: AppBar(
-        title: const Text('Mulai Perjalananmu'),
-        backgroundColor: AppTheme.background,
+        title: Text('Mulai Perjalananmu', style: TextStyle(color: const Color(0xFF2F2F2F))),
+        backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
+        iconTheme: IconThemeData(color: const Color(0xFF2F2F2F)),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(context.spaceLG),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
@@ -106,28 +109,71 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Text(
                 'Lengkapi Profil Anda',
                 style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: context.font2XL,
-                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF2F2F2F),
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: context.spaceXL),
-              _buildTextField('Nama', (v) => _name = v!, TextInputType.name),
-              SizedBox(height: context.spaceLG),
+              SizedBox(height: 32),
+              
+              _buildTextField('Nama', (v) => _name = v!, TextInputType.name, initialValue: AuthService.displayName),
+              SizedBox(height: 20),
+              
+              // Username Field
+              TextFormField(
+                style: TextStyle(color: const Color(0xFF2F2F2F)),
+                keyboardType: TextInputType.text,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  labelStyle: TextStyle(color: const Color(0xFF72A2C5)),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: const Color(0xFFFF5406), width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F5),
+                  prefixIcon: Icon(Icons.alternate_email_rounded, color: const Color(0xFF72A2C5)),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-z0-9_.]')),
+                  LowerCaseTextFormatter(),
+                ],
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Username wajib diisi';
+                  if (v.length < 3) return 'Minimal 3 karakter';
+                  return null;
+                },
+                onSaved: (v) => _username = v!,
+              ),
+              SizedBox(height: 20),
+
               Row(
                 children: [
                   Expanded(child: _buildTextField('Usia', (v) => _age = int.parse(v!), TextInputType.number)),
-                  SizedBox(width: context.spaceLG),
+                  SizedBox(width: 20),
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         labelText: 'Gender',
-                        labelStyle: TextStyle(color: AppTheme.textMuted),
-                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.border)),
-                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.neonGreen)),
+                        labelStyle: TextStyle(color: const Color(0xFF72A2C5)),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: const Color(0xFFFF5406), width: 2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF5F5F5),
                       ),
-                      dropdownColor: AppTheme.surface,
-                      style: TextStyle(color: AppTheme.textPrimary),
+                      dropdownColor: const Color(0xFFFFFFFF),
+                      style: TextStyle(color: const Color(0xFF2F2F2F), fontSize: 16),
                       initialValue: _gender,
                       items: _genders.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                       onChanged: (v) => setState(() => _gender = v!),
@@ -135,41 +181,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: context.spaceLG),
+              SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: _buildTextField('Tinggi Badan (cm)', (v) => _height = double.parse(v!), TextInputType.number)),
-                  SizedBox(width: context.spaceLG),
+                  SizedBox(width: 20),
                   Expanded(child: _buildTextField('Berat Badan (kg)', (v) => _weight = double.parse(v!), TextInputType.number)),
                 ],
               ),
-              SizedBox(height: context.spaceLG),
+              SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Goal Latihan',
-                  labelStyle: TextStyle(color: AppTheme.textMuted),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.border)),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.neonGreen)),
+                  labelStyle: TextStyle(color: const Color(0xFF72A2C5)),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: const Color(0xFFFF5406), width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F5),
                 ),
-                dropdownColor: AppTheme.surface,
-                style: TextStyle(color: AppTheme.textPrimary),
+                dropdownColor: const Color(0xFFFFFFFF),
+                style: TextStyle(color: const Color(0xFF2F2F2F), fontSize: 16),
                 initialValue: _goal,
                 items: _goals.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                 onChanged: (v) => setState(() => _goal = v!),
               ),
-              SizedBox(height: context.space2XL),
+              SizedBox(height: 48),
               SizedBox(
                 width: double.infinity,
-                height: context.buttonHeight,
+                height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.neonGreen,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.radiusMD)),
+                    backgroundColor: const Color(0xFFFF5406), // Ember Orange
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)), // Pill radius
+                    elevation: 0,
                   ),
                   onPressed: _saveAndContinue,
                   child: Text(
                     'Simpan & Lanjutkan',
-                    style: TextStyle(color: Colors.black, fontSize: context.fontMD, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -180,18 +235,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildTextField(String label, void Function(String?) onSave, TextInputType type) {
+  Widget _buildTextField(String label, void Function(String?) onSave, TextInputType type, {String? initialValue}) {
     return TextFormField(
-      style: TextStyle(color: AppTheme.textPrimary),
+      initialValue: initialValue,
+      style: TextStyle(color: const Color(0xFF2F2F2F)),
       keyboardType: type,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: AppTheme.textMuted),
-        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.border)),
-        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.neonGreen)),
+        labelStyle: TextStyle(color: const Color(0xFF72A2C5)), // Mist Blue
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: const Color(0xFFFF5406), width: 2), // Ember Orange
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF5F5F5), // Fog
       ),
       validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
       onSaved: onSave,
+    );
+  }
+}
+
+class LowerCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toLowerCase(),
+      selection: newValue.selection,
     );
   }
 }
