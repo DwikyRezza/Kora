@@ -125,7 +125,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () async {
-            await AuthService.logout();
+            await AuthService.signOut();
             if (context.mounted) {
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (_) => const LandingScreen()),
