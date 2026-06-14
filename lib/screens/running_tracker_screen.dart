@@ -93,7 +93,15 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   // true = tab Workout visible (RunningTrackerScreen mungkin terlihat)
   // false = user pindah tab → pause GPS stream, skip setState, stop camera
   bool _isMapVisible = true;
-  DateTime? _tabHiddenTime; // Waktu saat tab disembunyikan (untuk sync elapsed)
+  DateTime? _tabHiddenTime;
+
+  // ── ValueNotifiers — granular metric updates tanpa rebuild seluruh screen ─
+  // Updated every second by timer & on GPS/service data change.
+  // Only the small ValueListenableBuilder widgets that listen to these
+  // will rebuild — GoogleMap, buttons, GPS badge stay untouched.
+  final ValueNotifier<int> _elapsedNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<double> _distanceNotifier = ValueNotifier<double>(0.0);
+  final ValueNotifier<String> _paceNotifier = ValueNotifier<String>('--:--');
 
   @override
   void initState() {
@@ -112,6 +120,9 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
     _uiTimer?.cancel();
     _initialLocationStream?.cancel();
+    _elapsedNotifier.dispose();
+    _distanceNotifier.dispose();
+    _paceNotifier.dispose();
     super.dispose();
   }
 
@@ -155,13 +166,15 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   void _startUiTimer() {
     _uiTimer?.cancel();
     _uiTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted || !_isMapVisible) return; // Skip rebuild saat tab hidden
-      setState(() {
-        if (_uiRunStartTime != null) {
-          _elapsedSeconds = _elapsedBeforePause +
-              DateTime.now().difference(_uiRunStartTime!).inSeconds;
-        }
-      });
+      if (!mounted || !_isMapVisible) return;
+      if (_uiRunStartTime != null) {
+        final newElapsed = _elapsedBeforePause +
+            DateTime.now().difference(_uiRunStartTime!).inSeconds;
+        // Update ValueNotifier TANPA setState — hanya widget metrics yang rebuild
+        _elapsedSeconds = newElapsed;
+        _elapsedNotifier.value = newElapsed;
+        _recalcPace();
+      }
     });
   }
 
@@ -263,12 +276,17 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
           }
         } catch (_) {}
       }
-      if (svcRoute != null && svcRoute.length > _routePoints.length) {
+      final bool hasNewRoute = svcRoute != null && svcRoute.length > _routePoints.length;
+      if (hasNewRoute) {
         _routePoints = svcRoute;
       }
 
-      // Trigger rebuild HANYA jika tab visible — skip rebuild mahal saat hidden
-      if (_isMapVisible) setState(() {});
+      // Sync ValueNotifiers — metric widgets update granularly, no full rebuild.
+      _syncAllNotifiers();
+      // Rebuild map only when new route points arrived from service
+      if (_isMapVisible && hasNewRoute) {
+        setState(() {});
+      }
     } else if (type == 'final') {
       // Saat selesai: ambil data terbaik (max) antara service & UI
       if (!mounted) return;
@@ -426,11 +444,18 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     ).listen((pos) {
       if (!mounted) return;
       final loc = LatLng(pos.latitude, pos.longitude);
-      setState(() {
-        _currentLocation = loc;
-        // SATU-SATUNYA tempat jarak dihitung — pakai speed dari GPS
-        if (_isRunning) _addRoutePointWithDistance(loc, gpsSpeedMs: pos.speed);
-      });
+
+      // Hitung jarak DULU (update _distanceKm + notifier tanpa setState)
+      if (_isRunning) {
+        _addRoutePointWithDistance(loc, gpsSpeedMs: pos.speed);
+        _distanceNotifier.value = _distanceKm;
+        _recalcPace();
+      }
+
+      // setState HANYA untuk update posisi marker di Google Maps
+      _currentLocation = loc;
+      setState(() {});
+
       if (_isRunning || !_hasStarted) {
         _animateCameraToLocation(loc);
       }
@@ -523,6 +548,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
         _uiRunStartTime = DateTime.now();
         _startUiTimer();
         _startInitialLocationStream();
+        _syncAllNotifiers(); // Sync ValueNotifiers setelah resume
 
         // Re-center kamera ke posisi terakhir
         if (_currentLocation != null) {
@@ -590,6 +616,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
         _uiRunStartTime = DateTime.now();
         _startUiTimer();
         _startInitialLocationStream();
+        _syncAllNotifiers(); // Sync ValueNotifiers setelah resume dari background
         debugPrint('📱 [UI] App kembali foreground — UI timer & GPS stream restart');
       }
     } else if (state == AppLifecycleState.detached) {
@@ -619,6 +646,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       _lastSplitKm = 0;
       _lastSplitTimeSeconds = 0;
     });
+    _syncAllNotifiers(); // Reset metrics di ValueNotifier juga
 
     _uiRunStartTime = DateTime.now();
     _startUiTimer();
@@ -751,10 +779,14 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   }
 
   // ── Getters ───────────────────────────────────────────────────────────
-  String get _formattedTime {
-    final h = (_elapsedSeconds ~/ 3600);
-    final m = ((_elapsedSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
-    final s = (_elapsedSeconds % 60).toString().padLeft(2, '0');
+  String get _formattedTime => _formatElapsed(_elapsedSeconds);
+
+  /// Format elapsed seconds → "HH:MM:SS" or "MM:SS".
+  /// Pure function — bisa dipakai oleh ValueListenableBuilder tanpa akses state.
+  static String _formatElapsed(int totalSeconds) {
+    final h = totalSeconds ~/ 3600;
+    final m = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
+    final s = (totalSeconds % 60).toString().padLeft(2, '0');
     if (h > 0) return '$h:$m:$s';
     return '$m:$s';
   }
@@ -769,6 +801,21 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     final m = paceMins.truncate();
     final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
     return '$m:$s';
+  }
+
+  // ── ValueNotifier sync helpers ─────────────────────────────────────────
+  // Setiap kali _elapsedSeconds atau _distanceKm berubah, panggil helper ini
+  // agar ValueNotifier ikut ter-update dan widget metrics ter-rebuild granular.
+  void _recalcPace() {
+    _paceNotifier.value = _pace;
+  }
+
+  /// Sync semua ValueNotifier dari variabel state saat ini.
+  /// Dipanggil setelah operasi yang mengubah banyak variabel sekaligus.
+  void _syncAllNotifiers() {
+    _elapsedNotifier.value = _elapsedSeconds;
+    _distanceNotifier.value = _distanceKm;
+    _recalcPace();
   }
 
   // ─── BUILD ────────────────────────────────────────────────────────────
@@ -1128,10 +1175,30 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _statItem('Waktu', _formattedTime),
-                        _statItemPace('Avg pace (/km)', _pace),
-                        _statItem(
-                            'Jarak (km)', _distanceKm.toStringAsFixed(2)),
+                        // ── Waktu (elapsed) — rebuild only when seconds change ──
+                        ValueListenableBuilder<int>(
+                          valueListenable: _elapsedNotifier,
+                          builder: (_, elapsed, __) => _statItem(
+                            'Waktu',
+                            _formatElapsed(elapsed),
+                          ),
+                        ),
+                        // ── Pace — rebuild only when pace recalc triggers ──
+                        ValueListenableBuilder<String>(
+                          valueListenable: _paceNotifier,
+                          builder: (_, pace, __) => _statItemPace(
+                            'Avg pace (/km)',
+                            pace,
+                          ),
+                        ),
+                        // ── Jarak — rebuild only when distance changes ──
+                        ValueListenableBuilder<double>(
+                          valueListenable: _distanceNotifier,
+                          builder: (_, dist, __) => _statItem(
+                            'Jarak (km)',
+                            dist.toStringAsFixed(2),
+                          ),
+                        ),
                       ],
                     ),
                     SizedBox(height: context.spaceLG),
