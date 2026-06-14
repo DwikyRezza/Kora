@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -114,6 +115,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _saveProfile() async {
     setState(() => _isSaving = true);
     
+    String newUsername = _usernameController.text.trim();
+    if (newUsername.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username wajib diisi')));
+      setState(() => _isSaving = false);
+      return;
+    }
+
+    bool isUsernameAvail = await ProfileService.isUsernameAvailable(newUsername);
+    if (!isUsernameAvail && mounted) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Username "$newUsername" sudah digunakan. Silakan pilih username lain.'),
+          backgroundColor: const Color(0xFFFF5406),
+        ),
+      );
+      return;
+    }
+
     // Map reverse Goal & Gender
     String goal = _selectedGoal;
     if (goal == 'Cutting / Diet') goal = 'Diet';
@@ -302,7 +322,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             // Informasi Pribadi
             _buildSectionTitle('INFORMASI PRIBADI'),
             const SizedBox(height: 16),
-            _buildTextField('Username', _usernameController, hint: '@username'),
+            _buildTextField(
+              'Username', 
+              _usernameController, 
+              hint: '@username',
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[a-z0-9_.]')),
+                _LowerCaseTextFormatter(),
+              ],
+            ),
             const SizedBox(height: 16),
             _buildTextField('Display Name', _nameController, hint: 'Nama tampilan publik'),
             const SizedBox(height: 16),
@@ -388,7 +416,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {String? hint, bool isNumber = false, bool readOnly = false}) {
+  Widget _buildTextField(String label, TextEditingController controller, {String? hint, bool isNumber = false, bool readOnly = false, List<TextInputFormatter>? inputFormatters}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -406,6 +434,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextFormField(
           controller: controller,
           readOnly: readOnly,
+          inputFormatters: inputFormatters,
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
           style: TextStyle(color: readOnly ? AppTheme.textMuted : AppTheme.textPrimary, fontSize: 16),
           decoration: InputDecoration(
@@ -461,6 +490,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LowerCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toLowerCase(),
+      selection: newValue.selection,
     );
   }
 }
