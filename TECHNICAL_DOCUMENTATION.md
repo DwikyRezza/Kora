@@ -79,7 +79,7 @@ lib/
 │   ├── public_profile_screen.dart     # Profil pengguna lain
 │   ├── search_screen.dart             # Search users
 │   ├── strava_import_screen.dart      # Import dari Strava
-│   ├── notification_screen.dart       # Notification center
+│   ├── notification_screen.dart       # Notification center + interactive follow routing
 │   ├── edit_profile_screen.dart       # Edit profil
 │   └── setting_screen.dart            # App settings
 ├── services/                          # Business logic layer (14 service files)
@@ -248,6 +248,12 @@ Tombol notifikasi (`pause_btn`, `resume_btn`, `finish_btn`) langsung ditangani o
 - **Exact Alarm Permission** — `requestExactAlarmsPermission()` memastikan notifikasi penting (schedule, strict nutrition) tepat waktu bahkan di Doze mode
 - **Reschedule All** — `rescheduleAllEvents()` membatalkan dan menjadwalkan ulang semua reminder saat ada perubahan jadwal
 - **Cloud Notifications** — `addNotification()` menulis ke sub-collection `notifications` di Firestore untuk notifikasi sosial (follow, like, comment)
+
+**Social Notification Interactive Routing:**
+`NotificationScreen` di `notification_screen.dart` merender notifikasi sosial dengan payload dinamis:
+- **Payload dari `SocialService.followUser()`** — Mengambil `name`, `username`, dan `photoUrl` dari sub-dokumen `profile` di Firestore user yang mengikuti, lalu mengirim `relatedUid` (follower UID) + `relatedPhotoUrl` ke notifikasi
+- **Avatar rendering** — `_buildAvatar()` menampilkan foto asli pengikut via `NetworkImage` (atau `Image.memory` untuk base64 data URI). Fallback ke ikon `person_add` jika foto tidak tersedia
+- **Tap-to-profile routing** — Setiap item notifikasi dibungkus `GestureDetector` dengan `HitTestBehavior.opaque`. Jika `type == 'follow'` dan `relatedUid` valid, tap otomatis push `PublicProfileScreen(uid: relatedUid)` via `MaterialPageRoute`
 
 ---
 
@@ -665,4 +671,4 @@ final profile = userData.containsKey('profile')
 
 ---
 
-*Dokumentasi ini dihasilkan berdasarkan analisis mendalam terhadap seluruh source code repositori Kora. Terakhir diperbarui mencakup: photo normalization (v11), SQLite indexes (v12), TabVisibility event bus, ValueNotifier granular rebuild, weekly report dashboard refactor, social feed profile fix, home screen smart routing, dan async offline-first nutrition save (non-blocking cloud sync).*
+*Dokumentasi ini dihasilkan berdasarkan analisis mendalam terhadap seluruh source code repositori Kora. Terakhir diperbarui mencakup: photo normalization (v11), SQLite indexes (v12), TabVisibility event bus, ValueNotifier granular rebuild, weekly report dashboard refactor, social feed profile fix, home screen smart routing, async offline-first nutrition save (non-blocking cloud sync), dan social notification interactive routing.*

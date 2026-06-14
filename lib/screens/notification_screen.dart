@@ -4,6 +4,7 @@ import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'public_profile_screen.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -127,37 +128,52 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   itemBuilder: (context, index) {
                     final notif = _notifications[index];
                     final isRead = notif['isRead'] ?? true;
+                    final type = notif['type'] as String? ?? '';
+                    final relatedUid = notif['relatedUid'] as String?;
                     
-                    return Container(
-                      color: isRead ? Colors.transparent : const Color(0xFFFF5406).withOpacity(0.05),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildAvatar(notif['relatedPhotoUrl'] as String?, notif['type'] as String? ?? ''),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  notif['title'] ?? 'Info Kora',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  notif['body'] ?? '',
-                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _formatTimestamp(notif['timestamp'] as Timestamp?),
-                                  style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold),
-                                ),
-                              ],
+                    return GestureDetector(
+                      onTap: () {
+                        if (type == 'follow' && relatedUid != null && relatedUid.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfileScreen(uid: relatedUid),
                             ),
-                          ),
-                        ],
+                          );
+                        }
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        color: isRead ? Colors.transparent : const Color(0xFFFF5406).withOpacity(0.05),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildAvatar(notif['relatedPhotoUrl'] as String?, type),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    notif['title'] ?? 'Info Kora',
+                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    notif['body'] ?? '',
+                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    _formatTimestamp(notif['timestamp'] as Timestamp?),
+                                    style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
