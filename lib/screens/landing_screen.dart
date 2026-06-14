@@ -361,6 +361,7 @@ class _LandingScreenState extends State<LandingScreen>
     ),
   );
 }
+}
 
 /// Widget Google "G" icon kecil
 class _GoogleGIcon extends StatelessWidget {
