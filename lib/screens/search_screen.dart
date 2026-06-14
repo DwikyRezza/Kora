@@ -50,18 +50,18 @@ class _SearchScreenState extends State<SearchScreen> {
 
       final snap = await FirebaseFirestore.instance
           .collection('users')
-          .where('username', isGreaterThanOrEqualTo: queryLower)
-          .where('username', isLessThanOrEqualTo: endQuery)
+          .where('profile.usernameLower', isGreaterThanOrEqualTo: queryLower)
+          .where('profile.usernameLower', isLessThanOrEqualTo: endQuery)
           .limit(20)
           .get();
           
-      // Kita juga bisa melakukan query terpisah untuk 'name' jika diinginkan,
-      // tetapi untuk kesederhanaan, kita cari berdasarkan username.
-      
       final results = snap.docs.map((doc) {
         final data = doc.data();
-        data['uid'] = doc.id;
-        return data;
+        final profileData = data.containsKey('profile') 
+            ? Map<String, dynamic>.from(data['profile'] as Map) 
+            : <String, dynamic>{};
+        profileData['uid'] = doc.id;
+        return profileData;
       }).toList();
 
       if (mounted) {

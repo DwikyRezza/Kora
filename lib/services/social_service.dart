@@ -110,7 +110,8 @@ class SocialService {
       for (var doc in snap.docs) {
         final userSnap = await _firestore.collection('users').doc(doc.id).get();
         if (userSnap.exists) {
-          final data = userSnap.data() as Map<String, dynamic>;
+          final docData = userSnap.data() as Map<String, dynamic>;
+          final data = docData.containsKey('profile') ? Map<String, dynamic>.from(docData['profile'] as Map) : <String, dynamic>{};
           data['uid'] = doc.id; 
           followers.add(data);
         }
@@ -130,7 +131,8 @@ class SocialService {
       for (var doc in snap.docs) {
         final userSnap = await _firestore.collection('users').doc(doc.id).get();
         if (userSnap.exists) {
-          final data = userSnap.data() as Map<String, dynamic>;
+          final docData = userSnap.data() as Map<String, dynamic>;
+          final data = docData.containsKey('profile') ? Map<String, dynamic>.from(docData['profile'] as Map) : <String, dynamic>{};
           data['uid'] = doc.id;
           following.add(data);
         }
@@ -385,7 +387,8 @@ class SocialService {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
-        final data = doc.data()!;
+        final docData = doc.data()!;
+        final data = docData.containsKey('profile') ? Map<String, dynamic>.from(docData['profile'] as Map) : <String, dynamic>{};
         data['uid'] = doc.id;
         return data;
       }

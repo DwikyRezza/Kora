@@ -98,6 +98,7 @@ class ProfileService {
       'uid': AuthService.uid,
       'name': name,
       'username': username, // Ditambahkan
+      'usernameLower': username.toLowerCase(), // Untuk pencarian case-insensitive
       'email': AuthService.email,
       'photoUrl': resolvedPhotoUrl,
       'age': age,
