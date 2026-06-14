@@ -20,7 +20,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
   List<ProteinEntry> _entries = [];
   bool _isLoading = true;
   double _targetProtein = 150.0;
-  final double _targetCalories = 2500.0; 
+  final double _targetCalories = 2500.0;
 
   @override
   void initState() {
@@ -43,13 +43,13 @@ class _ProteinScreenState extends State<ProteinScreen> {
     final today = DateTime.now();
     final entries = await _db.getProteinEntriesByDate(today);
     final profile = await ProfileService.getProfile();
-    
+
     if (mounted) {
       setState(() {
         _entries = entries;
         _targetProtein = profile[ProfileService.keyTargetProtein] ?? 150.0;
         if (_targetProtein == 0) _targetProtein = 150.0;
-        
+
         if (_totalProtein < _targetProtein * 0.9) {
           NotificationService().scheduleNutritionReminders();
         } else {
@@ -61,7 +61,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
     }
   }
 
-  double get _totalProtein => _entries.fold(0, (sum, e) => sum + e.proteinGrams);
+  double get _totalProtein =>
+      _entries.fold(0, (sum, e) => sum + e.proteinGrams);
   double get _totalCalories => _entries.fold(0, (sum, e) => sum + e.calories);
   double get _totalCarbs => _entries.fold(0, (sum, e) => sum + e.carbsGrams);
   double get _totalFat => _entries.fold(0, (sum, e) => sum + e.fatGrams);
@@ -72,7 +73,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
       backgroundColor: Colors.white, // Flat UI: Pure White
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5406)))
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFFFF5406)))
             : RefreshIndicator(
                 onRefresh: _refreshData,
                 color: const Color(0xFFFF5406),
@@ -81,7 +83,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24.0, vertical: 16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -89,7 +92,11 @@ class _ProteinScreenState extends State<ProteinScreen> {
                             const SizedBox(height: 32),
                             _buildHeroRings(),
                             const SizedBox(height: 32),
-                            const Text('Riwayat Hari Ini', style: TextStyle(color: Color(0xFF2F2F2F), fontSize: 20, fontWeight: FontWeight.bold)),
+                            const Text('Riwayat Hari Ini',
+                                style: TextStyle(
+                                    color: Color(0xFF2F2F2F),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold)),
                             const SizedBox(height: 16),
                           ],
                         ),
@@ -98,7 +105,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
                     if (_entries.isEmpty)
                       const SliverFillRemaining(
                         child: Center(
-                          child: Text('Belum ada asupan yang dicatat.', style: TextStyle(color: Colors.grey)),
+                          child: Text('Belum ada asupan yang dicatat.',
+                              style: TextStyle(color: Colors.grey)),
                         ),
                       )
                     else
@@ -129,20 +137,49 @@ class _ProteinScreenState extends State<ProteinScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-            Text('Nutrisi', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFFFF5406), letterSpacing: -1)),
-            Text('Harian', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F), letterSpacing: -1, height: 0.9)),
+            Text('Nutrisi',
+                style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFFF5406),
+                    letterSpacing: -1)),
+            Text('Harian',
+                style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF2F2F2F),
+                    letterSpacing: -1,
+                    height: 0.9)),
           ],
         ),
         Row(
           children: [
-             GestureDetector(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyReportScreen())),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(26)),
-                  child: const Icon(Icons.calendar_month, color: Color(0xFF2F2F2F), size: 24),
-                ),
-             ),
+            GestureDetector(
+              onTap: _showAddWaterSheet,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(26)),
+                child: const Icon(Icons.water_drop,
+                    color: Color(0xFF00A9DD), size: 24),
+              ),
+            ),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const WeeklyReportScreen())),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: const Color(0xFFF5F5F5),
+                    borderRadius: BorderRadius.circular(26)),
+                child: const Icon(Icons.calendar_month,
+                    color: Color(0xFF2F2F2F), size: 24),
+              ),
+            ),
           ],
         )
       ],
@@ -161,15 +198,18 @@ class _ProteinScreenState extends State<ProteinScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _macroRing('Kalori', _totalCalories, _targetCalories, const Color(0xFFFF3400), 'kcal'),
-              _macroRing('Protein', _totalProtein, _targetProtein, const Color(0xFFBD4BE5), 'g'),
+              _macroRing('Kalori', _totalCalories, _targetCalories,
+                  const Color(0xFFFF3400), 'kcal'),
+              _macroRing('Protein', _totalProtein, _targetProtein,
+                  const Color(0xFFBD4BE5), 'g'),
             ],
           ),
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _macroRing('Karbo', _totalCarbs, 250, const Color(0xFF00A9DD), 'g'),
+              _macroRing(
+                  'Karbo', _totalCarbs, 250, const Color(0xFF00A9DD), 'g'),
               _macroRing('Lemak', _totalFat, 65, const Color(0xFF00B33F), 'g'),
             ],
           ),
@@ -178,7 +218,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
     );
   }
 
-  Widget _macroRing(String label, double current, double target, Color color, String unit) {
+  Widget _macroRing(
+      String label, double current, double target, Color color, String unit) {
     double progress = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
     return Column(
       children: [
@@ -203,8 +244,16 @@ class _ProteinScreenState extends State<ProteinScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(current.toStringAsFixed(0), style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 18)),
-                    Text(unit, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text(current.toStringAsFixed(0),
+                        style: const TextStyle(
+                            color: Color(0xFF2F2F2F),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18)),
+                    Text(unit,
+                        style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
               )
@@ -212,14 +261,16 @@ class _ProteinScreenState extends State<ProteinScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(label,
+            style: const TextStyle(
+                color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
   Widget _buildFoodRow(ProteinEntry entry) {
     final isWater = entry.waterMl > 0 && entry.calories == 0;
-    
+
     return Dismissible(
       key: Key('nut_${entry.id}'),
       direction: DismissDirection.endToStart,
@@ -238,7 +289,9 @@ class _ProteinScreenState extends State<ProteinScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5), width: 1.5)), // Hairline separator
+          border: Border(
+              bottom: BorderSide(
+                  color: Color(0xFFF5F5F5), width: 1.5)), // Hairline separator
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -247,31 +300,43 @@ class _ProteinScreenState extends State<ProteinScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(entry.foodName, style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(entry.foodName,
+                      style: const TextStyle(
+                          color: Color(0xFF2F2F2F),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
                   const SizedBox(height: 4),
                   Text(
-                    isWater 
-                      ? '${entry.waterMl} ml • Hidrasi' 
-                      : '${entry.calories.toStringAsFixed(0)} kcal • ${entry.mealLabel}', 
-                    style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600)
-                  ),
+                      isWater
+                          ? '${entry.waterMl} ml • Hidrasi'
+                          : '${entry.calories.toStringAsFixed(0)} kcal • ${entry.mealLabel}',
+                      style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
             Row(
               children: [
                 Container(
-                  width: 8, height: 8,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
-                    color: isWater ? const Color(0xFF00A9DD) : const Color(0xFFBD4BE5),
-                    shape: BoxShape.circle
-                  ),
+                      color: isWater
+                          ? const Color(0xFF00A9DD)
+                          : const Color(0xFFBD4BE5),
+                      shape: BoxShape.circle),
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isWater ? 'Air' : '${entry.proteinGrams.toStringAsFixed(0)}g Pro',
+                  isWater
+                      ? 'Air'
+                      : '${entry.proteinGrams.toStringAsFixed(0)}g Pro',
                   style: TextStyle(
-                    color: isWater ? const Color(0xFF00A9DD) : const Color(0xFFBD4BE5),
+                    color: isWater
+                        ? const Color(0xFF00A9DD)
+                        : const Color(0xFFBD4BE5),
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -292,21 +357,27 @@ class _ProteinScreenState extends State<ProteinScreen> {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () async {
-            final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const AiNutritionScreen()));
+            final result = await Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AiNutritionScreen()));
             if (result == true) _loadData();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFFF5406),
             elevation: 0,
             padding: const EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: const [
               _GroqIcon(),
               SizedBox(width: 10),
-              Text('Catat Makanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('Catat Makanan',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16)),
               SizedBox(width: 8),
               Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
             ],
@@ -316,15 +387,83 @@ class _ProteinScreenState extends State<ProteinScreen> {
     );
   }
 
+  void _showAddWaterSheet() {
+    showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+        builder: (_) {
+          return Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Tambah Air Putih',
+                    style: TextStyle(
+                        color: Color(0xFF00A9DD),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _waterButton(250, '1 Gelas'),
+                    _waterButton(600, 'Botol Sedang'),
+                    _waterButton(1000, 'Botol Besar'),
+                  ],
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
+          );
+        });
   }
 
+  Widget _waterButton(int ml, String label) {
+    return InkWell(
+      onTap: () async {
+        Navigator.pop(context);
+        await _db.insertProteinEntry(ProteinEntry(
+          foodName: 'Air Putih ($label)',
+          proteinGrams: 0,
+          calories: 0,
+          waterMl: ml,
+          mealType: 'water',
+          date: DateTime.now(),
+        ));
+        CloudSyncService.syncNutritionToCloud().catchError((_) {});
+        _loadData();
+      },
+      borderRadius: BorderRadius.circular(26),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(26),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
+            const SizedBox(height: 12),
+            Text('+$ml ml',
+                style: const TextStyle(
+                    color: Color(0xFF00A9DD),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _GroqIcon extends StatelessWidget {
   const _GroqIcon();
   @override
   Widget build(BuildContext context) {
-    return SizedBox(width: 20, height: 20, child: CustomPaint(painter: _GroqIconPainter()));
+    return SizedBox(
+        width: 20, height: 20, child: CustomPaint(painter: _GroqIconPainter()));
   }
 }
 
@@ -334,20 +473,27 @@ class _GroqIconPainter extends CustomPainter {
     final paint = Paint()
       ..color = const Color(0xFF2F2F2F)
       ..style = PaintingStyle.fill;
-    
+
     final path = Path()
       ..moveTo(size.width * 0.5, size.height * 0.1)
-      ..arcToPoint(Offset(size.width * 0.1, size.height * 0.5), radius: Radius.circular(size.width * 0.4), clockwise: false)
-      ..arcToPoint(Offset(size.width * 0.5, size.height * 0.9), radius: Radius.circular(size.width * 0.4), clockwise: false)
-      ..arcToPoint(Offset(size.width * 0.9, size.height * 0.5), radius: Radius.circular(size.width * 0.4), clockwise: false)
+      ..arcToPoint(Offset(size.width * 0.1, size.height * 0.5),
+          radius: Radius.circular(size.width * 0.4), clockwise: false)
+      ..arcToPoint(Offset(size.width * 0.5, size.height * 0.9),
+          radius: Radius.circular(size.width * 0.4), clockwise: false)
+      ..arcToPoint(Offset(size.width * 0.9, size.height * 0.5),
+          radius: Radius.circular(size.width * 0.4), clockwise: false)
       ..lineTo(size.width * 0.5, size.height * 0.5)
       ..lineTo(size.width * 0.5, size.height * 0.65)
       ..lineTo(size.width * 0.7, size.height * 0.65)
-      ..arcToPoint(Offset(size.width * 0.5, size.height * 0.75), radius: Radius.circular(size.width * 0.25))
-      ..arcToPoint(Offset(size.width * 0.25, size.height * 0.5), radius: Radius.circular(size.width * 0.25))
-      ..arcToPoint(Offset(size.width * 0.5, size.height * 0.25), radius: Radius.circular(size.width * 0.25));
+      ..arcToPoint(Offset(size.width * 0.5, size.height * 0.75),
+          radius: Radius.circular(size.width * 0.25))
+      ..arcToPoint(Offset(size.width * 0.25, size.height * 0.5),
+          radius: Radius.circular(size.width * 0.25))
+      ..arcToPoint(Offset(size.width * 0.5, size.height * 0.25),
+          radius: Radius.circular(size.width * 0.25));
     canvas.drawPath(path, paint);
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

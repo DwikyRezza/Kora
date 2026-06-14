@@ -64,30 +64,6 @@ class AuthService {
     }
   }
 
-  /// Hapus akun secara permanen (Firebase Auth, Cloud Firestore, & Lokal)
-  static Future<void> deleteAccount() async {
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        // 1. Hapus dokumen profil & data user di Firestore (jika ada)
-        await _firestore.collection('users').doc(user.uid).delete();
-        
-        // 2. Hapus akun dari Firebase Auth
-        await user.delete();
-        
-        // 3. Bersihkan sisa sesi Google Sign In jika tertaut
-        await _googleSignIn.signOut();
-      }
-    } catch (e) {
-      print('[AuthService] Error deleting account: $e');
-      // Bila terjadi token expired (requires recent login), error akan tertangkap di sini
-      rethrow;
-    } finally {
-      // 4. Pastikan memori lokal (SQLite & Prefs) tetap dibersihkan apa pun yang terjadi
-      await clearLocalSession();
-    }
-  }
-
   /// Bersihkan semua data sesi & profil lokal (SharedPreferences)
   static Future<void> clearLocalSession() async {
     final prefs = await SharedPreferences.getInstance();

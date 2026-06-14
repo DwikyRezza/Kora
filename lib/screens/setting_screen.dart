@@ -56,7 +56,9 @@ class _SettingScreenState extends State<SettingScreen> {
         title: const Text('Keluar'),
         content: const Text('Yakin ingin keluar dari akun?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: errorColor),
@@ -113,7 +115,8 @@ class _SettingScreenState extends State<SettingScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen()),
                   );
                 },
               ),
@@ -133,7 +136,9 @@ class _SettingScreenState extends State<SettingScreen> {
               ),
               _buildDivider(),
               _buildSwitchItem(
-                icon: _darkMode ? Icons.nights_stay_rounded : Icons.wb_sunny_rounded,
+                icon: _darkMode
+                    ? Icons.nights_stay_rounded
+                    : Icons.wb_sunny_rounded,
                 title: 'Mode',
                 value: _darkMode,
                 onChanged: _toggleDarkMode,
@@ -190,12 +195,16 @@ class _SettingScreenState extends State<SettingScreen> {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Hapus Akun'),
-                          content: const Text('Apakah Anda yakin ingin menghapus akun secara permanen? Tindakan ini tidak dapat dibatalkan.'),
+                          content: const Text(
+                              'Apakah Anda yakin ingin menghapus akun secara permanen? Tindakan ini tidak dapat dibatalkan.'),
                           actions: [
-                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+                            TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('Batal')),
                             ElevatedButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              style: ElevatedButton.styleFrom(backgroundColor: errorColor),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: errorColor),
                               child: const Text('Hapus'),
                             ),
                           ],
@@ -203,19 +212,11 @@ class _SettingScreenState extends State<SettingScreen> {
                       );
 
                       if (confirm == true && mounted) {
-                        try {
-                          await AuthService.deleteAccount();
-                          if (!mounted) return;
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (_) => const LandingScreen()),
-                            (route) => false,
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Gagal menghapus akun: $e. Coba login ulang lalu ulangi.')),
-                          );
-                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Permintaan hapus akun diterima. Fitur ini masih dalam tahap pengembangan.')),
+                        );
                       }
                     },
                   ),
@@ -273,7 +274,8 @@ class _SettingScreenState extends State<SettingScreen> {
         onTap: onTap ?? () {},
         borderRadius: BorderRadius.circular(26),
         child: Padding(
-          padding: const EdgeInsets.all(24), // card-padding = 32px di html, sesuaikan
+          padding: const EdgeInsets.all(
+              24), // card-padding = 32px di html, sesuaikan
           child: Row(
             children: [
               Icon(icon, color: iconColor ?? AppTheme.accentOrange, size: 24),
