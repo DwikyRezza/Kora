@@ -160,6 +160,14 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX IF NOT EXISTS idx_body_measurements_date ON body_measurements (date)');
   }
 
+  Future<void> clearAllData() async {
+    final db = await database;
+    await db.delete('workouts');
+    await db.delete('protein_entries');
+    await db.delete('schedule_events');
+    await db.delete('body_measurements');
+  }
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       try { await db.execute('ALTER TABLE protein_entries ADD COLUMN carbsGrams REAL DEFAULT 0.0'); } catch (_) {}
