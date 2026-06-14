@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
@@ -68,8 +68,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
     
     // Default system/reminder icon
     IconData iconData = Icons.notifications;
-    Color iconColor = const Color(0xFF2F2F2F);
-    Color bgColor = const Color(0xFFF5F5F5);
+    Color iconColor = AppTheme.textPrimary;
+    Color bgColor = AppTheme.surfaceVariant;
     
     if (type == 'follow') {
       iconData = Icons.person_add;
@@ -108,7 +108,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF2F2F2F)),
+          icon: Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(

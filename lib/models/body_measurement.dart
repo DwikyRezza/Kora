@@ -1,4 +1,4 @@
-class BodyMeasurement {
+﻿class BodyMeasurement {
   final int? id;
   final double weight; // in kg
   final double height; // in cm

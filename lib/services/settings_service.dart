@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
@@ -25,7 +25,17 @@ class SettingsService {
   // ── Load semua pengaturan saat startup ────────────────────────────────────
   static Future<void> loadAll() async {
     final prefs = await SharedPreferences.getInstance();
-    final darkMode = prefs.getBool(_kDarkMode) ?? true;
+    // Jika key belum ada (install baru), ikuti pengaturan sistem HP
+    bool darkMode;
+    if (prefs.containsKey(_kDarkMode)) {
+      darkMode = prefs.getBool(_kDarkMode)!;
+    } else {
+      // Baca dari platformDispatcher (brightness sistem)
+      final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      darkMode = brightness == Brightness.dark;
+      // Simpan ke prefs agar konsisten di sesi berikutnya
+      await prefs.setBool(_kDarkMode, darkMode);
+    }
     final desiredMode = darkMode ? ThemeMode.dark : ThemeMode.light;
     if (AppTheme.themeNotifier.value != desiredMode) {
       AppTheme.themeNotifier.value = desiredMode;
@@ -35,7 +45,12 @@ class SettingsService {
   // ── Dark Mode ─────────────────────────────────────────────────────────────
   static Future<bool> getDarkMode() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_kDarkMode) ?? true;
+    if (prefs.containsKey(_kDarkMode)) {
+      return prefs.getBool(_kDarkMode)!;
+    }
+    // Fallback ke sistem HP jika belum pernah di-set
+    final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    return brightness == Brightness.dark;
   }
 
   static Future<void> setDarkMode(bool value) async {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/workout.dart';
 import '../services/database_helper.dart';
@@ -271,7 +271,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
       child: Column(
         children: [
           Text(
-            '⏳ Rest Timer',
+            'â³ Rest Timer',
             style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 12),

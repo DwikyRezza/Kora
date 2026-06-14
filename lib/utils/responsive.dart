@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 /// Responsive utility — wraps MediaQuery untuk skala font, padding, dan ukuran
 /// berdasarkan lebar layar. Dibuat sebagai extension agar mudah dipakai di semua Widget.

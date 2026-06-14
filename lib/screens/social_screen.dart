@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
@@ -124,7 +124,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: AppTheme.border, width: 2),
-                color: const Color(0xFFF5F5F5),
+                color: AppTheme.surfaceVariant,
               ),
               child: ClipOval(child: _buildUserAvatar(user['photoUrl'] as String?)),
             ),
@@ -154,8 +154,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   ? ElevatedButton(
                       onPressed: () => _handleRemoveFollower(user['uid']),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF5F5F5), // Abu-abu terang (Fog)
-                        foregroundColor: const Color(0xFF2F2F2F), // Graphite
+                        backgroundColor: AppTheme.surfaceVariant, // Abu-abu terang (Fog)
+                        foregroundColor: AppTheme.textPrimary, // Graphite
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -165,8 +165,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   : ElevatedButton(
                       onPressed: () => _handleUnfollow(user['uid']),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF5F5F5), // Abu-abu
-                        foregroundColor: const Color(0xFF2F2F2F),
+                        backgroundColor: AppTheme.surfaceVariant, // Abu-abu
+                        foregroundColor: AppTheme.textPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -226,7 +226,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
             child: Container(
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: AppTheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(26),
               ),
               child: TabBar(
@@ -243,7 +243,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                 unselectedLabelColor: const Color(0xFF5F5E5E), // Secondary
                 labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.05),
                 dividerColor: Colors.transparent,
-                tabs: const [
+                tabs: [
                   Tab(text: 'Pengikut'),
                   Tab(text: 'Mengikuti'),
                 ],

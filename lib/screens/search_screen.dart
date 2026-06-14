@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
@@ -96,7 +96,7 @@ class _SearchScreenState extends State<SearchScreen> {
         backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF2F2F2F)),
+          icon: Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: TextField(
@@ -109,7 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
             border: InputBorder.none,
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, color: Color(0xFF2F2F2F)),
+                    icon: Icon(Icons.clear, color: AppTheme.textPrimary),
                     onPressed: () {
                       _searchController.clear();
                       _onSearchChanged('');
@@ -166,7 +166,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: Border.all(color: AppTheme.border, width: 2),
-                                        color: const Color(0xFFF5F5F5),
+                                        color: AppTheme.surfaceVariant,
                                       ),
                                       child: _buildAvatar(user['photoUrl'] as String?),
                                     ),

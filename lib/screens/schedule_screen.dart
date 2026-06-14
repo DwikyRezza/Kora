@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/schedule_event.dart';
@@ -50,17 +51,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final act = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: AppTheme.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-              title: const Text('Hapus Jadwal?', style: TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
-              content: const Text('Apakah Anda yakin ingin menghapus jadwal ini?', style: TextStyle(color: Colors.grey)),
+              title: Text('Hapus Jadwal?', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+              content: Text('Apakah Anda yakin ingin menghapus jadwal ini?', style: TextStyle(color: Colors.grey)),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
+                    child: Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Hapus', style: TextStyle(color: Color(0xFFFF3400), fontWeight: FontWeight.bold))),
+                    child: Text('Hapus', style: TextStyle(color: Color(0xFFFF3400), fontWeight: FontWeight.bold))),
               ],
             ));
 
@@ -123,19 +124,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
         title: Row(
-          children: const [
+          children: [
             Text('Agenda ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00A9DD), letterSpacing: -1)),
-            Text('Hari Ini', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F), letterSpacing: -1)),
+            Text('Hari Ini', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -1)),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.bar_chart, color: Color(0xFF2F2F2F), size: 28),
+            icon: Icon(Icons.bar_chart, color: AppTheme.textPrimary, size: 28),
             tooltip: 'Laporan Mingguan',
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
@@ -143,7 +144,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ));
             },
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -160,30 +161,30 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             backgroundColor: const Color(0xFF00A9DD),
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-            icon: const Icon(Icons.add_rounded, color: Colors.white),
-            label: const Text('Buat Jadwal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+            icon: Icon(Icons.add_rounded, color: Colors.white),
+            label: Text('Buat Jadwal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
           ),
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00A9DD)))
+          ? Center(child: CircularProgressIndicator(color: Color(0xFF00A9DD)))
           : RefreshIndicator(
               onRefresh: _refreshEvents,
               color: const Color(0xFF00A9DD),
-              backgroundColor: Colors.white,
+              backgroundColor: AppTheme.surface,
               child: _events.isEmpty
                   ? ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 100),
                       children: [
                         Column(
-                          children: const [
+                          children: [
                             Icon(Icons.event_seat_rounded, color: Colors.grey, size: 80),
                             SizedBox(height: 24),
                             Text(
                               'Belum ada agenda.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  color: Color(0xFF2F2F2F), fontSize: 20, fontWeight: FontWeight.bold),
+                                  color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
                             ),
                             SizedBox(height: 12),
                             Text(
@@ -208,30 +209,30 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             margin: const EdgeInsets.only(bottom: 16),
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
+                              color: AppTheme.surfaceVariant,
                               borderRadius: BorderRadius.circular(26),
                             ),
                             child: Row(
                               children: [
                                 Container(
                                   width: 48, height: 48,
-                                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                  decoration: BoxDecoration(color: AppTheme.surface, shape: BoxShape.circle),
                                   child: Icon(event.typeIcon, size: 24, color: _getColorForType(event.type)),
                                 ),
-                                const SizedBox(width: 16),
+                                SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(event.title,
-                                          style: const TextStyle(
-                                              color: Color(0xFF2F2F2F),
+                                          style: TextStyle(
+                                              color: AppTheme.textPrimary,
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 4),
+                                      SizedBox(height: 4),
                                       Text(
-                                          '${DateFormat('d MMM yyyy • HH:mm').format(event.dateTime)}',
-                                          style: const TextStyle(
+                                          '${DateFormat('d MMM yyyy â€¢ HH:mm').format(event.dateTime)}',
+                                          style: TextStyle(
                                               color: Color(0xFF00A9DD),
                                               fontWeight: FontWeight.bold, fontSize: 12)),
                                       if (event.durationMinutes > 0)
@@ -239,7 +240,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                           padding: const EdgeInsets.only(top: 2),
                                           child: Text(
                                               'Durasi: ${event.durationMinutes} menit',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                   color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
                                         ),
                                     ],
@@ -249,12 +250,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.delete_outline,
+                                      icon: Icon(Icons.delete_outline,
                                           color: Color(0xFFFF3400)),
                                       onPressed: () => _deleteEvent(event),
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.check_circle_outline,
+                                      icon: Icon(Icons.check_circle_outline,
                                           color: Color(0xFF00B33F)),
                                       onPressed: () async {
                                         await _db.updateScheduleEventCompletion(
@@ -348,11 +349,11 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF00A9DD),
+          colorScheme: ColorScheme.light(
+            primary: const Color(0xFF00A9DD),
             onPrimary: Colors.white,
-            surface: Colors.white,
-            onSurface: Color(0xFF2F2F2F),
+            surface: AppTheme.surface,
+            onSurface: AppTheme.textPrimary,
           ),
         ),
         child: child!,
@@ -369,11 +370,11 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
       initialTime: _selectedTime,
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFF00A9DD),
+          colorScheme: ColorScheme.light(
+            primary: const Color(0xFF00A9DD),
             onPrimary: Colors.white,
-            surface: Colors.white,
-            onSurface: Color(0xFF2F2F2F),
+            surface: AppTheme.surface,
+            onSurface: AppTheme.textPrimary,
           ),
         ),
         child: child!,
@@ -418,8 +419,8 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
           right: 24,
           top: 24,
         ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: Form(
@@ -434,33 +435,33 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
+                          color: AppTheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(2)))),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(widget.event == null ? 'Buat Jadwal Baru' : 'Edit Jadwal',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2F2F2F))),
+                          color: AppTheme.textPrimary)),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                    icon: Icon(Icons.close_rounded, color: Colors.grey),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               TextFormField(
                 controller: _titleController,
-                style: const TextStyle(color: Color(0xFF2F2F2F)),
+                style: TextStyle(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Judul Aktivitas',
-                  fillColor: const Color(0xFFF5F5F5),
+                  fillColor: AppTheme.surfaceVariant,
                   filled: true,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(26),
@@ -470,21 +471,21 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     ? 'Judul tidak boleh kosong'
                     : null,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
                 value: _type,
                 dropdownColor: Colors.white,
-                style: const TextStyle(color: Color(0xFF2F2F2F)),
+                style: TextStyle(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
                   labelText: 'Kategori',
-                  fillColor: const Color(0xFFF5F5F5),
+                  fillColor: AppTheme.surfaceVariant,
                   filled: true,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(26),
                       borderSide: BorderSide.none),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(value: 'workout', child: Text(' Latihan (Workout)')),
                   DropdownMenuItem(value: 'meal', child: Text(' Nutrisi/Makan')),
                   DropdownMenuItem(value: 'rest', child: Text(' Istirahat')),
@@ -492,22 +493,22 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                 ],
                 onChanged: (val) => setState(() => _type = val!),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               if (_type == 'workout') ...[
                 DropdownButtonFormField<String>(
                   value: _workoutType,
                   dropdownColor: Colors.white,
-                  style: const TextStyle(color: Color(0xFF2F2F2F)),
+                  style: TextStyle(color: AppTheme.textPrimary),
                   decoration: InputDecoration(
                     labelText: 'Jenis Latihan',
-                    fillColor: const Color(0xFFF5F5F5),
+                    fillColor: AppTheme.surfaceVariant,
                     filled: true,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(26),
                         borderSide: BorderSide.none),
                   ),
-                  items: const [
+                  items: [
                     DropdownMenuItem(value: 'running', child: Text('Lari / Running')),
                     DropdownMenuItem(value: 'basketball', child: Text('Basket')),
                     DropdownMenuItem(value: 'weightlifting', child: Text('Angkat Beban')),
@@ -515,7 +516,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   ],
                   onChanged: (val) => setState(() => _workoutType = val!),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
 
               if (_type == 'meal') ...[
@@ -534,8 +535,8 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                             '${rec.description}\n\nEstimasi Harga: Rp${rec.estimatedCost.toInt()} (${rec.category})';
                       });
                     },
-                    icon: const Icon(Icons.auto_awesome, color: Color(0xFFFF5406)),
-                    label: const Text('Dapatkan Rekomendasi Menu (AI)', style: TextStyle(color: Color(0xFFFF5406), fontWeight: FontWeight.bold)),
+                    icon: Icon(Icons.auto_awesome, color: Color(0xFFFF5406)),
+                    label: Text('Dapatkan Rekomendasi Menu (AI)', style: TextStyle(color: Color(0xFFFF5406), fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF5406).withOpacity(0.1),
                       elevation: 0,
@@ -544,21 +545,21 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 TextFormField(
                   controller: _notesController,
-                  style: const TextStyle(color: Color(0xFF2F2F2F)),
+                  style: TextStyle(color: AppTheme.textPrimary),
                   maxLines: 3,
                   decoration: InputDecoration(
                     labelText: 'Catatan / Menu Spesifik',
-                    fillColor: const Color(0xFFF5F5F5),
+                    fillColor: AppTheme.surfaceVariant,
                     filled: true,
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(26),
                         borderSide: BorderSide.none),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
 
               Row(
@@ -570,22 +571,22 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                         decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
+                            color: AppTheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(26)),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.calendar_today,
+                            Icon(Icons.calendar_today,
                                 color: Color(0xFF00A9DD), size: 20),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(DateFormat('d MMM').format(_selectedDate),
-                                style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
+                                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: InkWell(
                       onTap: _pickTime,
@@ -593,16 +594,16 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
                         decoration: BoxDecoration(
-                            color: const Color(0xFFF5F5F5),
+                            color: AppTheme.surfaceVariant,
                             borderRadius: BorderRadius.circular(26)),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.access_time,
+                            Icon(Icons.access_time,
                                 color: Color(0xFF00A9DD), size: 20),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(_selectedTime.format(context),
-                                style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
+                                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -610,25 +611,25 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               TextFormField(
                 controller: _durationController,
-                style: const TextStyle(color: Color(0xFF2F2F2F)),
+                style: TextStyle(color: AppTheme.textPrimary),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                 ],
                 decoration: InputDecoration(
                   labelText: 'Estimasi Durasi (Menit)',
-                  fillColor: const Color(0xFFF5F5F5),
+                  fillColor: AppTheme.surfaceVariant,
                   filled: true,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(26),
                       borderSide: BorderSide.none),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               
               Wrap(
                 spacing: 8,
@@ -648,7 +649,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF00A9DD)
-                            : const Color(0xFFF5F5F5),
+                            : AppTheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(26),
                       ),
                       child: Text(
@@ -665,22 +666,22 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Notifikasi Pengingat',
+                title: Text('Notifikasi Pengingat',
                     style: TextStyle(
-                        color: Color(0xFF2F2F2F),
+                        color: AppTheme.textPrimary,
                         fontWeight: FontWeight.bold)),
-                subtitle: const Text('Alarm akan berbunyi di waktu terjadwal',
+                subtitle: Text('Alarm akan berbunyi di waktu terjadwal',
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
                 activeColor: const Color(0xFF00A9DD),
                 value: _isReminderOn,
                 onChanged: (val) => setState(() => _isReminderOn = val),
               ),
 
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -692,12 +693,12 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(26)),
                   ),
-                  child: const Text('Simpan Jadwal',
+                  child: Text('Simpan Jadwal',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
             ],
           ),
         ),

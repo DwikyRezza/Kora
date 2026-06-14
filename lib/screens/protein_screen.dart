@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import '../models/protein_entry.dart';
 import '../services/database_helper.dart';
@@ -70,15 +71,15 @@ class _ProteinScreenState extends State<ProteinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Flat UI: Pure White
+      backgroundColor: AppTheme.surface, // Flat UI: Pure White
       body: SafeArea(
         child: _isLoading
-            ? const Center(
+            ? Center(
                 child: CircularProgressIndicator(color: Color(0xFFFF5406)))
             : RefreshIndicator(
                 onRefresh: _refreshData,
                 color: const Color(0xFFFF5406),
-                backgroundColor: Colors.white,
+                backgroundColor: AppTheme.surface,
                 child: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
@@ -89,15 +90,15 @@ class _ProteinScreenState extends State<ProteinScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeader(),
-                            const SizedBox(height: 32),
+                            SizedBox(height: 32),
                             _buildHeroRings(),
-                            const SizedBox(height: 32),
-                            const Text('Riwayat Hari Ini',
+                            SizedBox(height: 32),
+                            Text('Riwayat Hari Ini',
                                 style: TextStyle(
-                                    color: Color(0xFF2F2F2F),
+                                    color: AppTheme.textPrimary,
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                           ],
                         ),
                       ),
@@ -136,7 +137,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('Nutrisi',
                 style: TextStyle(
                     fontSize: 30,
@@ -147,7 +148,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                 style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF2F2F2F),
+                    color: AppTheme.textPrimary,
                     letterSpacing: -1,
                     height: 0.9)),
           ],
@@ -159,13 +160,13 @@ class _ProteinScreenState extends State<ProteinScreen> {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
+                    color: AppTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(26)),
-                child: const Icon(Icons.water_drop,
+                child: Icon(Icons.water_drop,
                     color: Color(0xFF00A9DD), size: 24),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             GestureDetector(
               onTap: () => Navigator.push(
                   context,
@@ -174,10 +175,10 @@ class _ProteinScreenState extends State<ProteinScreen> {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
+                    color: AppTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(26)),
-                child: const Icon(Icons.calendar_month,
-                    color: Color(0xFF2F2F2F), size: 24),
+                child: Icon(Icons.calendar_month,
+                    color: AppTheme.textPrimary, size: 24),
               ),
             ),
           ],
@@ -190,7 +191,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5), // Fog Gray
+        color: AppTheme.surfaceVariant, // Fog Gray
         borderRadius: BorderRadius.circular(26), // 26px radius everywhere
       ),
       child: Column(
@@ -204,7 +205,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                   const Color(0xFFBD4BE5), 'g'),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -245,12 +246,12 @@ class _ProteinScreenState extends State<ProteinScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(current.toStringAsFixed(0),
-                        style: const TextStyle(
-                            color: Color(0xFF2F2F2F),
+                        style: TextStyle(
+                            color: AppTheme.textPrimary,
                             fontWeight: FontWeight.bold,
                             fontSize: 18)),
                     Text(unit,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: Colors.grey,
                             fontSize: 10,
                             fontWeight: FontWeight.bold)),
@@ -260,9 +261,9 @@ class _ProteinScreenState extends State<ProteinScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Text(label,
-            style: const TextStyle(
+            style: TextStyle(
                 color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
@@ -278,7 +279,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         color: const Color(0xFFFF3400),
-        child: const Icon(Icons.delete_rounded, color: Colors.white),
+        child: Icon(Icons.delete_rounded, color: Colors.white),
       ),
       onDismissed: (_) async {
         await _db.deleteProteinEntry(entry.id!);
@@ -288,10 +289,10 @@ class _ProteinScreenState extends State<ProteinScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 24),
         padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
               bottom: BorderSide(
-                  color: Color(0xFFF5F5F5), width: 1.5)), // Hairline separator
+                  color: AppTheme.surfaceVariant, width: 1.5)), // Hairline separator
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -301,16 +302,16 @@ class _ProteinScreenState extends State<ProteinScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(entry.foodName,
-                      style: const TextStyle(
-                          color: Color(0xFF2F2F2F),
+                      style: TextStyle(
+                          color: AppTheme.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                       isWater
-                          ? '${entry.waterMl} ml • Hidrasi'
-                          : '${entry.calories.toStringAsFixed(0)} kcal • ${entry.mealLabel}',
-                      style: const TextStyle(
+                          ? '${entry.waterMl} ml â€¢ Hidrasi'
+                          : '${entry.calories.toStringAsFixed(0)} kcal â€¢ ${entry.mealLabel}',
+                      style: TextStyle(
                           color: Colors.grey,
                           fontSize: 13,
                           fontWeight: FontWeight.w600)),
@@ -328,7 +329,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                           : const Color(0xFFBD4BE5),
                       shape: BoxShape.circle),
                 ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text(
                   isWater
                       ? 'Air'
@@ -370,7 +371,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
+            children: [
               _GroqIcon(),
               SizedBox(width: 10),
               Text('Catat Makanan',
@@ -390,8 +391,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
   void _showAddWaterSheet() {
     showModalBottomSheet(
         context: context,
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
         builder: (_) {
           return Padding(
@@ -399,12 +400,12 @@ class _ProteinScreenState extends State<ProteinScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Tambah Air Putih',
+                Text('Tambah Air Putih',
                     style: TextStyle(
                         color: Color(0xFF00A9DD),
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -413,7 +414,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                     _waterButton(1000, 'Botol Besar'),
                   ],
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
               ],
             ),
           );
@@ -439,15 +440,15 @@ class _ProteinScreenState extends State<ProteinScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: AppTheme.surfaceVariant,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Column(
           children: [
-            const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
-            const SizedBox(height: 12),
+            Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
+            SizedBox(height: 12),
             Text('+$ml ml',
-                style: const TextStyle(
+                style: TextStyle(
                     color: Color(0xFF00A9DD),
                     fontWeight: FontWeight.bold,
                     fontSize: 16)),
@@ -471,7 +472,7 @@ class _GroqIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF2F2F2F)
+      ..color = AppTheme.textPrimary
       ..style = PaintingStyle.fill;
 
     final path = Path()

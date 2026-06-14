@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 import '../models/workout.dart';
@@ -456,7 +456,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
                           Text('${l.reps} reps', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                           if (l.weightKg != null) ...[
                             const SizedBox(width: 8),
-                            Text('× ${l.weightKg!.toStringAsFixed(1)} kg', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                            Text('Ã— ${l.weightKg!.toStringAsFixed(1)} kg', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                           ],
                         ],
                       ),
@@ -512,7 +512,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
         decoration: BoxDecoration(
           gradient: AppTheme.electricBlueGrad,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: AppTheme.electricBlue.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: AppTheme.electricBlue.withOpacity(0.35), blurRadius: 20, offset: Offset(0, 6))],
         ),
         child: const Center(
           child: Text('SELESAI & KEMBALI', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
@@ -586,7 +586,7 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
                 min: 1,
                 max: 10,
                 divisions: 9,
-                activeColor: _rpe > 7 ? AppTheme.accentRed : (_rpe > 4 ? const Color(0xFFFFB830) : AppTheme.neonGreen),
+                activeColor: _rpe > 7 ? AppTheme.accentRed : (_rpe > 4 ? Color(0xFFFFB830) : AppTheme.neonGreen),
                 inactiveColor: AppTheme.border,
                 label: _rpe.toInt().toString(),
                 onChanged: (v) => setState(() => _rpe = v),

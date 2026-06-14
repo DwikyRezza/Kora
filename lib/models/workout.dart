@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 class Workout {
   final int? id;
   final String type; // 'running', 'basketball', 'weightlifting'

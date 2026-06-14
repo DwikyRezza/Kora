@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen>
         await ProfileService.syncToDatabase();
       }
 
-      // ── Restore semua data dari Firestore ke SQLite SEBELUM navigasi ──
+      // â”€â”€ Restore semua data dari Firestore ke SQLite SEBELUM navigasi â”€â”€
       // Harus di-await agar SQLite sudah terisi sebelum screen merender
       if (!mounted) return;
       await _restoreFromCloudWithFeedback();
@@ -101,7 +101,7 @@ class _LoginScreenState extends State<LoginScreen>
     try {
       await CloudSyncService.restoreAllFromCloud();
     } catch (e) {
-      // Silent fail — tidak ganggu user jika offline
+      // Silent fail â€” tidak ganggu user jika offline
       print('[Login] Cloud restore failed (mungkin offline): $e');
     }
   }

@@ -1,5 +1,6 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
@@ -45,8 +46,8 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
     'weightlifting': 'Angkat Beban',
   };
 
-  static const _filterColors = {
-    'all': Color(0xFF2F2F2F),
+  static final _filterColors = {
+    'all': AppTheme.textPrimary,
     'running': Color(0xFF00B33F),
     'walking': Color(0xFF0099F9),
     'weightlifting': Color(0xFFFF5406),
@@ -261,53 +262,53 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF2F2F2F)),
+          icon: Icon(Icons.arrow_back_ios_rounded,
+              color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Aktivitas Latihan',
+        title: Text('Aktivitas Latihan',
             style: TextStyle(
-                color: Color(0xFF2F2F2F),
+                color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w900,
                 fontSize: 20,
                 letterSpacing: -0.5)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.ios_share_rounded,
-                color: Color(0xFF2F2F2F), size: 22),
+            icon: Icon(Icons.ios_share_rounded,
+                color: AppTheme.textPrimary, size: 22),
             onPressed: _shareReport,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
         ],
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: Color(0xFFFF5406)))
           : SingleChildScrollView(
               padding: const EdgeInsets.only(bottom: 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   _buildFilterChips(),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: _buildDynamicMetrics(),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
                   _build7DayBarChart(),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: _buildSummaryCard(),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Screenshot(
@@ -315,22 +316,22 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppTheme.surface,
                           borderRadius: BorderRadius.circular(26),
                         ),
                         child: Column(
                           children: [
                             _buildStreakHero(),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                             _buildAiryFireGrid(),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
                   _buildMonthlyLinearChart(),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32),
                   _buildAssistantEvaluation(),
                 ],
               ),
@@ -390,11 +391,11 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         Expanded(
             child: _metricBox('Total Sesi', '$totalSessions',
                 Icons.fitness_center, accent)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
             child: _metricBox('Durasi', '${m.duration.round()} m',
                 Icons.timer_outlined, accent)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
             child: _metricBox('Hari Aktif', '$activeDays / 7',
                 Icons.calendar_today_outlined, accent)),
@@ -404,11 +405,11 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         Expanded(
             child: _metricBox('Jarak', '${m.distance.toStringAsFixed(2)} km',
                 Icons.straighten, accent)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
             child: _metricBox('Durasi', '${m.duration.round()} m',
                 Icons.timer_outlined, accent)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
             child: _metricBox('Elevasi', '${m.elevation.round()} m',
                 Icons.terrain, accent)),
@@ -419,11 +420,11 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
             child: _metricBox('Volume',
                 '${m.volume > 999 ? '${(m.volume / 1000).toStringAsFixed(1)}k' : m.volume.round().toString()} kg',
                 Icons.fitness_center, accent)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
             child: _metricBox('Durasi', '${m.duration.round()} m',
                 Icons.timer_outlined, accent)),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
             child: _metricBox(
                 'Total Set', '${m.sets}', Icons.layers_outlined, accent)),
@@ -435,7 +436,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(20),
         border: Border(left: BorderSide(color: accent, width: 3)),
       ),
@@ -443,15 +444,15 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: accent, size: 18),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(value,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F2F))),
-          const SizedBox(height: 2),
+                  color: AppTheme.textPrimary)),
+          SizedBox(height: 2),
           Text(label,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
@@ -499,7 +500,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
             toY: normalised,
             color: v > 0 ? accent : Colors.transparent,
             width: 14,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(7)),
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: 1.0,
@@ -517,12 +518,12 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
               'Aktivitas 7 Hari Terakhir',
-              style: const TextStyle(
-                  color: Color(0xFF2F2F2F),
+              style: TextStyle(
+                  color: AppTheme.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         SizedBox(
           height: 200,
           child: Padding(
@@ -540,7 +541,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                     getTooltipItem: (group, gIdx, rod, rIdx) {
                       final v = values[group.x];
                       if (v <= 0) {
-                        return BarTooltipItem('', const TextStyle());
+                        return BarTooltipItem('', TextStyle());
                       }
                       String label;
                       if (isAll) {
@@ -571,7 +572,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                                   .format(d)
                                   .substring(0, 2)
                                   .toUpperCase(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold)),
@@ -609,7 +610,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
       return Container(
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(26),
           boxShadow: [
             BoxShadow(
@@ -658,7 +659,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
@@ -719,12 +720,12 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         crossAxisAlignment: crossAxis,
         children: [
           Text(label.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
                   letterSpacing: 1.2)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(
             mainAxisAlignment: mainAxis,
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -736,7 +737,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                       fontWeight: FontWeight.w900,
                       color: color,
                       height: 1)),
-              const SizedBox(width: 3),
+              SizedBox(width: 3),
               Flexible(
                 child: Text(suffix,
                     style: TextStyle(
@@ -756,13 +757,13 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
   Widget _buildStreakHero() {
     return Column(
       children: [
-        const Text('CURRENT STREAK',
+        Text('CURRENT STREAK',
             style: TextStyle(
                 color: Colors.grey,
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.5)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -772,57 +773,57 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
               child: Lottie.asset('assets/lottie/fire_streak.json',
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) =>
-                      const Text('🔥', style: TextStyle(fontSize: 40))),
+                      Text('🔥', style: TextStyle(fontSize: 40))),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text('$_currentStreak',
-                style: const TextStyle(
-                    color: Color(0xFF2F2F2F),
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
                     fontSize: 56,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -2)),
           ],
         ),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         Row(children: [
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: AppTheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(20)),
               child: Column(children: [
-                const Text('Best Streak',
+                Text('Best Streak',
                     style: TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
                         fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text('$_bestStreak',
-                    style: const TextStyle(
-                        color: Color(0xFF2F2F2F),
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.w900)),
               ]),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: AppTheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(20)),
               child: Column(children: [
-                const Text('Konsistensi',
+                Text('Konsistensi',
                     style: TextStyle(
                         color: Colors.grey,
                         fontSize: 12,
                         fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Text('${_consistencyScore.toStringAsFixed(0)}%',
-                    style: const TextStyle(
-                        color: Color(0xFF2F2F2F),
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
                         fontSize: 24,
                         fontWeight: FontWeight.w900)),
               ]),
@@ -848,14 +849,14 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(DateFormat('MMMM yyyy').format(_currentMonth),
-                style: const TextStyle(
-                    color: Color(0xFF2F2F2F),
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold)),
             Row(children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left,
-                    color: Color(0xFF2F2F2F)),
+                icon: Icon(Icons.chevron_left,
+                    color: AppTheme.textPrimary),
                 onPressed: () {
                   setState(() {
                     _currentMonth =
@@ -865,8 +866,8 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right,
-                    color: Color(0xFF2F2F2F)),
+                icon: Icon(Icons.chevron_right,
+                    color: AppTheme.textPrimary),
                 onPressed: () {
                   if (_currentMonth.month == DateTime.now().month &&
                       _currentMonth.year == DateTime.now().year) return;
@@ -880,7 +881,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
             ])
           ],
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: weekdays
@@ -888,13 +889,13 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                   width: 30,
                   child: Text(w,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: Colors.grey,
                           fontWeight: FontWeight.bold,
                           fontSize: 14))))
               .toList(),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -907,7 +908,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           itemCount: 42,
           itemBuilder: (context, index) {
             int day = index - firstWeekday + 2;
-            if (day < 1 || day > daysInMonth) return const SizedBox();
+            if (day < 1 || day > daysInMonth) return SizedBox();
 
             final stat = _dailyStats[day]!;
             final progress = stat['protein'] / _targetProtein;
@@ -932,16 +933,16 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                       ),
                       child: Center(
                         child: Text(isFrozen ? '🧊' : '🔥',
-                            style: const TextStyle(fontSize: 22)),
+                            style: TextStyle(fontSize: 22)),
                       ),
                     )
                   else
                     Container(
-                      decoration: const BoxDecoration(
-                          color: Color(0xFFF5F5F5), shape: BoxShape.circle),
+                      decoration: BoxDecoration(
+                          color: AppTheme.surfaceVariant, shape: BoxShape.circle),
                       child: Center(
                         child: Text('$day',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: Colors.grey,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14)),
@@ -954,7 +955,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                       child: Container(
                         width: 7,
                         height: 7,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                             color: Color(0xFFFF3400), shape: BoxShape.circle),
                       ),
                     ),
@@ -999,7 +1000,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
             backDrawRodData: BackgroundBarChartRodData(
               show: true,
               toY: 1.2,
-              color: const Color(0xFFF5F5F5),
+              color: AppTheme.surfaceVariant,
             ),
           ),
         ],
@@ -1009,15 +1010,15 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(horizontal: 24),
           child: Text('Tren Protein Bulanan',
               style: TextStyle(
-                  color: Color(0xFF2F2F2F),
+                  color: AppTheme.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         SizedBox(
           height: 180,
           child: SingleChildScrollView(
@@ -1032,11 +1033,11 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                   barTouchData: BarTouchData(
                     enabled: true,
                     touchTooltipData: BarTouchTooltipData(
-                      getTooltipColor: (_) => const Color(0xFF2F2F2F),
+                      getTooltipColor: (_) => AppTheme.textPrimary,
                       getTooltipItem: (group, gi, rod, ri) {
                         return BarTooltipItem(
                           'Tgl ${group.x}\n${(rod.toY * 100).toInt()}%',
-                          const TextStyle(
+                          TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold),
                         );
@@ -1051,11 +1052,11 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                         getTitlesWidget: (value, meta) {
                           if (value % 5 != 0 &&
                               value != 1 &&
-                              value != daysInMonth) return const SizedBox();
+                              value != daysInMonth) return SizedBox();
                           return Padding(
                             padding: const EdgeInsets.only(top: 12),
                             child: Text(value.toInt().toString(),
-                                style: const TextStyle(
+                                style: TextStyle(
                                     color: Colors.grey,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold)),
@@ -1083,7 +1084,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                           show: true,
                           alignment: Alignment.topRight,
                           padding: const EdgeInsets.only(right: 4, bottom: 4),
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: Colors.grey,
                               fontSize: 10,
                               fontWeight: FontWeight.bold),
@@ -1142,7 +1143,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(26),
       ),
       child: Row(
@@ -1151,10 +1152,10 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
             child: Icon(icon, color: color, size: 32),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1164,10 +1165,10 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                         color: color,
                         fontSize: 14,
                         fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(msg,
-                    style: const TextStyle(
-                        color: Color(0xFF2F2F2F),
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
                         fontSize: 15,
                         height: 1.5,
                         fontWeight: FontWeight.w600)),
@@ -1187,8 +1188,8 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: AppTheme.surface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
       builder: (_) => Padding(
         padding: const EdgeInsets.all(32.0),
@@ -1199,23 +1200,23 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
+                    color: AppTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             Text(
                 '${day} ${DateFormat('MMMM yyyy').format(_currentMonth)}',
-                style: const TextStyle(
-                    color: Color(0xFF2F2F2F),
+                style: TextStyle(
+                    color: AppTheme.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             _statRow('Protein', '${stat['protein'].toStringAsFixed(1)}g',
                 const Color(0xFFBD4BE5)),
             _statRow('Kalori', '${stat['calories'].toStringAsFixed(0)} kcal',
                 const Color(0xFFFF3400)),
-            const SizedBox(height: 16),
-            const Divider(color: Color(0xFFF5F5F5), thickness: 2),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
+            Divider(color: AppTheme.surfaceVariant, thickness: 2),
+            SizedBox(height: 16),
             _statRow('Gula', '${stat['sugar'].toStringAsFixed(1)}g',
                 sugarWarn ? const Color(0xFFFF3400) : Colors.grey,
                 isWarning: sugarWarn),
@@ -1225,7 +1226,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
             _statRow('Lemak', '${stat['fat'].toStringAsFixed(1)}g',
                 fatWarn ? const Color(0xFFFF3400) : Colors.grey,
                 isWarning: fatWarn),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
           ],
         ),
       ),
@@ -1241,13 +1242,13 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         children: [
           Row(children: [
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     color: Colors.grey,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
             if (isWarning) ...[
-              const SizedBox(width: 8),
-              const Icon(Icons.warning_amber_rounded,
+              SizedBox(width: 8),
+              Icon(Icons.warning_amber_rounded,
                   color: Color(0xFFFF3400), size: 18),
             ]
           ]),

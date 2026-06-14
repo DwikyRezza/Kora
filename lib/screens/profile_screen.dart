@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:intl/intl.dart';
@@ -62,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Load activities
     final allWorkouts = await DatabaseHelper().getAllWorkouts();
     
-    // Batch check: workout mana saja yang punya foto (lazy — tanpa load data foto)
+    // Batch check: workout mana saja yang punya foto (lazy â€” tanpa load data foto)
     final workoutIds = allWorkouts.map((w) => w.id).where((id) => id != null).cast<int>().toList();
     final idsWithPhotos = await DatabaseHelper().getWorkoutIdsWithPhotos(workoutIds);
     
@@ -91,13 +91,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Aktivitas?'),
-        content: const Text('Tindakan ini tidak dapat dibatalkan.'),
+        title: Text('Hapus Aktivitas?'),
+        content: Text('Tindakan ini tidak dapat dibatalkan.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(context, true), 
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            child: Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -216,8 +216,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Colors.white,
-        body: const Center(child: CircularProgressIndicator(color: primaryColor)),
+        backgroundColor: AppTheme.surface,
+        body: Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
@@ -233,14 +233,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String bmiStatus = ProfileService.getBMIStatus(bmi);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
         automaticallyImplyLeading: false, // since it's a bottom nav page
         title: Row(
           children: [
-            const Text(
+            Text(
               'Profile',
               style: TextStyle(
                 color: primaryColor,
@@ -248,7 +248,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             Text(
               '@$username',
               style: TextStyle(
@@ -264,7 +264,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
             onPressed: _goToSettings,
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -273,7 +273,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               
               // Profile Header Section
               Row(
@@ -289,7 +289,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           height: 96,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFF5F5F5), width: 4),
+                            border: Border.all(color: AppTheme.surfaceVariant, width: 4),
                           ),
                           child: ClipOval(
                             child: (photoUrl != null && photoUrl.isNotEmpty)
@@ -297,8 +297,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? Image.memory(base64Decode(photoUrl.split(',')[1]), fit: BoxFit.cover)
                                     : Image.network(photoUrl, fit: BoxFit.cover))
                                 : Container(
-                                    color: const Color(0xFFF5F5F5),
-                                    child: const Icon(Icons.person, size: 48, color: Colors.grey),
+                                    color: AppTheme.surfaceVariant,
+                                    child: Icon(Icons.person, size: 48, color: Colors.grey),
                                   ),
                           ),
                         ),
@@ -310,13 +310,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
-                          child: const Icon(Icons.photo_camera, color: Colors.white, size: 14),
+                          child: Icon(Icons.photo_camera, color: Colors.white, size: 14),
                         ),
                       ],
                     ),
                   ),
                   
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   
                   // Stats
                   Expanded(
@@ -350,7 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
               
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               
               // Bio Section
               Text(
@@ -361,16 +361,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
-                bio.isNotEmpty ? '$bio • $goal Goal' : '$goal Goal',
+                bio.isNotEmpty ? '$bio â€¢ $goal Goal' : '$goal Goal',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 17,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               
               // BMI Badge
               Container(
@@ -383,11 +383,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.monitor_weight_rounded, color: Color(0xFF00B33F), size: 18),
-                    const SizedBox(width: 8),
+                    Icon(Icons.monitor_weight_rounded, color: Color(0xFF00B33F), size: 18),
+                    SizedBox(width: 8),
                     Text(
                       'BMI $bmiStr $bmiStatus',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Color(0xFF00B33F),
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -397,7 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
               
               // Action Button
               SizedBox(
@@ -405,7 +405,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _goToEditProfile,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2F2F2F), // Graphite
+                    backgroundColor: AppTheme.textPrimary, // Graphite
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -413,7 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Edit Profil',
                     style: TextStyle(
                       fontSize: 16,
@@ -423,12 +423,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               
-              const SizedBox(height: 48),
+              SizedBox(height: 48),
               
               // Feed Content
               _buildListFeed(),
               
-              const SizedBox(height: 40),
+              SizedBox(height: 40),
             ],
           ),
         ),
@@ -466,7 +466,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildListFeed() {
     if (_activitiesList.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
           child: Text('Belum ada aktivitas olahraga.', style: TextStyle(color: Colors.grey)),
@@ -477,11 +477,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _activitiesList.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      separatorBuilder: (context, index) => SizedBox(height: 16),
       itemBuilder: (context, index) {
         final workout = _activitiesList[index];
         final hasPhoto = workout.id != null && _workoutsWithPhotos.contains(workout.id);
-        final dateStr = DateFormat('dd MMM yyyy • HH.mm').format(workout.date);
+        final dateStr = DateFormat('dd MMM yyyy â€¢ HH.mm').format(workout.date);
 
         final typeLower = workout.type.toLowerCase();
         String defaultImage;
@@ -526,10 +526,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ? (profilePhoto.startsWith('data:image')
                               ? Image.memory(base64Decode(profilePhoto.split(',')[1]), fit: BoxFit.cover)
                               : Image.network(profilePhoto, fit: BoxFit.cover))
-                          : const Icon(Icons.person, color: Colors.grey),
+                          : Icon(Icons.person, color: Colors.grey),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,7 +565,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               
               // Judul Aktivitas
               Text(
@@ -576,7 +576,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: AppTheme.textPrimary
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               
               // Baris Statistik
               Row(
@@ -624,7 +624,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ],
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               
               if (typeLower == 'running' || typeLower == 'lari' || hasPhoto) ...[
                 // Gambar/Visual Aktivitas
@@ -632,7 +632,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(26),
-                    color: const Color(0xFFF5F5F5),
+                    color: AppTheme.surfaceVariant,
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: AspectRatio(
@@ -642,7 +642,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           future: DatabaseHelper().getFirstWorkoutPhoto(workout.id!),
                           builder: (context, snap) {
                             if (snap.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                              return Center(child: CircularProgressIndicator(strokeWidth: 2));
                             }
                             final path = snap.data;
                             if (path != null && File(path).existsSync()) {
@@ -659,7 +659,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           : Image.network(defaultImage, fit: BoxFit.cover),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
               
               // Aksi (Like & Komen)
@@ -682,13 +682,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: (_isLiked[index] ?? false) ? Colors.red : AppTheme.textSecondary, 
                               size: 24
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text('${_likesCount[index] ?? 0}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     InkWell(
                       onTap: () => _showComments(index),
                       borderRadius: BorderRadius.circular(16),
@@ -697,7 +697,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Row(
                           children: [
                             Icon(Icons.chat_bubble_outline, color: AppTheme.textSecondary, size: 24),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text('${_comments[index]?.length ?? 0}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
                           ],
                         ),
@@ -731,8 +731,8 @@ class _CommentBottomSheetState extends State<_CommentBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(top: kToolbarHeight),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: Column(
@@ -747,11 +747,11 @@ class _CommentBottomSheetState extends State<_CommentBottomSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Text('Komentar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          const Divider(),
+          Text('Komentar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Divider(),
           Expanded(
             child: widget.comments.isEmpty
-                ? const Center(child: Text('Belum ada komentar. Jadilah yang pertama!', style: TextStyle(color: Colors.grey)))
+                ? Center(child: Text('Belum ada komentar. Jadilah yang pertama!', style: TextStyle(color: Colors.grey)))
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: widget.comments.length,
@@ -762,20 +762,20 @@ class _CommentBottomSheetState extends State<_CommentBottomSheet> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CircleAvatar(radius: 16, backgroundColor: Colors.grey[300], child: const Icon(Icons.person, size: 20, color: Colors.grey)),
-                            const SizedBox(width: 12),
+                            CircleAvatar(radius: 16, backgroundColor: Colors.grey[300], child: Icon(Icons.person, size: 20, color: Colors.grey)),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      Text(c['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      const SizedBox(width: 8),
-                                      Text(c['time']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                      Text(c['name']!, style: TextStyle(fontWeight: FontWeight.bold)),
+                                      SizedBox(width: 8),
+                                      Text(c['time']!, style: TextStyle(fontSize: 12, color: Colors.grey)),
                                     ],
                                   ),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: 4),
                                   Text(c['text']!),
                                 ],
                               ),
@@ -789,8 +789,8 @@ class _CommentBottomSheetState extends State<_CommentBottomSheet> {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey[200]!)),
+              color: AppTheme.surface,
+              border: Border(top: BorderSide(color: AppTheme.surfaceVariant)),
             ),
             child: Row(
               children: [
@@ -807,7 +807,7 @@ class _CommentBottomSheetState extends State<_CommentBottomSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFFA83300)),
+                  icon: Icon(Icons.send, color: Color(0xFFA83300)),
                   onPressed: () {
                     if (_controller.text.trim().isNotEmpty) {
                       widget.onCommentAdded(_controller.text.trim());

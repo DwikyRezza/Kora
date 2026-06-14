@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -197,12 +197,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshData,
           color: const Color(0xFF00B33F),
-          backgroundColor: Colors.white,
+          backgroundColor: AppTheme.surface,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
@@ -254,8 +254,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Container(
       width: 40,
       height: 40,
-      decoration: const BoxDecoration(color: Color(0xFFF5F5F5), shape: BoxShape.circle),
-      child: const Icon(Icons.person, color: Colors.grey, size: 24),
+      decoration: BoxDecoration(color: AppTheme.surfaceVariant, shape: BoxShape.circle),
+      child: Icon(Icons.person, color: AppTheme.textMuted, size: 24),
     );
   }
 
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.search, color: Color(0xFF2F2F2F)),
+              icon: Icon(Icons.search, color: AppTheme.textPrimary),
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
               },
@@ -283,7 +283,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             Stack(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.notifications_none, color: Color(0xFF2F2F2F)),
+                  icon: Icon(Icons.notifications_none, color: AppTheme.textPrimary),
                   onPressed: () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen()));
                     _loadData();
@@ -296,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     child: Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Color(0xFFFF3400),
                         shape: BoxShape.circle,
                       ),
@@ -330,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5), // fog
+        color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(26),
       ),
       child: Column(
@@ -343,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('CAPAIAN PROTEIN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.5)),
+                  Text('CAPAIAN PROTEIN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 1.5)),
                   const SizedBox(height: 4),
                   Text(
                     isSufficient ? 'Target tercapai!' : 'Di bawah target harian',
@@ -353,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
               Text(
                 '${(progress * 100).round()}%',
-                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F)),
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
               ),
             ],
           ),
@@ -362,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             height: 12,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(6),
             ),
             child: FractionallySizedBox(
@@ -383,15 +383,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('TERKUMPUL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  Text('${_totalProteinToday.toStringAsFixed(1)}g', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                  Text('TERKUMPUL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+                  Text('${_totalProteinToday.toStringAsFixed(1)}g', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                 ],
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text('TARGET', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  Text('${_totalProteinNeeded.toStringAsFixed(1)}g', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                  Text('TARGET', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+                  Text('${_totalProteinNeeded.toStringAsFixed(1)}g', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                 ],
               ),
             ],
@@ -400,14 +400,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.5),
+              color: AppTheme.surface.withOpacity(0.6),
               borderRadius: BorderRadius.circular(26),
             ),
             child: Text(
               isSufficient 
                   ? 'Pertahankan performa ini! Otot Anda berterima kasih.' 
                   : 'Tingkatkan asupan protein Anda di makan berikutnya untuk pemulihan optimal.',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF2F2F2F), height: 1.5),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textPrimary, height: 1.5),
             ),
           ),
         ],
@@ -487,7 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(26),
         border: Border(left: BorderSide(color: color, width: 4)),
       ),
@@ -495,16 +495,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
+          Text(title.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 1)),
           const SizedBox(height: 4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F))),
+              Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
               if (subValue != null) ...[
                 const SizedBox(width: 4),
-                Text(subValue, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                Text(subValue, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
               ],
             ],
           ),
@@ -535,7 +535,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
+            color: AppTheme.surfaceVariant,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Row(
@@ -562,7 +562,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         style: TextStyle(
                           fontSize: 9, 
                           fontWeight: FontWeight.bold, 
-                          color: isSelected ? Colors.white.withOpacity(0.8) : Colors.grey
+                          color: isSelected ? Colors.white.withOpacity(0.8) : AppTheme.textMuted
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -571,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         style: TextStyle(
                           fontSize: 14, 
                           fontWeight: FontWeight.bold, 
-                          color: isSelected ? Colors.white : const Color(0xFF2F2F2F)
+                          color: isSelected ? Colors.white : AppTheme.textPrimary
                         ),
                       ),
                     ],
@@ -587,7 +587,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
+            color: AppTheme.surfaceVariant,
             borderRadius: BorderRadius.circular(26),
           ),
           child: heroEvent != null ? Column(
@@ -597,15 +597,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('SARAN KORA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00B33F), letterSpacing: 1.5)),
-                  Text(DateFormat('HH:mm').format(heroEvent.dateTime), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  Text(DateFormat('HH:mm').format(heroEvent.dateTime), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
                 ],
               ),
               const SizedBox(height: 16),
-              Text(heroEvent.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+              Text(heroEvent.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
               const SizedBox(height: 8),
               Text(
                 heroEvent.notes.isNotEmpty ? heroEvent.notes : 'Fokus pada kontrol pernapasan dan postur tubuh yang stabil.',
-                style: const TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
+                style: TextStyle(fontSize: 14, color: AppTheme.textMuted, height: 1.5),
               ),
               const SizedBox(height: 24),
               Row(
@@ -615,17 +615,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     children: [
                       const Icon(Icons.timer, size: 18, color: Color(0xFF0099F9)),
                       const SizedBox(width: 4),
-                      const Text('60 mnt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                      Text('60 mnt', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                       const SizedBox(width: 16),
                       const Icon(Icons.local_fire_department, size: 18, color: Color(0xFFFF6D00)),
                       const SizedBox(width: 4),
-                      const Text('320 kal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                      Text('320 kal', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     ],
                   ),
                   ElevatedButton(
                     onPressed: () => _navigateByWorkoutType(heroEvent),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2F2F2F), // graphite
+                      backgroundColor: AppTheme.textPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -654,7 +654,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           children: [
             Row(
               children: [
-                const Text('Jadwal ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), letterSpacing: -0.5)),
+                Text('Jadwal ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppTheme.textPrimary, letterSpacing: -0.5)),
                 const Text('Latih', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFFFF5406), letterSpacing: -0.5)),
               ],
             ),
@@ -663,10 +663,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: AppTheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(26),
                 ),
-                child: const Text('TAMBAH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), letterSpacing: 1.5)),
+                child: Text('TAMBAH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textPrimary, letterSpacing: 1.5)),
               ),
             ),
           ],
@@ -688,14 +688,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: AppTheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(26),
                 ),
                 child: Row(
                   children: [
                     Container(
                       width: 48, height: 48,
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(26)),
+                      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(26)),
                       child: const Icon(Icons.task_alt, color: Color(0xFF00B33F)),
                     ),
                     const SizedBox(width: 16),
@@ -703,16 +703,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(w.type.substring(0, 1).toUpperCase() + w.type.substring(1), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), fontSize: 16)),
+                          Text(w.type.substring(0, 1).toUpperCase() + w.type.substring(1), style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 16)),
                           const SizedBox(height: 4),
                           Text(
-                            'Selesai • ${DateFormat('HH:mm').format(w.date)} WIB',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.grey, letterSpacing: 0.5),
+                            'Selesai â€¢ ${DateFormat('HH:mm').format(w.date)} WIB',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.textMuted, letterSpacing: 0.5),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right, color: Colors.grey),
+                    Icon(Icons.chevron_right, color: AppTheme.textMuted),
                   ],
                 ),
               ),
@@ -728,7 +728,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       children: [
         Row(
           children: [
-            const Text('Aktivitas ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), letterSpacing: -0.5)),
+            Text('Aktivitas ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppTheme.textPrimary, letterSpacing: -0.5)),
             const Text('Teman', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Color(0xFF00B33F), letterSpacing: -0.5)),
           ],
         ),
@@ -741,16 +741,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: AppTheme.surfaceVariant,
               borderRadius: BorderRadius.circular(26),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.group_outlined, size: 48, color: Colors.grey),
+                Icon(Icons.group_outlined, size: 48, color: AppTheme.textMuted),
                 SizedBox(height: 16),
                 Text(
                   'Belum ada aktivitas',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2F2F2F)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
                 ),
                 SizedBox(height: 8),
                 Text(

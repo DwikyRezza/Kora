@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -321,7 +321,7 @@ class _FeedPostCardState extends State<FeedPostCard> {
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(26),
-              color: const Color(0xFFF5F5F5),
+              color: AppTheme.surfaceVariant,
             ),
             clipBehavior: Clip.antiAlias,
             child: AspectRatio(

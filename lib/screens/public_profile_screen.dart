@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
@@ -100,16 +100,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Color(0xFF2F2F2F))),
+        backgroundColor: AppTheme.surface,
+        appBar: AppBar(backgroundColor: AppTheme.surface, elevation: 0, iconTheme: IconThemeData(color: AppTheme.textPrimary)),
         body: const Center(child: CircularProgressIndicator(color: Color(0xFF00B33F))),
       );
     }
 
     if (_userProfile == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(backgroundColor: Colors.white, elevation: 0, iconTheme: const IconThemeData(color: Color(0xFF2F2F2F))),
+        backgroundColor: AppTheme.surface,
+        appBar: AppBar(backgroundColor: AppTheme.surface, elevation: 0, iconTheme: IconThemeData(color: AppTheme.textPrimary)),
         body: const Center(child: Text('Pengguna tidak ditemukan', style: TextStyle(color: Colors.grey))),
       );
     }
@@ -119,12 +119,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final photoUrl = _userProfile!['photoUrl'];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF2F2F2F)),
-        title: Text(username.isNotEmpty ? '@$username' : name, style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 16)),
+        iconTheme: IconThemeData(color: AppTheme.textPrimary),
+        title: Text(username.isNotEmpty ? '@$username' : name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
         centerTitle: true,
       ),
       body: RefreshIndicator(
@@ -144,14 +144,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       height: 96,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFFF5F5F5),
+                        color: AppTheme.surfaceVariant,
                       ),
                       child: _buildAvatar(photoUrl),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       name,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F)),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
                     ),
                     const SizedBox(height: 24),
                     Row(
@@ -163,14 +163,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           },
                           child: _buildStat('Pengikut', _followersCount),
                         ),
-                        Container(width: 1, height: 24, color: Colors.grey.shade300),
+                        Container(width: 1, height: 24, color: AppTheme.surfaceVariant),
                         GestureDetector(
                           onTap: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => SocialScreen(initialTab: 'following', username: username, uid: widget.uid)));
                           },
                           child: _buildStat('Mengikuti', _followingCount),
                         ),
-                        Container(width: 1, height: 24, color: Colors.grey.shade300),
+                        Container(width: 1, height: 24, color: AppTheme.surfaceVariant),
                         _buildStat('Aktivitas', _userPosts.length),
                       ],
                     ),
@@ -181,13 +181,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         child: ElevatedButton(
                           onPressed: _isProcessingFollow ? null : _toggleFollow,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _isFollowing ? const Color(0xFFF5F5F5) : const Color(0xFF00B33F),
-                            foregroundColor: _isFollowing ? const Color(0xFF2F2F2F) : Colors.white,
+                            backgroundColor: _isFollowing ? AppTheme.surfaceVariant : Color(0xFF00B33F),
+                            foregroundColor: _isFollowing ? AppTheme.textPrimary : Colors.white,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(26),
-                              side: _isFollowing ? const BorderSide(color: Color(0xFFE0E0E0)) : BorderSide.none,
+                              side: _isFollowing ? BorderSide(color: Color(0xFFE0E0E0)) : BorderSide.none,
                             ),
                           ),
                           child: _isProcessingFollow
@@ -201,7 +201,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 32, thickness: 8, color: Color(0xFFF5F5F5)),
+              Divider(height: 32, thickness: 8, color: AppTheme.surfaceVariant),
               
               // Posts List
               Padding(
@@ -209,7 +209,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Aktivitas Terakhir', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F))),
+                    Text('Aktivitas Terakhir', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                     const SizedBox(height: 16),
                     if (_userPosts.isEmpty)
                       const Center(
@@ -238,7 +238,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       children: [
         Text(
           value.toString(),
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F)),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
         ),
         const SizedBox(height: 4),
         Text(

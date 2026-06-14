@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -260,7 +260,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => Padding(
@@ -387,7 +387,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                    fontFeatures: [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
@@ -535,7 +535,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                         color: AppTheme.textPrimary,
                         fontSize: 56,
                         fontWeight: FontWeight.w900,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
                   ),
@@ -609,8 +609,8 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isFinishing
-                ? [AppTheme.neonGreen, const Color(0xFF00CC6A)]
-                : [AppTheme.electricBlue, const Color(0xFF0099CC)],
+                ? [AppTheme.neonGreen, Color(0xFF00CC6A)]
+                : [AppTheme.electricBlue, Color(0xFF0099CC)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -670,7 +670,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                   fontSize: 100, 
                   fontWeight: FontWeight.w900,
                   fontFamily: 'monospace', 
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontFeatures: [FontFeature.tabularFigures()],
                   shadows: [Shadow(color: const Color(0xFFFFB830).withOpacity(0.5), blurRadius: 40)],
                 ),
               ),
@@ -686,7 +686,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                     label: const Text('10s', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white70,
-                      side: const BorderSide(color: Colors.white24, width: 2),
+                      side: BorderSide(color: Colors.white24, width: 2),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
@@ -698,7 +698,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                     label: const Text('20s', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white70,
-                      side: const BorderSide(color: Colors.white24, width: 2),
+                      side: BorderSide(color: Colors.white24, width: 2),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),

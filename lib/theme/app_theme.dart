@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
+  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
   static bool get isDarkMode => themeNotifier.value == ThemeMode.dark;
 
@@ -26,6 +26,8 @@ class AppTheme {
   static Color get textMuted => isDarkMode ? const Color(0xFF4A5568) : const Color(0xFF718096);
 
   static Color get border => isDarkMode ? const Color(0xFF2D3748) : const Color(0xFFCBD5E0);
+  static Color get inputFill => isDarkMode ? const Color(0xFF1C2438) : const Color(0xFFEEF2F7);
+  static Color get divider => isDarkMode ? const Color(0xFF1E2A3E) : const Color(0xFFE8EEF4);
 
   // Workout Colors
   static Color get runningColor => electricBlue;
@@ -66,10 +68,10 @@ class AppTheme {
   );
 
   static ThemeData get theme {
-    return isDarkMode ? _darkTheme : _lightTheme;
+    return isDarkMode ? darkTheme : lightTheme;
   }
 
-  static ThemeData get _darkTheme {
+  static ThemeData get darkTheme {
     return ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF0A0E1A),
@@ -144,7 +146,7 @@ class AppTheme {
     );
   }
 
-  static ThemeData get _lightTheme {
+  static ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
       scaffoldBackgroundColor: const Color(0xFFF7F9FC),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/body_measurement.dart';
@@ -25,7 +25,7 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
     _loadData();
   }
 
-  /// Dipanggil saat pull-to-refresh — sync dari Firestore dulu
+  /// Dipanggil saat pull-to-refresh â€” sync dari Firestore dulu
   Future<void> _refreshData() async {
     try {
       await CloudSyncService.restoreAllFromCloud();
@@ -120,7 +120,7 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
                           child: ListTile(
                             leading: CircleAvatar(backgroundColor: AppTheme.surfaceVariant, child: Icon(Icons.monitor_weight_rounded, color: AppTheme.electricBlue)),
                             title: Text('${m.weight} kg', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                            subtitle: Text('BMI: ${m.bmi.toStringAsFixed(1)} • ${DateFormat('dd MMM yy', 'id').format(m.date)}', style: TextStyle(color: AppTheme.textMuted)),
+                            subtitle: Text('BMI: ${m.bmi.toStringAsFixed(1)} â€¢ ${DateFormat('dd MMM yy', 'id').format(m.date)}', style: TextStyle(color: AppTheme.textMuted)),
                             trailing: IconButton(
                               icon: Icon(Icons.delete_outline, color: AppTheme.accentRed),
                               onPressed: () async {
@@ -334,7 +334,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +349,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                   controller: _weightCtrl,
                   keyboardType: TextInputType.number,
                   style: TextStyle(color: AppTheme.textPrimary),
-                  decoration: const InputDecoration(labelText: 'Berat Badan (kg)', prefixIcon: Icon(Icons.monitor_weight_rounded)),
+                  decoration: InputDecoration(labelText: 'Berat Badan (kg)', prefixIcon: Icon(Icons.monitor_weight_rounded)),
                 ),
               ),
               const SizedBox(width: 16),
@@ -358,7 +358,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                   controller: _heightCtrl,
                   keyboardType: TextInputType.number,
                   style: TextStyle(color: AppTheme.textPrimary),
-                  decoration: const InputDecoration(labelText: 'Tinggi Badan (cm)', prefixIcon: Icon(Icons.height_rounded)),
+                  decoration: InputDecoration(labelText: 'Tinggi Badan (cm)', prefixIcon: Icon(Icons.height_rounded)),
                 ),
               ),
             ],
@@ -368,7 +368,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _save,
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.electricBlue, padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.electricBlue, padding: EdgeInsets.symmetric(vertical: 16)),
               child: const Text('Simpan Data', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),

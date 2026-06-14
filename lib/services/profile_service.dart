@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 
 /// ProfileService — Cloud-First (Firestore Only)

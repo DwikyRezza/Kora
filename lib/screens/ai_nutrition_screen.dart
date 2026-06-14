@@ -1,5 +1,6 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/protein_entry.dart';
@@ -212,16 +213,16 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Color(0xFF2F2F2F)),
+          icon: Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
-          children: const [
+          children: [
             Text('Catat Makanan', style: TextStyle(color: Color(0xFFFF5406), fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -0.5)),
           ],
         ),
@@ -237,21 +238,21 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
           margin: const EdgeInsets.fromLTRB(24, 16, 24, 0),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
+            color: AppTheme.surfaceVariant,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Row(
             children: [
               const _GroqLogo(size: 32),
-              const SizedBox(width: 16),
+              SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       'Catat Apa yang Kamu Makan',
                       style: TextStyle(
-                        color: Color(0xFF2F2F2F),
+                        color: AppTheme.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -276,7 +277,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
-                  children: const [
+                  children: [
                     Expanded(
                       flex: 5,
                       child: Text('Menu Makanan',
@@ -301,28 +302,28 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
 
               ...List.generate(_rows.length, (i) => _buildInputRow(i)),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               GestureDetector(
                 onTap: _addRow,
                 child: Container(
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(26),
                     border: Border.all(
-                      color: const Color(0xFFF5F5F5),
+                      color: AppTheme.surfaceVariant,
                       width: 2,
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Icons.add_circle_outline_rounded,
-                          color: Color(0xFF2F2F2F), size: 24),
+                          color: AppTheme.textPrimary, size: 24),
                       SizedBox(width: 8),
                       Text('Tambah Makanan',
                           style: TextStyle(
-                              color: Color(0xFF2F2F2F),
+                              color: AppTheme.textPrimary,
                               fontWeight: FontWeight.bold,
                               fontSize: 16)),
                     ],
@@ -331,7 +332,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               ),
 
               if (_errorMsg != null) ...[
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -340,11 +341,11 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                   ),
                   child: Text(_errorMsg!,
                       style:
-                          const TextStyle(color: Color(0xFFFF3400), fontSize: 13, fontWeight: FontWeight.bold)),
+                          TextStyle(color: Color(0xFFFF3400), fontSize: 13, fontWeight: FontWeight.bold)),
                 ),
               ],
 
-              const SizedBox(height: 100),
+              SizedBox(height: 100),
             ],
           ),
         ),
@@ -368,15 +369,15 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (_isAnalyzing)
-                    const SizedBox(
+                    SizedBox(
                       width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                     )
                   else
                     const _GroqLogo(size: 24, isWhite: true),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Text(_isAnalyzing ? 'Menganalisis...' : 'Catat Makanan',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
@@ -398,13 +399,13 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
             flex: 5,
             child: TextField(
               controller: _rows[index]['name'],
-              style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 16),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 hintText: '2 butir telur, nasi goreng...',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
+                hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                 filled: true,
-                fillColor: const Color(0xFFF5F5F5),
+                fillColor: AppTheme.surfaceVariant,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 border: OutlineInputBorder(
@@ -414,20 +415,20 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           SizedBox(
             width: 80,
             child: TextField(
               controller: _rows[index]['gram'],
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 16),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
               decoration: InputDecoration(
                 hintText: '100',
-                hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
+                hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                 filled: true,
-                fillColor: const Color(0xFFF5F5F5),
+                fillColor: AppTheme.surfaceVariant,
                 suffixText: 'g',
-                suffixStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                suffixStyle: TextStyle(color: Colors.grey, fontSize: 14),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 border: OutlineInputBorder(
@@ -437,7 +438,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           IconButton(
             icon: Icon(Icons.remove_circle_outline_rounded,
                 color: _rows.length > 1
@@ -468,47 +469,47 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: AppTheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(26),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      children: const [
+                      children: [
                         _GroqLogo(size: 24),
                         SizedBox(width: 12),
                         Text('Hasil Analisis',
                             style: TextStyle(
-                                color: Color(0xFF2F2F2F),
+                                color: AppTheme.textPrimary,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16)),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     Row(
                       children: [
                         _totalChip('Pro', '${totalProtein.toStringAsFixed(0)}g', const Color(0xFFBD4BE5)),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _totalChip('Cal', '${totalCalories.toStringAsFixed(0)}k', const Color(0xFFFF3400)),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _totalChip('Carb', '${totalCarbs.toStringAsFixed(0)}g', const Color(0xFF00A9DD)),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         _totalChip('Fat', '${totalFat.toStringAsFixed(0)}g', const Color(0xFF00B33F)),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-              const Text('Detail Per Makanan',
+              SizedBox(height: 32),
+              Text('Detail Per Makanan',
                   style: TextStyle(
-                      color: Color(0xFF2F2F2F),
+                      color: AppTheme.textPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 18)),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               ...results.map((r) => _buildFoodResultCard(r)),
-              const SizedBox(height: 80),
+              SizedBox(height: 80),
             ],
           ),
         ),
@@ -522,18 +523,18 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                 child: OutlinedButton(
                   onPressed: () => setState(() => _results = null),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFF5F5F5), width: 2),
+                    side: BorderSide(color: AppTheme.surfaceVariant, width: 2),
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(26)),
                   ),
-                  child: const Text('Ulangi',
+                  child: Text('Ulangi',
                       style: TextStyle(
-                          color: Color(0xFF2F2F2F),
+                          color: AppTheme.textPrimary,
                           fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
@@ -547,11 +548,11 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                     elevation: 0,
                   ),
                   child: _isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22, height: 22,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
-                      : const Text('Simpan',
+                      : Text('Simpan',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 ),
               ),
@@ -567,7 +568,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(26),
       ),
       child: Column(
@@ -578,31 +579,31 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text('${r.gram.toStringAsFixed(0)}g',
-                    style: const TextStyle(
-                        color: Color(0xFF2F2F2F),
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(r.name,
-                    style: const TextStyle(
-                        color: Color(0xFF2F2F2F),
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 18)),
               ),
               Text('${r.calories.toStringAsFixed(0)} kcal',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: Color(0xFFFF3400),
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Row(
             children: [
               _miniNutrient('Protein', r.protein, const Color(0xFFBD4BE5)),
@@ -623,9 +624,9 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
           Text('${value.toStringAsFixed(1)}g',
               style: TextStyle(
                   color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(label,
-              style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+              style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -636,7 +637,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -644,9 +645,9 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
             Text(value,
                 style: TextStyle(
                     color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -715,7 +716,7 @@ class _GroqPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isWhite ? Colors.white : const Color(0xFF2F2F2F)
+      ..color = isWhite ? Colors.white : AppTheme.textPrimary
       ..style = PaintingStyle.fill;
     
     final path = Path()

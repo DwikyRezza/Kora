@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 
 /// TabVisibility — lightweight event bus berbasis ValueNotifier.
 ///

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
@@ -74,18 +74,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFFFF), // Paper White
+      backgroundColor: AppTheme.surface, // Paper White
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mulai Perjalananmu', style: TextStyle(color: const Color(0xFF2F2F2F), fontSize: 20)),
+            Text('Mulai Perjalananmu', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20)),
             Text(AuthService.email ?? '', style: TextStyle(color: const Color(0xFF72A2C5), fontSize: 13, fontWeight: FontWeight.normal)),
           ],
         ),
-        backgroundColor: const Color(0xFFFFFFFF),
+        backgroundColor: AppTheme.surface,
         elevation: 0,
-        iconTheme: IconThemeData(color: const Color(0xFF2F2F2F)),
+        iconTheme: IconThemeData(color: AppTheme.textPrimary),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () async {
@@ -108,7 +108,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Text(
                 'Lengkapi Profil Anda',
                 style: TextStyle(
-                  color: const Color(0xFF2F2F2F),
+                  color: AppTheme.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
@@ -121,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               
               // Username Field
               TextFormField(
-                style: TextStyle(color: const Color(0xFF2F2F2F)),
+                style: TextStyle(color: AppTheme.textPrimary),
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(
                   labelText: 'Username',
@@ -135,7 +135,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: const Color(0xFFF5F5F5),
+                  fillColor: AppTheme.surfaceVariant,
                   prefixIcon: Icon(Icons.alternate_email_rounded, color: const Color(0xFF72A2C5)),
                 ),
                 inputFormatters: [
@@ -169,10 +169,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         filled: true,
-                        fillColor: const Color(0xFFF5F5F5),
+                        fillColor: AppTheme.surfaceVariant,
                       ),
-                      dropdownColor: const Color(0xFFFFFFFF),
-                      style: TextStyle(color: const Color(0xFF2F2F2F), fontSize: 16),
+                      dropdownColor: AppTheme.surface,
+                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
                       initialValue: _gender,
                       items: _genders.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                       onChanged: (v) => setState(() => _gender = v!),
@@ -202,10 +202,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: const Color(0xFFF5F5F5),
+                  fillColor: AppTheme.surfaceVariant,
                 ),
-                dropdownColor: const Color(0xFFFFFFFF),
-                style: TextStyle(color: const Color(0xFF2F2F2F), fontSize: 16),
+                dropdownColor: AppTheme.surface,
+                style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
                 initialValue: _goal,
                 items: _goals.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                 onChanged: (v) => setState(() => _goal = v!),
@@ -243,7 +243,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildTextField(String label, void Function(String?) onSave, TextInputType type, {String? initialValue}) {
     return TextFormField(
       initialValue: initialValue,
-      style: TextStyle(color: const Color(0xFF2F2F2F)),
+      style: TextStyle(color: AppTheme.textPrimary),
       keyboardType: type,
       decoration: InputDecoration(
         labelText: label,
@@ -257,7 +257,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           borderRadius: BorderRadius.circular(12),
         ),
         filled: true,
-        fillColor: const Color(0xFFF5F5F5), // Fog
+        fillColor: AppTheme.surfaceVariant, // Fog
       ),
       validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
       onSaved: onSave,

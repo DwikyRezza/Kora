@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// High-performance Q&A screen using ValueNotifier + ListView.builder.
 /// - Search filtering is isolated via ValueNotifier<String> so only the
-///   list rebuilds on keystroke — AppBar and TextField stay untouched.
+///   list rebuilds on keystroke â€” AppBar and TextField stay untouched.
 /// - ListView.builder lazily renders ExpansionTile items only when they
 ///   scroll into the viewport, keeping RAM usage minimal on low-end devices.
 class QnaScreen extends StatefulWidget {
@@ -14,10 +14,10 @@ class QnaScreen extends StatefulWidget {
 }
 
 class _QnaScreenState extends State<QnaScreen> {
-  /// Search query notifier — isolates rebuild scope to the list only.
+  /// Search query notifier â€” isolates rebuild scope to the list only.
   final ValueNotifier<String> _searchQuery = ValueNotifier('');
 
-  /// Master Q&A dataset — immutable, loaded once.
+  /// Master Q&A dataset â€” immutable, loaded once.
   static const List<Map<String, String>> _allQa = [
     {
       'q': 'Mengapa data pencatatan makanan saya tidak langsung muncul di perangkat lain?',
@@ -89,7 +89,7 @@ class _QnaScreenState extends State<QnaScreen> {
       ),
       body: Column(
         children: [
-          // ── Search Bar (outside ValueListenableBuilder — never rebuilds) ──
+          // â”€â”€ Search Bar (outside ValueListenableBuilder â€” never rebuilds) â”€â”€
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: TextField(
@@ -110,7 +110,7 @@ class _QnaScreenState extends State<QnaScreen> {
             ),
           ),
 
-          // ── Filtered list (rebuilds ONLY when search query changes) ──
+          // â”€â”€ Filtered list (rebuilds ONLY when search query changes) â”€â”€
           Expanded(
             child: ValueListenableBuilder<String>(
               valueListenable: _searchQuery,

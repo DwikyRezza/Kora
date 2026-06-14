@@ -58,9 +58,18 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark, // akan diupdate oleh MaterialApp
     ),
   );
+
+  // Update status bar brightness saat tema berubah
+  AppTheme.themeNotifier.addListener(() {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: AppTheme.isDarkMode ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+    ));
+  });
 
   // Check login and onboarding status
   bool isLoggedIn = AuthService.isLoggedIn;
@@ -83,7 +92,8 @@ class Kora extends StatelessWidget {
         return MaterialApp(
           title: 'Kora',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.theme,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           themeMode: currentMode,
           home: _getHomeScreen(),
         );

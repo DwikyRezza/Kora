@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 
 class MealRecommendation {
   final String title;

@@ -54,8 +54,8 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: Column(
@@ -66,12 +66,12 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: AppTheme.surfaceVariant,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -79,12 +79,12 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: Color(0xFF2F2F2F),
+                  color: AppTheme.textPrimary,
                 ),
               ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFF5F5F5)),
+          Divider(height: 1, color: AppTheme.surfaceVariant),
           
           Expanded(
             child: _isLoading && _comments.isEmpty
@@ -107,7 +107,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                                   height: 36,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.grey.shade200,
+                                    color: AppTheme.surfaceVariant,
                                   ),
                                   child: ClipOval(
                                     child: (photoUrl != null && photoUrl.isNotEmpty)
@@ -122,7 +122,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                                   child: Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFF5F5F5),
+                                      color: AppTheme.surfaceVariant,
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Column(
@@ -133,7 +133,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                                           children: [
                                             Text(
                                               c['authorName'] ?? 'Anon',
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF2F2F2F)),
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
                                             ),
                                             Text(
                                               _formatTime(c['timestamp']),
@@ -144,7 +144,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                                         const SizedBox(height: 4),
                                         Text(
                                           c['text'] ?? '',
-                                          style: const TextStyle(fontSize: 14, color: Color(0xFF2F2F2F), height: 1.4),
+                                          style: TextStyle(fontSize: 14, color: AppTheme.textPrimary, height: 1.4),
                                         ),
                                       ],
                                     ),
@@ -160,9 +160,9 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           // Input field
           Container(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFF5F5F5))),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(top: BorderSide(color: AppTheme.surfaceVariant)),
             ),
             child: Row(
               children: [
@@ -174,7 +174,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                       hintText: 'Tulis komentar...',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
-                      fillColor: const Color(0xFFF5F5F5),
+                      fillColor: AppTheme.surfaceVariant,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(26),
@@ -188,7 +188,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                   onTap: _submitComment,
                   child: Container(
                     width: 48, height: 48,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Color(0xFF00B33F),
                       shape: BoxShape.circle,
                     ),

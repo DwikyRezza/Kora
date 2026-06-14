@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:share_plus/share_plus.dart';
@@ -110,17 +111,17 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       appBar: AppBar(
         title: Row(
-          children: const [
+          children: [
             Text('Aktivitas ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00B33F), letterSpacing: -1)),
-            Text('Latihan', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF2F2F2F), letterSpacing: -1)),
+            Text('Latihan', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -1)),
           ],
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
-        actions: const [],
+        actions: [],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(50),
           child: Column(
@@ -129,15 +130,15 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                 controller: _tabController,
                 indicatorColor: const Color(0xFF00B33F),
                 indicatorWeight: 4,
-                labelColor: const Color(0xFF2F2F2F),
+                labelColor: AppTheme.textPrimary,
                 unselectedLabelColor: Colors.grey,
                 labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-                tabs: const [
+                tabs: [
                   Tab(text: 'Progress'),
                   Tab(text: 'Riwayat'),
                 ],
               ),
-              Container(height: 1, color: const Color(0xFFF5F5F5)),
+              Container(height: 1, color: AppTheme.surfaceVariant),
             ],
           ),
         ),
@@ -194,7 +195,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('30 Hari Terakhir', style: TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold, fontSize: 20)),
+                Text('30 Hari Terakhir', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 20)),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -225,7 +226,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
+                    color: AppTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(26),
                   ),
                   child: _buildBarChart(),
@@ -235,7 +236,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
           ),
 
           const SizedBox(height: 32),
-          Container(height: 8, color: const Color(0xFFF5F5F5)),
+          Container(height: 8, color: AppTheme.surfaceVariant),
 
           Padding(
             padding: const EdgeInsets.all(24),
@@ -245,7 +246,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(DateFormat('MMMM yyyy').format(DateTime.now()), style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(DateFormat('MMMM yyyy').format(DateTime.now()), style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
                     _shareButton(),
                   ],
                 ),
@@ -273,7 +274,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     return RefreshIndicator(
       onRefresh: _refreshData,
       color: const Color(0xFF00B33F),
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 100, top: 16),
         itemCount: _workouts.length,
@@ -300,9 +301,9 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
         return await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: Colors.white,
+            backgroundColor: AppTheme.surface,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-            title: const Text('Hapus Aktivitas?', style: TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
+            title: Text('Hapus Aktivitas?', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
             content: const Text('Aktivitas ini akan dihapus secara permanen.', style: TextStyle(color: Colors.grey)),
             actions: [
               TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
@@ -326,7 +327,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
           margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5),
+            color: AppTheme.surfaceVariant,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Column(
@@ -336,14 +337,14 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                 children: [
                   Container(
                     width: 40, height: 40,
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: AppTheme.surface, shape: BoxShape.circle),
                     child: Icon(workout.typeIcon, size: 20, color: const Color(0xFF00B33F)),
                   ),
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_userName.isNotEmpty ? _userName : 'Atlet', style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.bold)),
+                      Text(_userName.isNotEmpty ? _userName : 'Atlet', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                       Text(
                         '${DateFormat('dd MMM yyyy').format(workout.date)}',
                         style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
@@ -353,7 +354,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                 ],
               ),
               const SizedBox(height: 20),
-              Text(workout.type.substring(0, 1).toUpperCase() + workout.type.substring(1), style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 20, fontWeight: FontWeight.w900)),
+              Text(workout.type.substring(0, 1).toUpperCase() + workout.type.substring(1), style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w900)),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -376,7 +377,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-          Text(value, style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -409,13 +410,13 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF00B33F).withOpacity(0.1) : const Color(0xFFF5F5F5),
+            color: isSelected ? Color(0xFF00B33F).withOpacity(0.1) : AppTheme.surfaceVariant,
             borderRadius: BorderRadius.circular(26),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? const Color(0xFF00B33F) : const Color(0xFF2F2F2F), 
+              color: isSelected ? Color(0xFF00B33F) : AppTheme.textPrimary, 
               fontWeight: FontWeight.bold, 
               fontSize: 14
             ),
@@ -431,7 +432,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       children: [
         Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Color(0xFF2F2F2F), fontWeight: FontWeight.w900, fontSize: 18)),
+        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 18)),
       ],
     );
   }
@@ -443,10 +444,10 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
         Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
         Row(
           children: [
-            Text(value, style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 20, fontWeight: FontWeight.bold)),
-            if (showFire) ...const [
+            Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+            if (showFire) ...[
               SizedBox(width: 4),
-              Text('🔥', style: TextStyle(fontSize: 18)),
+              Text('ðŸ”¥', style: TextStyle(fontSize: 18)),
             ],
           ],
         ),
@@ -462,12 +463,12 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       borderRadius: BorderRadius.circular(26),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(26)),
+        decoration: BoxDecoration(color: AppTheme.surfaceVariant, borderRadius: BorderRadius.circular(26)),
         child: Row(
-          children: const [
-            Icon(Icons.share_rounded, size: 16, color: Color(0xFF2F2F2F)),
+          children: [
+            Icon(Icons.share_rounded, size: 16, color: AppTheme.textPrimary),
             SizedBox(width: 6),
-            Text('Bagikan', style: TextStyle(color: Color(0xFF2F2F2F), fontSize: 12, fontWeight: FontWeight.bold)),
+            Text('Bagikan', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -515,7 +516,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
         barTouchData: BarTouchData(
           enabled: true,
           touchTooltipData: BarTouchTooltipData(
-            getTooltipColor: (group) => const Color(0xFF2F2F2F),
+            getTooltipColor: (group) => AppTheme.textPrimary,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
                return BarTooltipItem(
                  '${rod.toY.toStringAsFixed(1)}',
@@ -556,9 +557,9 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
   void showWorkoutSelectionSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
       builder: (_) {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 32, top: 24, left: 24, right: 24),
@@ -566,9 +567,9 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(2)))),
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: AppTheme.surfaceVariant, borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 32),
-              const Text('Mulai Latihan', style: TextStyle(color: Color(0xFF2F2F2F), fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              Text('Mulai Latihan', style: TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               const SizedBox(height: 32),
               
               _buildBoldGatewayCard(
@@ -619,7 +620,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: AppTheme.surfaceVariant,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
@@ -627,8 +628,8 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
             Container(
               width: 50,
               height: 50,
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
                 shape: BoxShape.circle,
               ),
               child: Center(child: Icon(icon, color: accentColor, size: 24)),
@@ -638,7 +639,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Color(0xFF2F2F2F), fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(title, style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
                 ],

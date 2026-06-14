@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
@@ -39,7 +39,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   void _toggleDarkMode(bool value) async {
     setState(() => _darkMode = value);
-    // Instant global theme switch — updates all ValueListenableBuilder listeners
+    // Instant global theme switch â€” updates all ValueListenableBuilder listeners
     AppTheme.themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
     await SettingsService.setDarkMode(value);
   }

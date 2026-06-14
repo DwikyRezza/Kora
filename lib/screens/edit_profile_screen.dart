@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart';
@@ -277,7 +277,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 spreadRadius: 2,
                               ),
                             ],
-                            color: const Color(0xFFF5F5F5),
+                            color: AppTheme.surfaceVariant,
                           ),
                           child: ClipOval(
                             child: _isUploadingPhoto
@@ -293,7 +293,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: Color(0xFFFF6D00), // Calorie Orange
                             shape: BoxShape.circle,
                           ),
@@ -441,7 +441,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             hintText: hint,
             hintStyle: TextStyle(color: AppTheme.textMuted.withOpacity(0.5)),
             filled: true,
-            fillColor: const Color(0xFFF5F5F5), // fog
+            fillColor: AppTheme.surfaceVariant, // fog
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(26),
               borderSide: BorderSide.none,
@@ -471,7 +471,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5), // fog
+            color: AppTheme.surfaceVariant, // fog
             borderRadius: BorderRadius.circular(26),
           ),
           child: DropdownButtonHideUnderline(
