@@ -8,6 +8,7 @@ import 'package:quick_actions/quick_actions.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'theme/app_theme.dart';
 import 'utils/responsive.dart';
+import 'utils/tab_visibility.dart';
 import 'screens/landing_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/workout_screen.dart';
@@ -115,12 +116,14 @@ class _MainNavigationState extends State<MainNavigation>
 
   void _goToTab(int index) {
     setState(() => _currentIndex = index);
+    TabVisibility.instance.setActiveTab(index);
   }
 
   void _onFabTapped() {
     HapticFeedback.heavyImpact();
     if (_currentIndex != 2) {
       setState(() => _currentIndex = 2);
+      TabVisibility.instance.setActiveTab(2);
     }
     // Auto-trigger the modal after transition
     Future.delayed(const Duration(milliseconds: 100), () {

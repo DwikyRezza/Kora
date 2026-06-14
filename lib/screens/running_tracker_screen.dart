@@ -11,6 +11,7 @@ import '../services/location_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/social_service.dart';
 import '../utils/responsive.dart';
+import '../utils/tab_visibility.dart';
 import 'strava_import_screen.dart';
 
 class RunningTrackerScreen extends StatefulWidget {
@@ -88,10 +89,17 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   int _lastServiceElapsed = 0;   // Elapsed terakhir diterima dari service
   double _lastServiceDistance = 0.0; // Distance terakhir dari service
 
+  // ── Flag tab visibility (IndexedStack optimization) ─────────────────────
+  // true = tab Workout visible (RunningTrackerScreen mungkin terlihat)
+  // false = user pindah tab → pause GPS stream, skip setState, stop camera
+  bool _isMapVisible = true;
+  DateTime? _tabHiddenTime; // Waktu saat tab disembunyikan (untuk sync elapsed)
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    TabVisibility.instance.addListener(_onTabVisibilityChanged);
     FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
     _createLocationMarker();
     _initGps();
@@ -100,6 +108,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    TabVisibility.instance.removeListener(_onTabVisibilityChanged);
     FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
     _uiTimer?.cancel();
     _initialLocationStream?.cancel();
@@ -146,7 +155,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   void _startUiTimer() {
     _uiTimer?.cancel();
     _uiTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
+      if (!mounted || !_isMapVisible) return; // Skip rebuild saat tab hidden
       setState(() {
         if (_uiRunStartTime != null) {
           _elapsedSeconds = _elapsedBeforePause +
@@ -175,9 +184,12 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
       final newLoc = LatLng(lat, lng);
       if (!mounted) return;
-      // location event HANYA untuk update marker — jarak dihitung di _initialLocationStream
-      setState(() => _currentLocation = newLoc);
-      if (_isRunning) _animateCameraToLocation(newLoc);
+      // Simpan lokasi tanpa setState saat tab hidden — hemat rebuild
+      _currentLocation = newLoc;
+      if (_isMapVisible) {
+        if (mounted) setState(() {});
+        if (_isRunning) _animateCameraToLocation(newLoc);
+      }
     } else if (type == 'update') {
       // ── Selalu simpan nilai terbaru dari service ke variabel tracking ────
       // Ini penting agar saat UI resume dari background, data sudah tersedia
@@ -188,73 +200,75 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
       // ── Merge data service ke UI (hanya jika mounted) ─────────────────
       if (!mounted) return;
-      setState(() {
-        if (_isInBackground) {
-          // Saat di background: service adalah sumber kebenaran penuh
-          if (svcDistRaw > 0) _distanceKm = svcDistRaw;
 
-          final svcMoving = (map['movingSeconds'] as num?)?.toInt();
-          if (svcMoving != null) _movingSeconds = svcMoving;
+      // Selalu update variabel data (tanpa setState) — murah dan perlu untuk sync
+      if (_isInBackground || !_isMapVisible) {
+        // Saat di background atau tab hidden: service adalah sumber kebenaran penuh
+        if (svcDistRaw > 0) _distanceKm = svcDistRaw;
 
-          // Update elapsed background agar saat resume tidak perlu hitung ulang
-          if (svcElapsedRaw > 0) {
-            _elapsedSeconds = svcElapsedRaw;
-            _elapsedBeforePause = svcElapsedRaw;
-          }
-        } else {
-          // Saat foreground: UI menghitung jarak sendiri, tapi terima
-          // nilai service jika lebih besar
-          if (svcDistRaw > _distanceKm) _distanceKm = svcDistRaw;
+        final svcMoving = (map['movingSeconds'] as num?)?.toInt();
+        if (svcMoving != null) _movingSeconds = svcMoving;
 
-          final svcMoving = (map['movingSeconds'] as num?)?.toInt() ?? 0;
-          if (svcMoving > _movingSeconds) _movingSeconds = svcMoving;
-
-          // Sync elapsed HANYA jika UI timer mati
-          if (_uiTimer == null || !_uiTimer!.isActive) {
-            if (svcElapsedRaw > 0) _elapsedSeconds = svcElapsedRaw;
-          }
+        if (svcElapsedRaw > 0) {
+          _elapsedSeconds = svcElapsedRaw;
+          _elapsedBeforePause = svcElapsedRaw;
         }
+      } else {
+        // Saat foreground & visible: UI menghitung jarak sendiri, tapi terima
+        // nilai service jika lebih besar
+        if (svcDistRaw > _distanceKm) _distanceKm = svcDistRaw;
 
-        _elevationGain =
-            (map['elevationGain'] as num?)?.toDouble() ?? _elevationGain;
-        _maxElevation =
-            (map['maxElevation'] as num?)?.toDouble() ?? _maxElevation;
+        final svcMoving = (map['movingSeconds'] as num?)?.toInt() ?? 0;
+        if (svcMoving > _movingSeconds) _movingSeconds = svcMoving;
 
-        // Sync splits dari service
-        final rawSplits = map['splits'];
-        if (rawSplits is String) {
-          try {
-            final decoded = jsonDecode(rawSplits);
-            if (decoded is List) _splits = List<String>.from(decoded);
-          } catch (_) {}
-        } else if (rawSplits is List) {
-          _splits = List<String>.from(rawSplits);
+        // Sync elapsed HANYA jika UI timer mati
+        if (_uiTimer == null || !_uiTimer!.isActive) {
+          if (svcElapsedRaw > 0) _elapsedSeconds = svcElapsedRaw;
         }
+      }
 
-        // Hanya pakai route dari service jika lebih banyak titiknya
-        final rawRoute = map['routePoints'];
-        List<LatLng>? svcRoute;
-        if (rawRoute is String) {
-          try {
-            final decoded = jsonDecode(rawRoute);
-            if (decoded is List && decoded.isNotEmpty) {
-              final parsed = <LatLng>[];
-              for (final p in decoded) {
-                if (p is List && p.length >= 2) {
-                  try {
-                    parsed.add(LatLng(
-                        (p[0] as num).toDouble(), (p[1] as num).toDouble()));
-                  } catch (_) {}
-                }
+      _elevationGain =
+          (map['elevationGain'] as num?)?.toDouble() ?? _elevationGain;
+      _maxElevation =
+          (map['maxElevation'] as num?)?.toDouble() ?? _maxElevation;
+
+      // Sync splits dari service
+      final rawSplits = map['splits'];
+      if (rawSplits is String) {
+        try {
+          final decoded = jsonDecode(rawSplits);
+          if (decoded is List) _splits = List<String>.from(decoded);
+        } catch (_) {}
+      } else if (rawSplits is List) {
+        _splits = List<String>.from(rawSplits);
+      }
+
+      // Hanya pakai route dari service jika lebih banyak titiknya
+      final rawRoute = map['routePoints'];
+      List<LatLng>? svcRoute;
+      if (rawRoute is String) {
+        try {
+          final decoded = jsonDecode(rawRoute);
+          if (decoded is List && decoded.isNotEmpty) {
+            final parsed = <LatLng>[];
+            for (final p in decoded) {
+              if (p is List && p.length >= 2) {
+                try {
+                  parsed.add(LatLng(
+                      (p[0] as num).toDouble(), (p[1] as num).toDouble()));
+                } catch (_) {}
               }
-              if (parsed.isNotEmpty) svcRoute = parsed;
             }
-          } catch (_) {}
-        }
-        if (svcRoute != null && svcRoute.length > _routePoints.length) {
-          _routePoints = svcRoute;
-        }
-      });
+            if (parsed.isNotEmpty) svcRoute = parsed;
+          }
+        } catch (_) {}
+      }
+      if (svcRoute != null && svcRoute.length > _routePoints.length) {
+        _routePoints = svcRoute;
+      }
+
+      // Trigger rebuild HANYA jika tab visible — skip rebuild mahal saat hidden
+      if (_isMapVisible) setState(() {});
     } else if (type == 'final') {
       // Saat selesai: ambil data terbaik (max) antara service & UI
       if (!mounted) return;
@@ -337,6 +351,8 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
   // ── Gerak kamera Google Maps ──────────────────────────────────────────
   Future<void> _animateCameraToLocation(LatLng loc) async {
+    // Skip camera animation saat tab hidden — hemat GPU
+    if (!_isMapVisible) return;
     if (_mapController.isCompleted) {
       final controller = await _mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(loc));
@@ -457,6 +473,69 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       _routePoints.add(newLoc);
     }
     // segmentM < 1.0: terlalu kecil (noise), skip
+  }
+
+  // ── Tab Visibility handler (IndexedStack optimization) ──────────────
+  // Dipanggil saat user ganti tab di MainNavigation.
+  // Tab 2 = Workout tab (induk dari RunningTrackerScreen).
+  void _onTabVisibilityChanged() {
+    final isVisible = TabVisibility.instance.isTabVisible(2);
+    if (isVisible == _isMapVisible) return; // Tidak ada perubahan
+
+    if (!isVisible) {
+      // ── Tab disembunyikan → PAUSE map & GPS stream ─────────────────
+      _isMapVisible = false;
+      _tabHiddenTime = DateTime.now();
+
+      // Stop UI timer — hemat CPU rebuild
+      _stopUiTimer();
+      _elapsedBeforePause = _elapsedSeconds;
+
+      // Cancel GPS stream — hemat baterai & mencegah setState saat hidden
+      _initialLocationStream?.cancel();
+      _initialLocationStream = null;
+
+      debugPrint('🗺️ [TabVisibility] Tab hidden — GPS stream & UI timer paused');
+
+    } else {
+      // ── Tab ditampilkan kembali → RESUME map & GPS stream ──────────
+      _isMapVisible = true;
+
+      if (_isRunning) {
+        // Sync elapsed dari service (sumber kebenaran saat tab hidden)
+        if (_lastServiceElapsed > _elapsedSeconds) {
+          _elapsedSeconds = _lastServiceElapsed;
+          debugPrint('✅ [TabVisibility] Sync elapsed dari service: ${_elapsedSeconds}s');
+        } else if (_tabHiddenTime != null) {
+          // Fallback: hitung dari wall clock
+          final hiddenDuration = DateTime.now().difference(_tabHiddenTime!).inSeconds;
+          _elapsedSeconds += hiddenDuration;
+          debugPrint('✅ [TabVisibility] Elapsed dari wall clock: +${hiddenDuration}s = ${_elapsedSeconds}s');
+        }
+
+        // Sync distance dari service jika lebih besar
+        if (_lastServiceDistance > _distanceKm) {
+          _distanceKm = _lastServiceDistance;
+          debugPrint('✅ [TabVisibility] Sync distance dari service: ${_distanceKm.toStringAsFixed(3)} km');
+        }
+
+        _elapsedBeforePause = _elapsedSeconds;
+        _uiRunStartTime = DateTime.now();
+        _startUiTimer();
+        _startInitialLocationStream();
+
+        // Re-center kamera ke posisi terakhir
+        if (_currentLocation != null) {
+          _animateCameraToLocation(_currentLocation!);
+        }
+        debugPrint('🗺️ [TabVisibility] Tab visible — GPS stream & UI timer resumed');
+      }
+
+      _tabHiddenTime = null;
+
+      // Force refresh UI setelah resume
+      if (mounted) setState(() {});
+    }
   }
 
   @override
