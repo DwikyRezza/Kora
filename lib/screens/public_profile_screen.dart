@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
+import 'social_screen.dart';
 import '../theme/app_theme.dart';
 import '../widgets/feed_post_card.dart';
 
@@ -156,9 +157,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildStat('Pengikut', _followersCount),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => SocialScreen(initialTab: 'followers', username: username)));
+                          },
+                          child: _buildStat('Pengikut', _followersCount),
+                        ),
                         Container(width: 1, height: 24, color: Colors.grey.shade300),
-                        _buildStat('Mengikuti', _followingCount),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => SocialScreen(initialTab: 'following', username: username)));
+                          },
+                          child: _buildStat('Mengikuti', _followingCount),
+                        ),
                         Container(width: 1, height: 24, color: Colors.grey.shade300),
                         _buildStat('Aktivitas', _userPosts.length),
                       ],

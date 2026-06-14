@@ -24,6 +24,7 @@ import 'services/location_service.dart';
 import 'services/auth_service.dart';
 import 'services/settings_service.dart';
 import 'services/cloud_sync_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -140,6 +141,8 @@ class _MainNavigationState extends State<MainNavigation>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
+    NotificationService.startListening();
+
     const QuickActions quickActions = QuickActions();
     quickActions.initialize((String shortcutType) {
       if (shortcutType == 'catat_telur') {
@@ -160,6 +163,7 @@ class _MainNavigationState extends State<MainNavigation>
 
   @override
   void dispose() {
+    NotificationService.stopListening();
     _pulseController.dispose();
     super.dispose();
   }

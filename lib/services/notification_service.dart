@@ -3,6 +3,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/schedule_event.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import 'auth_service.dart';
 
 class NotificationService {
@@ -197,6 +198,46 @@ class NotificationService {
   }
 
   // ── Sosial & Cloud Notifications (Firebase) ────────────────────────────────
+
+  static StreamSubscription<QuerySnapshot>? _notifSub;
+
+  static void startListening() {
+    if (!AuthService.isLoggedIn) return;
+    
+    _notifSub?.cancel();
+    
+    // Gunakan timestamp saat mulai listen agar tidak munculkan notif lama sekaligus
+    final startTime = Timestamp.now();
+    
+    _notifSub = _firestore
+        .collection('users')
+        .doc(AuthService.uid)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .where('timestamp', isGreaterThanOrEqualTo: startTime)
+        .snapshots()
+        .listen((snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          final data = change.doc.data();
+          if (data != null) {
+            final title = data['title'] ?? 'Kora';
+            final body = data['body'] ?? '';
+            NotificationService().showNotification(
+              id: change.doc.id.hashCode,
+              title: title,
+              body: body,
+            );
+          }
+        }
+      }
+    });
+  }
+
+  static void stopListening() {
+    _notifSub?.cancel();
+    _notifSub = null;
+  }
 
   static Future<List<Map<String, dynamic>>> getNotifications() async {
     if (!AuthService.isLoggedIn) return [];

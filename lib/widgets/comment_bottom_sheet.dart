@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 import '../services/social_service.dart';
 import '../theme/app_theme.dart';
 
@@ -101,10 +102,20 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                                  child: photoUrl == null ? const Icon(Icons.person, size: 20, color: Colors.grey) : null,
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  child: ClipOval(
+                                    child: (photoUrl != null && photoUrl.isNotEmpty)
+                                        ? (photoUrl.startsWith('data:image')
+                                            ? Image.memory(base64Decode(photoUrl.split(',')[1]), fit: BoxFit.cover)
+                                            : Image.network(photoUrl, fit: BoxFit.cover))
+                                        : const Icon(Icons.person, size: 20, color: Colors.grey),
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

@@ -79,6 +79,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
       iconData = Icons.alarm;
       iconColor = const Color(0xFFFF5406); // ember-orange
       bgColor = const Color(0xFFFF5406).withOpacity(0.1);
+    } else if (type == 'like') {
+      iconData = Icons.favorite;
+      iconColor = const Color(0xFFFF3400); // red
+      bgColor = const Color(0xFFFF3400).withOpacity(0.1);
+    } else if (type == 'comment') {
+      iconData = Icons.mode_comment;
+      iconColor = const Color(0xFFBD4BE5); // purple
+      bgColor = const Color(0xFFBD4BE5).withOpacity(0.1);
     }
 
     return Container(
