@@ -373,8 +373,9 @@ class _LandingScreenState extends State<LandingScreen>
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFeatureRow(IconData icon, String text) {
     return Row(
