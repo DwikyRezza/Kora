@@ -181,11 +181,12 @@ class _LandingScreenState extends State<LandingScreen>
           opacity: _fadeAnim,
           child: SlideTransition(
             position: _slideAnim,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                children: [
-                  const Spacer(flex: 2),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 32),
 
                   // ── Logo ─────────────────────────────────────────────
                   Container(
@@ -249,7 +250,7 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                   ),
 
-                  const Spacer(flex: 2),
+                  const SizedBox(height: 32),
 
                   // ── Feature list ─────────────────────────────────────
                   _buildFeatureRow(Icons.directions_run_rounded,
@@ -264,7 +265,7 @@ class _LandingScreenState extends State<LandingScreen>
                   _buildFeatureRow(Icons.cloud_sync_rounded,
                       'Data tersimpan di cloud dengan aman'),
 
-                  const Spacer(flex: 2),
+                  const SizedBox(height: 32),
 
                   // ── Register Button ───────────────────────────────────
                   SizedBox(
