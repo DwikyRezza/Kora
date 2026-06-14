@@ -174,34 +174,34 @@ class _LandingScreenState extends State<LandingScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFFFFFFF), // Paper White
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnim,
           child: SlideTransition(
             position: _slideAnim,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 children: [
                   const Spacer(flex: 2),
 
                   // ── Logo ─────────────────────────────────────────────
                   Container(
-                    width: context.avatarLG,
-                    height: context.avatarLG,
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(context.radiusLG),
+                      borderRadius: BorderRadius.circular(26), // radius-3xl
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF093247).withOpacity(0.5),
+                          color: const Color(0xFFFF5406).withOpacity(0.2), // Ember orange soft glow
                           blurRadius: 30,
                           offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(context.radiusLG),
+                      borderRadius: BorderRadius.circular(26),
                       child: Image.asset('assets/icons/logo.png',
                           fit: BoxFit.cover),
                     ),
@@ -209,27 +209,42 @@ class _LandingScreenState extends State<LandingScreen>
                   SizedBox(height: context.space2XL),
 
                   // ── App Name ─────────────────────────────────────────
-                  ShaderMask(
-                    shaderCallback: (bounds) =>
-                        AppTheme.neonGreenGrad.createShader(bounds),
-                    child: Text(
-                      'Kora',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: context.font3XL,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                      ),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Mulai Berlatih ',
+                          style: TextStyle(
+                            color: const Color(0xFF00B33F), // Verdant Green
+                            fontSize: 48,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.0,
+                            height: 1.2,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'dengan Kora',
+                          style: TextStyle(
+                            color: const Color(0xFF2F2F2F), // Graphite
+                            fontSize: 48,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.0,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: context.spaceMD),
+                  SizedBox(height: 24),
                   Text(
-                    'Asisten Digital untuk Atlet\nLacak latihan, nutrisi, dan jadwalmu',
+                    'Asisten Digital untuk Atlet\nLacak latihan, nutrisi, dan jadwalmu secara real-time',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: context.fontBase,
-                      height: 1.5,
+                      color: const Color(0xFF2F2F2F),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      height: 1.6,
                     ),
                   ),
 
@@ -238,31 +253,31 @@ class _LandingScreenState extends State<LandingScreen>
                   // ── Feature list ─────────────────────────────────────
                   _buildFeatureRow(Icons.directions_run_rounded,
                       'Lacak aktivitas lari & angkat beban'),
-                  SizedBox(height: context.spaceMD),
+                  SizedBox(height: 20),
                   _buildFeatureRow(
                       Icons.restaurant_rounded, 'Monitor asupan nutrisi harian'),
-                  SizedBox(height: context.spaceMD),
+                  SizedBox(height: 20),
                   _buildFeatureRow(
-                      Icons.calendar_month_rounded, 'Atur jadwal latihan'),
-                  SizedBox(height: context.spaceMD),
+                      Icons.calendar_month_rounded, 'Atur jadwal latihan tanpa repot'),
+                  SizedBox(height: 20),
                   _buildFeatureRow(Icons.cloud_sync_rounded,
-                      'Data tersimpan di cloud, aman di semua perangkat'),
+                      'Data tersimpan di cloud dengan aman'),
 
                   const Spacer(flex: 2),
 
                   // ── Register Button ───────────────────────────────────
                   SizedBox(
                     width: double.infinity,
-                    height: context.buttonHeight,
+                    height: 56,
                     child: ElevatedButton(
                       onPressed:
                           (_isLoadingLogin || _isLoadingRegister) ? null : _handleRegister,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.neonGreen,
-                        foregroundColor: Colors.black,
+                        backgroundColor: const Color(0xFFFF5406), // Ember Orange
+                        foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(context.radiusLG),
+                          borderRadius: BorderRadius.circular(26), // radius-3xl
                         ),
                       ),
                       child: _isLoadingRegister
@@ -270,19 +285,19 @@ class _LandingScreenState extends State<LandingScreen>
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  color: Colors.black, strokeWidth: 2.5),
+                                  color: Colors.white, strokeWidth: 2.5),
                             )
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _GoogleGIcon(),
-                                SizedBox(width: context.spaceMD),
+                                SizedBox(width: 16),
                                 Text(
                                   'Daftar dengan Google',
                                   style: TextStyle(
-                                    fontSize: context.fontMD,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600, // DemiBold
+                                    color: Colors.white,
                                   ),
                                 ),
                               ],
@@ -290,21 +305,22 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                   ),
 
-                  SizedBox(height: context.spaceMD),
+                  SizedBox(height: 16),
 
                   // ── Login Button ──────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
-                    height: context.buttonHeight,
+                    height: 56,
                     child: OutlinedButton(
                       onPressed:
                           (_isLoadingLogin || _isLoadingRegister) ? null : _handleLogin,
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.textPrimary,
+                        backgroundColor: const Color(0xFFF5F5F5), // Fog
+                        foregroundColor: const Color(0xFF2F2F2F), // Graphite
                         elevation: 0,
-                        side: BorderSide(color: AppTheme.border, width: 1.5),
+                        side: BorderSide.none,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(context.radiusLG),
+                          borderRadius: BorderRadius.circular(26), // radius-3xl
                         ),
                       ),
                       child: _isLoadingLogin
@@ -312,19 +328,19 @@ class _LandingScreenState extends State<LandingScreen>
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  color: AppTheme.neonGreen, strokeWidth: 2.5),
+                                  color: const Color(0xFFFF5406), strokeWidth: 2.5),
                             )
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _GoogleGIcon(),
-                                SizedBox(width: context.spaceMD),
+                                SizedBox(width: 16),
                                 Text(
                                   'Masuk dengan Google',
                                   style: TextStyle(
-                                    fontSize: context.fontMD,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textPrimary,
+                                    color: const Color(0xFF2F2F2F),
                                   ),
                                 ),
                               ],
@@ -332,19 +348,19 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                   ),
 
-                  SizedBox(height: context.spaceLG),
+                  SizedBox(height: 32),
 
                   // ── Terms ─────────────────────────────────────────────
                   Text(
                     'Dengan mendaftar, Anda menyetujui\nKetentuan Layanan & Kebijakan Privasi',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: context.fontXS,
+                      color: const Color(0xFF72A2C5), // Mist Blue for muted text
+                      fontSize: 12,
                       height: 1.4,
                     ),
                   ),
-                  SizedBox(height: context.spaceLG),
+                  SizedBox(height: 32),
                 ],
               ),
             ),
@@ -358,22 +374,22 @@ class _LandingScreenState extends State<LandingScreen>
     return Row(
       children: [
         Container(
-          width: context.avatarSM,
-          height: context.avatarSM,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: AppTheme.neonGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(context.radiusSM),
+            color: const Color(0xFFF5F5F5), // Fog
+            borderRadius: BorderRadius.circular(26), // pill radius
           ),
-          child: Icon(icon, color: AppTheme.neonGreen, size: context.iconSM),
+          child: Icon(icon, color: const Color(0xFFFF5406), size: 20), // Ember Orange icon
         ),
-        SizedBox(width: context.spaceLG),
+        SizedBox(width: 24),
         Expanded(
           child: Text(
             text,
             style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: context.fontSM,
-              fontWeight: FontWeight.w500,
+              color: const Color(0xFF2F2F2F), // Graphite
+              fontSize: 16,
+              fontWeight: FontWeight.w500, // Medium
             ),
           ),
         ),
