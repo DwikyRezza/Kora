@@ -411,13 +411,13 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 24,
-        right: 24,
-        top: 24,
-      ),
+    return _KeyboardPadding(
+      child: Container(
+        padding: const EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -702,6 +702,19 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _KeyboardPadding extends StatelessWidget {
+  final Widget child;
+  const _KeyboardPadding({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: child,
     );
   }
 }
