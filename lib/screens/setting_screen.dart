@@ -203,9 +203,19 @@ class _SettingScreenState extends State<SettingScreen> {
                       );
 
                       if (confirm == true && mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Permintaan hapus akun diterima. Fitur ini masih dalam tahap pengembangan.')),
-                        );
+                        try {
+                          await AuthService.deleteAccount();
+                          if (!mounted) return;
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LandingScreen()),
+                            (route) => false,
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal menghapus akun: $e. Coba login ulang lalu ulangi.')),
+                          );
+                        }
                       }
                     },
                   ),
