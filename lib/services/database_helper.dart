@@ -24,7 +24,7 @@ class DatabaseHelper {
     final path = join(dbPath, 'Kora.db');
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -149,6 +149,15 @@ class DatabaseHelper {
         FOREIGN KEY (workout_id) REFERENCES workouts (id) ON DELETE CASCADE
       )
     ''');
+
+    // ── Database Indexes — optimasi query tanggal & GROUP BY ──────────
+    // Index pada kolom yang sering dipakai di WHERE / BETWEEN / ORDER BY / GROUP BY.
+    // Mengubah Full Table Scan → Index Scan (O(log n) vs O(n)).
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_workouts_date ON workouts (date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_protein_entries_date ON protein_entries (date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_protein_entries_food_name ON protein_entries (foodName)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_schedule_events_date_time ON schedule_events (dateTime)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_body_measurements_date ON body_measurements (date)');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -297,6 +306,18 @@ class DatabaseHelper {
           }
         }
       } catch (_) {}
+    }
+
+    // ── v12: Database Indexes — optimasi Full Table Scan ─────────────────
+    // Menambahkan B-tree index pada kolom yang sering di-query dengan
+    // BETWEEN / LIKE / ORDER BY / GROUP BY. Aman: IF NOT EXISTS + try-catch
+    // per baris agar tidak merusak skema jika index sudah ada.
+    if (oldVersion < 12) {
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_workouts_date ON workouts (date)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_protein_entries_date ON protein_entries (date)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_protein_entries_food_name ON protein_entries (foodName)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_schedule_events_date_time ON schedule_events (dateTime)'); } catch (_) {}
+      try { await db.execute('CREATE INDEX IF NOT EXISTS idx_body_measurements_date ON body_measurements (date)'); } catch (_) {}
     }
   }
 
