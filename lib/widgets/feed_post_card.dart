@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -110,13 +111,7 @@ class _FeedPostCardState extends State<FeedPostCard> {
   String _formatTime(dynamic timestamp) {
     if (timestamp == null) return '';
     final date = timestamp.toDate();
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays > 7) return DateFormat('dd MMM yyyy').format(date);
-    if (diff.inDays > 0) return '${diff.inDays} hari yang lalu';
-    if (diff.inHours > 0) return '${diff.inHours} jam yang lalu';
-    if (diff.inMinutes > 0) return '${diff.inMinutes} menit yang lalu';
-    return 'Baru saja';
+    return DateFormat('dd MMM yyyy • HH.mm').format(date);
   }
 
   Widget _buildAvatar(String? photoUrl) {
@@ -134,28 +129,85 @@ class _FeedPostCardState extends State<FeedPostCard> {
     return const Icon(Icons.person, color: Colors.grey);
   }
 
+  Widget _buildMap(String polylineStr) {
+    try {
+      final List<dynamic> decoded = jsonDecode(polylineStr);
+      if (decoded.isEmpty) return Container(color: Colors.grey[200]);
+      final List<LatLng> points = decoded.map((p) => LatLng(p[0] as double, p[1] as double)).toList();
+      
+      double minLat = points.first.latitude;
+      double maxLat = points.first.latitude;
+      double minLng = points.first.longitude;
+      double maxLng = points.first.longitude;
+      for (var p in points) {
+        if (p.latitude < minLat) minLat = p.latitude;
+        if (p.latitude > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+      
+      return GoogleMap(
+        initialCameraPosition: CameraPosition(target: points.first, zoom: 14),
+        liteModeEnabled: true,
+        zoomControlsEnabled: false,
+        myLocationButtonEnabled: false,
+        polylines: {
+          Polyline(
+            polylineId: const PolylineId('route'),
+            points: points,
+            color: const Color(0xFFFF5406),
+            width: 4,
+          )
+        },
+        onMapCreated: (controller) {
+          Future.delayed(const Duration(milliseconds: 200), () {
+            controller.animateCamera(CameraUpdate.newLatLngBounds(
+              LatLngBounds(
+                southwest: LatLng(minLat, minLng),
+                northeast: LatLng(maxLat, maxLng),
+              ),
+              20.0,
+            ));
+          });
+        },
+      );
+    } catch (e) {
+      return Container(color: Colors.grey[200]);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
-    final type = workoutData['type'] ?? 'workout';
+    final typeLower = (workoutData['type'] ?? 'workout').toString().toLowerCase();
     final title = workoutData['title'] ?? 'Aktivitas Latihan';
     final dist = workoutData['distance'] as num? ?? 0.0;
     final dur = workoutData['duration'] as num? ?? 0.0; // minutes
-    
-    // Parse duration format
-    final int durMin = dur.toInt();
+    final calories = workoutData['caloriesBurned'] as num? ?? 0;
+    final polylineStr = workoutData['polyline'] as String?;
+
+    String defaultImage;
+    if (typeLower == 'running' || typeLower == 'lari') {
+      defaultImage = 'https://images.unsplash.com/photo-1552674605-15c2145efa38?q=80&w=800&auto=format&fit=crop'; 
+    } else if (typeLower == 'weightlifting' || typeLower == 'beban' || typeLower == 'gym') {
+      defaultImage = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop';
+    } else if (typeLower == 'basketball' || typeLower == 'basket') {
+      defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
+    } else {
+      defaultImage = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop';
+    }
+
+    final bool hasMap = (typeLower == 'running' || typeLower == 'lari') && polylineStr != null && polylineStr.isNotEmpty;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(26),
+        border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
       ),
+      padding: const EdgeInsets.only(top: 24, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Avatar, Name, Time
+          // Header User
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -171,97 +223,161 @@ class _FeedPostCardState extends State<FeedPostCard> {
                   height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white,
+                    border: Border.all(color: AppTheme.border),
                   ),
-                  child: _buildAvatar(_photoUrl),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: _buildAvatar(_photoUrl)
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_authorName, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2F2F2F), fontSize: 16)),
-                      Text(_formatTime(widget.post['timestamp']), style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                      Text(
+                        _authorName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600, 
+                          fontSize: 16, 
+                          color: AppTheme.textPrimary
+                        ),
+                      ),
+                      Text(
+                        _formatTime(widget.post['timestamp']),
+                        style: TextStyle(
+                          color: AppTheme.textSecondary, 
+                          fontSize: 12
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(type.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1, color: Color(0xFF2F2F2F))),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           
-          // Content
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF2F2F2F))),
-          const SizedBox(height: 12),
-          
-          Row(
-            children: [
-              _buildStatMetric(Icons.straighten, '${dist > 0 ? dist.toStringAsFixed(2) : '-'} km'),
-              const SizedBox(width: 24),
-              _buildStatMetric(Icons.timer_outlined, '$durMin mnt'),
-            ],
+          // Judul Aktivitas
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w700, 
+              fontSize: 22, 
+              color: AppTheme.textPrimary
+            ),
           ),
           const SizedBox(height: 16),
           
-          const Divider(color: Color(0xFFE0E0E0), height: 1),
-          const SizedBox(height: 8),
-          
-          // Action Buttons
+          // Baris Statistik
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _buildActionButton(
-                icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                color: _isLiked ? const Color(0xFFFF3400) : const Color(0xFF2F2F2F),
-                count: _likesCount,
-                onTap: _toggleLike,
-              ),
-              const SizedBox(width: 24),
-              _buildActionButton(
-                icon: Icons.chat_bubble_outline_rounded,
-                color: const Color(0xFF2F2F2F),
-                count: _commentsCount,
-                onTap: _showComments,
-              ),
+              if (typeLower == 'running' || typeLower == 'lari') ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Jarak', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                    Text('${dist > 0 ? dist.toStringAsFixed(2) : "0.0"} km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pace', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                    Text('${(dur / (dist == 0 ? 1 : dist)).toStringAsFixed(2)} /km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Waktu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                    Text('${dur.toStringAsFixed(0)}m', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  ],
+                ),
+              ] else ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Durasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                    Text('${dur.toStringAsFixed(0)} mnt', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Kalori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
+                    Text('${calories} kkal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  ],
+                ),
+              ],
             ],
           ),
+          const SizedBox(height: 24),
+          
+          // Gambar/Visual Aktivitas
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              color: const Color(0xFFF5F5F5),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: hasMap
+                  ? _buildMap(polylineStr!)
+                  : Image.network(defaultImage, fit: BoxFit.cover),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Aksi (Like & Komen)
+          Container(
+            padding: const EdgeInsets.only(top: 8),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
+            ),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: _toggleLike,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _isLiked ? Icons.favorite : Icons.favorite_border, 
+                          color: _isLiked ? Colors.red : AppTheme.textSecondary, 
+                          size: 24
+                        ),
+                        const SizedBox(width: 8),
+                        Text('$_likesCount', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                InkWell(
+                  onTap: _showComments,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.chat_bubble_outline, color: AppTheme.textSecondary, size: 24),
+                        const SizedBox(width: 8),
+                        Text('$_commentsCount', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatMetric(IconData icon, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.grey),
-        const SizedBox(width: 6),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF2F2F2F))),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({required IconData icon, required Color color, required int count, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            if (count > 0) ...[
-              const SizedBox(width: 6),
-              Text('$count', style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 14)),
-            ],
-          ],
-        ),
       ),
     );
   }
