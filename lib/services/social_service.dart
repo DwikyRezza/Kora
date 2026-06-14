@@ -64,9 +64,11 @@ class SocialService {
         final profile = data.containsKey('profile')
             ? Map<String, dynamic>.from(data['profile'] as Map)
             : data;
-        final name = profile['name'] ?? 'Seseorang';
-        final username = profile['username'];
-        final display = username != null ? '$name (@$username)' : name;
+        final username = profile['username'] as String?;
+        final name = profile['name'] as String?;
+        final display = (username != null && username.isNotEmpty)
+            ? '@$username'
+            : (name ?? 'Seseorang');
         final photoUrl = profile['photoUrl'];
 
         await NotificationService.addNotification(

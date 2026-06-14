@@ -251,7 +251,7 @@ Tombol notifikasi (`pause_btn`, `resume_btn`, `finish_btn`) langsung ditangani o
 
 **Social Notification Interactive Routing:**
 `NotificationScreen` di `notification_screen.dart` merender notifikasi sosial dengan payload dinamis:
-- **Payload dari `SocialService.followUser()`** — Mengambil `name`, `username`, dan `photoUrl` dari sub-dokumen `profile` di Firestore user yang mengikuti, lalu mengirim `relatedUid` (follower UID) + `relatedPhotoUrl` ke notifikasi
+- **Payload dari `SocialService.followUser()`** — Mengambil `username`, `name`, dan `photoUrl` dari sub-dokumen `profile` di Firestore user yang mengikuti. Body notifikasi diformat sebagai `'@username mulai mengikuti Anda.'` (fallback ke `name` atau `'Seseorang'` jika username kosong). Payload juga menyertakan `relatedUid` (follower UID) + `relatedPhotoUrl` untuk kebutuhan UI interaktif
 - **Avatar rendering** — `_buildAvatar()` menampilkan foto asli pengikut via `NetworkImage` (atau `Image.memory` untuk base64 data URI). Fallback ke ikon `person_add` jika foto tidak tersedia
 - **Tap-to-profile routing** — Setiap item notifikasi dibungkus `GestureDetector` dengan `HitTestBehavior.opaque`. Jika `type == 'follow'` dan `relatedUid` valid, tap otomatis push `PublicProfileScreen(uid: relatedUid)` via `MaterialPageRoute`
 
