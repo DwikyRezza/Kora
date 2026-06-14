@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
@@ -194,7 +195,7 @@ class _LandingScreenState extends State<LandingScreen>
                       borderRadius: BorderRadius.circular(26), // radius-3xl
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF5406).withOpacity(0.2), // Ember orange soft glow
+                          color: const Color(0xFFFF5406).withOpacity(0.15), // Ember orange soft glow
                           blurRadius: 30,
                           offset: const Offset(0, 10),
                         ),
@@ -206,29 +207,29 @@ class _LandingScreenState extends State<LandingScreen>
                           fit: BoxFit.cover),
                     ),
                   ),
-                  SizedBox(height: context.space2XL),
+                  SizedBox(height: 48),
 
                   // ── App Name ─────────────────────────────────────────
                   Text.rich(
                     TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Mulai Berlatih ',
+                          text: 'Capai Target ',
                           style: TextStyle(
                             color: const Color(0xFF00B33F), // Verdant Green
-                            fontSize: 48,
+                            fontSize: 32,
                             fontWeight: FontWeight.w900,
-                            letterSpacing: -1.0,
+                            letterSpacing: -0.5,
                             height: 1.2,
                           ),
                         ),
                         TextSpan(
-                          text: 'dengan Kora',
+                          text: 'bersama Kora',
                           style: TextStyle(
                             color: const Color(0xFF2F2F2F), // Graphite
-                            fontSize: 48,
+                            fontSize: 32,
                             fontWeight: FontWeight.w900,
-                            letterSpacing: -1.0,
+                            letterSpacing: -0.5,
                             height: 1.2,
                           ),
                         ),
@@ -236,15 +237,15 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 24),
+                  SizedBox(height: 16),
                   Text(
-                    'Asisten Digital untuk Atlet\nLacak latihan, nutrisi, dan jadwalmu secara real-time',
+                    'Asisten Digital untuk Atlet\nLacak latihan, nutrisi, dan jadwalmu',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: const Color(0xFF2F2F2F),
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      height: 1.6,
+                      height: 1.5,
                     ),
                   ),
 
@@ -270,8 +271,9 @@ class _LandingScreenState extends State<LandingScreen>
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed:
-                          (_isLoadingLogin || _isLoadingRegister) ? null : _handleRegister,
+                      onPressed: (_isLoadingLogin || _isLoadingRegister)
+                          ? null
+                          : _handleRegister,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF5406), // Ember Orange
                         foregroundColor: Colors.white,
@@ -312,8 +314,9 @@ class _LandingScreenState extends State<LandingScreen>
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
-                      onPressed:
-                          (_isLoadingLogin || _isLoadingRegister) ? null : _handleLogin,
+                      onPressed: (_isLoadingLogin || _isLoadingRegister)
+                          ? null
+                          : _handleLogin,
                       style: OutlinedButton.styleFrom(
                         backgroundColor: const Color(0xFFF5F5F5), // Fog
                         foregroundColor: const Color(0xFF2F2F2F), // Graphite
@@ -328,7 +331,8 @@ class _LandingScreenState extends State<LandingScreen>
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
-                                  color: const Color(0xFFFF5406), strokeWidth: 2.5),
+                                  color: const Color(0xFFFF5406),
+                                  strokeWidth: 2.5),
                             )
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -348,14 +352,15 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                   ),
 
-                  SizedBox(height: 32),
+                  SizedBox(height: 24),
 
                   // ── Terms ─────────────────────────────────────────────
                   Text(
                     'Dengan mendaftar, Anda menyetujui\nKetentuan Layanan & Kebijakan Privasi',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: const Color(0xFF72A2C5), // Mist Blue for muted text
+                      color:
+                          const Color(0xFF72A2C5), // Mist Blue for muted text
                       fontSize: 12,
                       height: 1.4,
                     ),
@@ -380,7 +385,8 @@ class _LandingScreenState extends State<LandingScreen>
             color: const Color(0xFFF5F5F5), // Fog
             borderRadius: BorderRadius.circular(26), // pill radius
           ),
-          child: Icon(icon, color: const Color(0xFFFF5406), size: 20), // Ember Orange icon
+          child: Icon(icon,
+              color: const Color(0xFFFF5406), size: 20), // Ember Orange icon
         ),
         SizedBox(width: 24),
         Expanded(
@@ -402,8 +408,8 @@ class _LandingScreenState extends State<LandingScreen>
 class _GoogleGIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/icons/google.png',
+    return SvgPicture.asset(
+      'assets/icons/kora_logo.svg', // using the SVG provided by the user
       width: 22,
       height: 22,
     );
