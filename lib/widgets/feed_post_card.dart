@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -118,6 +119,21 @@ class _FeedPostCardState extends State<FeedPostCard> {
     return 'Baru saja';
   }
 
+  Widget _buildAvatar(String? photoUrl) {
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      try {
+        if (photoUrl.startsWith('data:image')) {
+          final parts = photoUrl.split(',');
+          if (parts.length > 1) {
+            return ClipOval(child: Image.memory(base64Decode(parts[1]), fit: BoxFit.cover));
+          }
+        }
+        return ClipOval(child: Image.network(photoUrl, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.person, color: Colors.grey)));
+      } catch (_) {}
+    }
+    return const Icon(Icons.person, color: Colors.grey);
+  }
+
   @override
   Widget build(BuildContext context) {
     final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
@@ -150,10 +166,14 @@ class _FeedPostCardState extends State<FeedPostCard> {
             behavior: HitTestBehavior.opaque,
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: _photoUrl != null ? NetworkImage(_photoUrl!) : null,
-                  child: _photoUrl == null ? const Icon(Icons.person, color: Colors.grey) : null,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                  ),
+                  child: _buildAvatar(_photoUrl),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
