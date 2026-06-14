@@ -136,15 +136,6 @@ class _ProteinScreenState extends State<ProteinScreen> {
         Row(
           children: [
              GestureDetector(
-                onTap: _showAddWaterSheet,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: const Color(0xFFF5F5F5), borderRadius: BorderRadius.circular(26)),
-                  child: const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 24),
-                ),
-             ),
-             const SizedBox(width: 8),
-             GestureDetector(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeeklyReportScreen())),
                 child: Container(
                   padding: const EdgeInsets.all(10),
@@ -325,66 +316,6 @@ class _ProteinScreenState extends State<ProteinScreen> {
     );
   }
 
-  void _showAddWaterSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Tambah Air Putih', style: TextStyle(color: Color(0xFF00A9DD), fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _waterButton(250, '1 Gelas'),
-                  _waterButton(600, 'Botol Sedang'),
-                  _waterButton(1000, 'Botol Besar'),
-                ],
-              ),
-              const SizedBox(height: 32),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _waterButton(int ml, String label) {
-    return InkWell(
-      onTap: () async {
-        Navigator.pop(context);
-        await _db.insertProteinEntry(ProteinEntry(
-          foodName: 'Air Putih ($label)',
-          proteinGrams: 0,
-          calories: 0,
-          waterMl: ml,
-          mealType: 'water',
-          date: DateTime.now(),
-        ));
-        CloudSyncService.syncNutritionToCloud().catchError((_) {});
-        _loadData();
-      },
-      borderRadius: BorderRadius.circular(26),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(26),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
-            const SizedBox(height: 12),
-            Text('+$ml ml', style: const TextStyle(color: Color(0xFF00A9DD), fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
-        ),
-      ),
-    );
   }
 
 }
