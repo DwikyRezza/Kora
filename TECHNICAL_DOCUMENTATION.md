@@ -19,7 +19,7 @@ Kora mengimplementasikan arsitektur **Service-Oriented Layered Architecture** ya
 │                  PRESENTATION LAYER               │
 │         (screens/, widgets/, main.dart)           │
 │   • StatefulWidget + ValueListenableBuilder       │
-│   • IndexedStack navigation (persistent tabs)     │
+│   • IndexedStack + TabVisibility event bus        │
 │   • Responsive extension utilities                │
 ├──────────────────────────────────────────────────┤
 │                   SERVICE LAYER                   │
@@ -61,20 +61,20 @@ lib/
 │   ├── active_workout_screen.dart     # Live workout tracking UI
 │   ├── ai_nutrition_screen.dart       # AI-powered nutrition analyzer (Groq API)
 │   ├── body_stats_screen.dart         # Body measurement dashboard
-│   ├── home_screen.dart               # Dashboard utama
+│   ├── home_screen.dart               # Dashboard utama + smart navigation routing
 │   ├── landing_screen.dart            # Pre-auth landing page
 │   ├── login_screen.dart              # Google Sign-In flow
 │   ├── onboarding_screen.dart         # First-time user setup
-│   ├── profile_screen.dart            # User profile & settings
+│   ├── profile_screen.dart            # User profile + lazy-loaded photo thumbnails
 │   ├── protein_screen.dart            # Nutrition tracking
-│   ├── running_tracker_screen.dart    # GPS running + Google Maps (1210 baris)
+│   ├── running_tracker_screen.dart    # GPS running + Google Maps + ValueNotifier optimization
 │   ├── schedule_screen.dart           # Training schedule planner
 │   ├── workout_screen.dart            # Workout hub (tab utama)
 │   ├── workout_detail_screen.dart     # Detail view sebuah workout
 │   ├── workout_setup_screen.dart      # Setup workout baru
 │   ├── workout_summary_screen.dart    # Post-workout summary
 │   ├── weightlifting_screen.dart      # Weightlifting-specific UI
-│   ├── weekly_report_screen.dart      # Laporan mingguan
+│   ├── weekly_report_screen.dart      # Workout analysis dashboard (filter chips, 7-day chart, summary card)
 │   ├── social_screen.dart             # Social feed
 │   ├── public_profile_screen.dart     # Profil pengguna lain
 │   ├── search_screen.dart             # Search users
@@ -84,15 +84,15 @@ lib/
 │   └── setting_screen.dart            # App settings
 ├── services/                          # Business logic layer (14 service files)
 │   ├── auth_service.dart              # Google Sign-In + Firebase Auth
-│   ├── cloud_sync_service.dart        # Bidirectional sync: SQLite ↔ Firestore
-│   ├── database_helper.dart           # SQLite ORM + migration (version 1→10)
+│   ├── cloud_sync_service.dart        # Bidirectional sync: SQLite ↔ Firestore + photo subcollection
+│   ├── database_helper.dart           # SQLite ORM + migration (version 1→12)
 │   ├── location_service.dart          # Foreground service manager
 │   ├── meal_recommender_service.dart  # Rule-based meal recommender
 │   ├── notification_service.dart      # Local + cloud notifications
 │   ├── profile_service.dart           # Cloud-first profile management
 │   ├── running_task_handler.dart      # GPS processing di Android Service
 │   ├── settings_service.dart          # SharedPreferences wrapper
-│   ├── social_service.dart            # Follow system + social feed
+│   ├── social_service.dart            # Follow system + social feed + profile path consistency
 │   ├── storage_service.dart           # Base64 photo upload ke Firestore
 │   ├── strava_service.dart            # OAuth2 + Strava API client
 │   ├── strava_share_handler.dart      # Deep-link share handler
@@ -100,7 +100,8 @@ lib/
 ├── theme/
 │   └── app_theme.dart                 # Dual-theme system (dark/light)
 ├── utils/
-│   └── responsive.dart                # Adaptive sizing extension
+│   ├── responsive.dart                # Adaptive sizing extension
+│   └── tab_visibility.dart            # Lightweight event bus for IndexedStack tab detection
 └── widgets/                           # Reusable UI components
     ├── comment_bottom_sheet.dart       # Komentar bottom sheet
     ├── common_widgets.dart            # Shared widgets
@@ -279,10 +280,11 @@ body_measurements     -- Tracking fisik tubuh
 
 user_profiles         -- Cache profil user (SQLite mirror)
 workout_sets          -- Detail set per workout (weightlifting)
+workout_photos        -- Foto workout (normalized, lazy-loaded via FK ke workouts)
 temp_tracking_points  -- Buffer GPS points sementara
 ```
 
-#### Database Migration Strategy (Version 1 → 10):
+#### Database Migration Strategy (Version 1 → 12):
 
 Sistem migrasi menggunakan **incremental ALTER TABLE** yang dibungkus `try-catch` per blok versi. Ini memungkinkan upgrade dari versi berapapun ke versi terbaru tanpa kehilangan data:
 
@@ -290,15 +292,28 @@ Sistem migrasi menggunakan **incremental ALTER TABLE** yang dibungkus `try-catch
 if (oldVersion < 2) { /* ADD COLUMN carbsGrams, fatGrams, fiber... */ }
 if (oldVersion < 3) { /* CREATE TABLE body_measurements */ }
 if (oldVersion < 4) { /* ADD COLUMN emojiStr */ }
-// ... hingga version 10
+// ...
+if (oldVersion < 11) { /* CREATE TABLE workout_photos (normalization) */ }
+if (oldVersion < 12) { /* CREATE INDEX on date/name columns */ }
 ```
 
 Setiap `ALTER TABLE` dibungkus `try-catch` terpisah agar kegagalan satu kolom tidak menggagalkan migrasi keseluruhan — defensive programming untuk menangani edge case di production.
 
 #### Query Optimization:
 
-- **Date-range queries** — `getWorkoutsByDate()` dan `getProteinEntriesByDate()` menggunakan `BETWEEN` dengan ISO 8601 string yang memungkinkan range filtering efisien tanpa index tambahan
+- **Date-range queries** — `getWorkoutsByDate()` dan `getProteinEntriesByDate()` menggunakan `BETWEEN` dengan ISO 8601 string yang memungkinkan range filtering efisien
+- **Range queries** — `getWorkoutsByDateRange()` mendukung filter tanggal + tipe workout untuk analisis mingguan/bulanan
 - **Frequent foods** — `getFrequentFoods()` menggunakan `GROUP BY foodName` + `COUNT(*) as freq` + `ORDER BY freq DESC` untuk predictive search berdasarkan riwayat
+- **Photo lazy loading** — `getWorkoutIdsWithPhotos()` batch-check keberadaan foto tanpa load BLOB data; `getFirstWorkoutPhoto()` load satu foto per workout on-demand via `FutureBuilder`
+- **Database Indexes (v12)** — 5 B-tree indexes untuk eliminasi Full Table Scan:
+  ```sql
+  CREATE INDEX idx_workouts_date ON workouts (date);
+  CREATE INDEX idx_protein_entries_date ON protein_entries (date);
+  CREATE INDEX idx_protein_entries_food_name ON protein_entries (foodName);
+  CREATE INDEX idx_schedule_events_date_time ON schedule_events (dateTime);
+  CREATE INDEX idx_body_measurements_date ON body_measurements (date);
+  ```
+  Setiap `CREATE INDEX` dibungkus `try-catch` individual dengan `IF NOT EXISTS` — safe migration pattern yang mencegah kegagalan satu index menggagalkan seluruh upgrade.
 - **Lazy initialization** — Database hanya diinisialisasi saat pertama kali diakses (`Future<Database> get database async`)
 
 ### 3.2 Cloud-Local Hybrid Storage Strategy
@@ -368,6 +383,8 @@ Kora menggunakan **pragmatic state management** tanpa framework pihak ketiga:
 | Mekanisme | Penggunaan | Scope |
 |---|---|---|
 | `ValueNotifier<ThemeMode>` | Theme switching | Global, reaktif via `ValueListenableBuilder` |
+| `ValueNotifier<int/double/String>` | Metric updates (elapsed, distance, pace) | Running tracker — granular text rebuild tanpa rebuild Google Maps |
+| `ChangeNotifier` (singleton) | Tab visibility event bus | `TabVisibility.instance` — broadcast active tab ke subscribers |
 | `setState()` | UI state per-screen | Local widget state |
 | `IndexedStack` | Tab persistence | Main navigation — mempertahankan state semua tab |
 | `SharedPreferences` | App settings | Persistent key-value (dark mode, notification prefs, units) |
@@ -375,6 +392,17 @@ Kora menggunakan **pragmatic state management** tanpa framework pihak ketiga:
 
 **IndexedStack Strategy:**
 `MainNavigation` menggunakan `IndexedStack` (bukan `PageView` atau navigator) untuk menjaga **semua 5 tab tetap hidup** di memory. Ini berarti state scroll, form input, dan data yang sudah di-load tidak hilang saat berpindah tab — trade-off memory untuk UX yang seamless.
+
+**TabVisibility Event Bus:**
+[TabVisibility](file:///d:/Rezza/Kuliah/Kora/lib/utils/tab_visibility.dart) adalah lightweight `ChangeNotifier` singleton yang mem-broadcast perubahan tab aktif. Subscriber (misalnya `RunningTrackerScreen`) dapat mendeteksi kapan mereka hidden/visible dan men-suspend/resume resource-intensive operations (GPS stream, camera animation, setState calls) — tanpa menambah dependency package baru.
+
+**ValueNotifier Granular Rebuild (Running Tracker):**
+Alih-alih memanggil `setState()` setiap detik (yang rebuild seluruh widget tree termasuk Google Maps), `running_tracker_screen.dart` menggunakan 3 `ValueNotifier` + `ValueListenableBuilder` untuk metrik:
+- `_elapsedNotifier<int>` — durasi lari (detik)
+- `_distanceNotifier<double>` — jarak tempuh (km)
+- `_paceNotifier<String>` — pace rata-rata (/km)
+
+Hasilnya: hanya 3 text widget kecil yang rebuild per detik, sementara `GoogleMap`, polyline, marker, dan tombol-tombol tetap untouched — mengeliminasi jank visual.
 
 **Quick Actions Integration:**
 `QuickActions` package memungkinkan shortcut dari home screen Android:
@@ -442,11 +470,12 @@ Ini adalah simplifikasi yang disengaja — untuk use case personal fitness track
 
 ### 4.4 Database Migration tanpa Data Loss
 
-**Tantangan:** 10 versi database dengan perubahan schema yang berbeda-beda. Migration harus backward-compatible.
+**Tantangan:** 12 versi database dengan perubahan schema yang berbeda-beda (tambah kolom, tabel baru, indexes). Migration harus backward-compatible.
 
 **Solusi:**
 - Setiap `ALTER TABLE` dibungkus `try-catch` independen
 - `CREATE TABLE IF NOT EXISTS` untuk tabel baru di migrasi
+- `CREATE INDEX IF NOT EXISTS` dengan `try-catch` per index untuk safe index creation
 - Conditional `if (oldVersion < N)` memastikan setiap blok hanya dijalankan jika diperlukan
 - `onUpgrade` dipanggil otomatis oleh `sqflite` saat versi database meningkat
 
@@ -478,22 +507,105 @@ Ini adalah simplifikasi yang disengaja — untuk use case personal fitness track
 - Filter client-side berdasarkan daftar `followingUids`
 - Ini acceptable untuk skala MVP dengan user base terbatas
 
-### 4.8 Photo Storage — Base64 di Firestore
+### 4.8 Photo Storage — Normalized Lazy Loading
 
-**Tantangan:** Firebase Storage memerlukan Security Rules yang kompleks untuk upload foto profil.
+**Tantangan:** Menyimpan foto workout sebagai base64 BLOB di tabel `workouts` membuat query list menjadi lambat karena data foto (~50-200KB per foto) ikut ter-load meskipun tidak ditampilkan.
 
-**Solusi pragmatis:**
-[StorageService](file:///d:/Rezza/Kuliah/Kora/lib/services/storage_service.dart) mengonversi foto ke base64 dan menyimpannya langsung di dokumen Firestore:
-- Size guard: warning jika file > 200KB
-- Data URI format (`data:image/jpeg;base64,...`) bisa langsung ditampilkan di `Image.network()`
-- Trade-off: Firestore document size limit 1MB vs simplicity tanpa Storage Rules
+**Solusi: Photo Normalization + Lazy Loading (DB v11):**
 
-### 4.9 Meal Recommendation Engine
+Foto dipindahkan ke tabel terpisah `workout_photos` dengan foreign key ke `workouts`:
+
+```sql
+CREATE TABLE workout_photos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workout_id INTEGER NOT NULL,
+  photo_path TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (workout_id) REFERENCES workouts (id) ON DELETE CASCADE
+);
+```
+
+**Pattern dua-tahap:**
+1. **Batch Check** — `getWorkoutIdsWithPhotos()` mengembalikan `Set<int>` dari workout ID yang memiliki foto (tanpa load BLOB). Digunakan di `profile_screen.dart` untuk menampilkan badge "📷" pada workout list.
+2. **On-Demand Load** — `getFirstWorkoutPhoto()` dipanggil per-item via `FutureBuilder` hanya saat user membuka detail workout.
+
+**Cloud Sync Integration:**
+- `CloudSyncService.syncWorkoutsToCloud()` — foto di-sync sebagai Firestore subcollection per workout
+- `_restoreWorkouts()` — foto di-restore dengan `workout_id` di-relink ke ID lokal baru
+- `deleteWorkout()` — manual cascade delete di `workout_photos` (karena `PRAGMA foreign_keys` tidak aktif by default di sqflite)
+
+### 4.9 IndexedStack Resource Suspension
+
+**Tantangan:** `IndexedStack` menjaga semua tab tetap hidup, yang berarti Google Maps di tab Running Tracker terus mengonsumsi GPU/RAM (camera animation, GPS stream) meskipun tab tersembunyi.
+
+**Solusi: TabVisibility Event Bus:**
+
+[TabVisibility](file:///d:/Rezza/Kuliah/Kora/lib/utils/tab_visibility.dart) — lightweight `ChangeNotifier` singleton tanpa dependency package:
+
+```dart
+class TabVisibility extends ChangeNotifier {
+  TabVisibility._();
+  static final TabVisibility instance = TabVisibility._();
+  int _activeTab = 0;
+  bool isTabVisible(int tabIndex) => _activeTab == tabIndex;
+  void setActiveTab(int index) { ... notifyListeners(); }
+}
+```
+
+**Cara kerja di RunningTrackerScreen:**
+1. Subscribe ke `TabVisibility.instance` di `initState()`
+2. Saat tab hidden: stop UI timer, cancel GPS stream, freeze camera animations
+3. Saat tab visible: sync data dari foreground service, restart timer, resume GPS
+4. State (route points, distance, elapsed) tetap terjaga — hanya processing yang di-suspend
+
+### 4.10 Weekly Report Dashboard — Workout Analysis Refactor
+
+**Tantangan:** Halaman `weekly_report_screen.dart` sebelumnya hanya menampilkan data protein/streak statis tanpa analisis workout interaktif.
+
+**Refactor yang diterapkan:**
+
+1. **Dynamic Filter Chips** — `Semua | Lari | Jalan | Angkat Beban` mengubah metrik dan grafik secara kondisional:
+   - Lari/Jalan → Jarak (km), Durasi (m), Elevasi (m)
+   - Angkat Beban → Volume (kg), Durasi (m), Total Set
+
+2. **7-Day Bar Chart (fl_chart)** — Wide bars (14px) dengan persistent top labels via `showingTooltipIndicators: [0]` per `BarChartGroupData` + `handleBuiltInTouches: false`. Background tracks low-opacity agar fokus pada data.
+
+3. **Neumorphic Summary Card** — Elevated container dengan soft shadow, horizontal layout: Konsistensi (streak 🔥) + Total Aktivitas (monthly count). Typographic hierarchy: 36px bold numbers dengan color accent.
+
+4. **Share Button** — Dipindahkan ke AppBar `IconButton` sejajar judul. Menggunakan `ScreenshotController` untuk capture section yang di-share.
+
+### 4.11 Meal Recommendation Engine
 
 [MealRecommenderService](file:///d:/Rezza/Kuliah/Kora/lib/services/meal_recommender_service.dart) mengimplementasikan **rule-based recommendation**:
 - **Budget Matching** — `dailyBudget / 3` = budget per makan → kategori Ekonomi (≤20K), Medium (20K-45K), Premium (>45K)
 - **Goal Matching** — Diet/Cutting meals vs Bulking meals dari curated database
 - **Randomized Selection** — Dari matched meals, pilih random untuk variasi
+
+### 4.12 Social Feed — Firestore Profile Path Consistency
+
+**Tantangan:** `ProfileService` menyimpan data profil di sub-dokumen `profile` (`users/{uid}/profile`), namun `SocialService.publishWorkoutToFeed()`, `addComment()`, `followUser()`, dan `toggleLike()` membaca `name`/`photoUrl` dari root dokumen Firestore. Ini menyebabkan avatar dan nama di feed post menampilkan data kosong/salah.
+
+**Solusi:**
+Semua method di `SocialService` diupdate untuk membaca dari `profile` sub-document dengan backward-compatible fallback:
+```dart
+final profile = userData.containsKey('profile')
+    ? Map<String, dynamic>.from(userData['profile'] as Map)
+    : userData;
+```
+
+### 4.13 Home Screen Navigation — Smart Routing
+
+**Tantangan:** Tiga bug navigasi di `home_screen.dart`:
+1. Item workout di "Jadwal Latih" tidak bisa di-klik (tidak ada tap handler)
+2. Tombol "MULAI" di Saran Kora hanya menandai selesai tanpa navigasi
+3. Tidak ada routing berdasarkan tipe workout
+
+**Solusi:**
+1. **Workout Detail Navigation** — Setiap workout item di-bungkus `GestureDetector` → navigasi ke `WorkoutDetailScreen(workout: w)`
+2. **Smart MULAI Button** — `_navigateByWorkoutType(event)` memeriksa `ScheduleEvent.workoutType`:
+   - `running` → push `RunningTrackerScreen`
+   - `weightlifting` → push `WorkoutSetupScreen`
+   - lainnya → fallback ke Workout tab
 
 ---
 
@@ -513,11 +625,14 @@ Ini adalah simplifikasi yang disengaja — untuk use case personal fitness track
 | `google_generative_ai` | ^0.4.6 | AI nutrition analysis (Groq) |
 | `fl_chart` | ^0.69.0 | Charts & data visualization |
 | `flutter_dotenv` | ^5.2.1 | Environment variable management |
-| `audioplayers` | ^6.6.0 | Whistle alarm playback |
+| `audioplayers` | ^6.6.0 | Whistle alarm + streak sound playback |
 | `vibration` | ^3.1.8 | Haptic feedback + vibration patterns |
 | `quick_actions` | ^1.0.9 | Android home screen shortcuts |
-| `share_plus` | ^12.0.1 | Share workout to social/Strava |
+| `share_plus` | ^12.0.1 | Share workout/report to social/Strava |
+| `screenshot` | ^3.0.0 | Capture widget as image for sharing |
+| `lottie` | ^3.x | Animated streak fire Lottie rendering |
+| `path_provider` | ^2.1.5 | Temp directory for share image export |
 
 ---
 
-*Dokumentasi ini dihasilkan berdasarkan analisis mendalam terhadap seluruh source code repositori Kora v1.0.0.*
+*Dokumentasi ini dihasilkan berdasarkan analisis mendalam terhadap seluruh source code repositori Kora. Terakhir diperbarui mencakup: photo normalization (v11), SQLite indexes (v12), TabVisibility event bus, ValueNotifier granular rebuild, weekly report dashboard refactor, social feed profile fix, dan home screen smart routing.*
