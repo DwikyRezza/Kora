@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../utils/responsive.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
+import '../screens/landing_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -111,10 +112,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFFFFF), // Paper White
       appBar: AppBar(
-        title: Text('Mulai Perjalananmu', style: TextStyle(color: const Color(0xFF2F2F2F))),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Mulai Perjalananmu', style: TextStyle(color: const Color(0xFF2F2F2F), fontSize: 20)),
+            Text(AuthService.email ?? '', style: TextStyle(color: const Color(0xFF72A2C5), fontSize: 13, fontWeight: FontWeight.normal)),
+          ],
+        ),
         backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         iconTheme: IconThemeData(color: const Color(0xFF2F2F2F)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () async {
+            await AuthService.logout();
+            if (context.mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const LandingScreen()),
+              );
+            }
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
