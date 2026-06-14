@@ -23,6 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   double _height = 0.0;
   double _weight = 0.0;
   String _goal = 'Bulking';
+  bool _isSaving = false;
 
   final List<String> _goals = ['Runner', 'Weightlifter', 'Diet', 'Bulking'];
   final List<String> _genders = ['Laki-laki', 'Perempuan'];
@@ -30,6 +31,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _saveAndContinue() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
+      setState(() => _isSaving = true);
+
+      // Cek apakah username tersedia
+      bool isUsernameAvail = await ProfileService.isUsernameAvailable(_username);
+      if (!isUsernameAvail && mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Username "$_username" sudah digunakan. Silakan pilih username lain.'),
+            backgroundColor: const Color(0xFFFF5406),
+          ),
+        );
+        return;
+      }
 
       double bmi = _weight / ((_height / 100) * (_height / 100));
       String status = ProfileService.getBMIStatus(bmi);
@@ -49,6 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       CloudSyncService.backupToCloud().catchError((_) {});
 
       if (mounted) {
+        setState(() => _isSaving = false);
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -221,11 +238,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)), // Pill radius
                     elevation: 0,
                   ),
-                  onPressed: _saveAndContinue,
-                  child: Text(
-                    'Simpan & Lanjutkan',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
+                  onPressed: _isSaving ? null : _saveAndContinue,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                        )
+                      : const Text(
+                          'Simpan & Lanjutkan',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
                 ),
               ),
             ],

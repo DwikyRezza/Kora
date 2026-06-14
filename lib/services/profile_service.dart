@@ -49,6 +49,25 @@ class ProfileService {
     }
   }
 
+  // ─── Cek apakah username tersedia (unik) ───────────────────────────────────
+  static Future<bool> isUsernameAvailable(String username) async {
+    if (username.isEmpty) return false;
+    try {
+      final qs = await _firestore.collection('users')
+          .where('profile.username', isEqualTo: username)
+          .limit(1)
+          .get();
+          
+      if (qs.docs.isEmpty) return true;
+      
+      // Jika ditemukan, cek apakah itu akun user sendiri yang sedang update
+      return qs.docs.first.id == AuthService.uid;
+    } catch (e) {
+      print('[ProfileService] isUsernameAvailable error: $e');
+      return false; // Anggap tidak tersedia jika terjadi error untuk keamanan
+    }
+  }
+
   // ─── Simpan profil ke Firestore ────────────────────────────────────────────
   static Future<void> saveProfile({
     required String name,
