@@ -630,6 +630,23 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       return;
     }
 
+    // ── Gerbang izin: pastikan location permission MASIH aktif sebelum start ──
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      _showSnackBar('⚠️ Izin lokasi diperlukan untuk tracking. Buka Settings.');
+      return;
+    }
+
+    // Pastikan service GPS sistem masih aktif
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      _showSnackBar('⚠️ Layanan GPS tidak aktif. Aktifkan GPS terlebih dahulu.');
+      return;
+    }
+
     setState(() {
       _isRunning = true;
       _hasStarted = true;
