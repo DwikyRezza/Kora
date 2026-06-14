@@ -47,6 +47,13 @@ class LocationService {
 
   /// Mulai foreground service dengan TaskHandler yang berjalan di dalam service.
   static Future<bool> startService() async {
+    // Guard: pastikan izin notifikasi (Android 13+) masih aktif
+    final notifPerm = await FlutterForegroundTask.checkNotificationPermission();
+    if (notifPerm != NotificationPermission.granted) {
+      debugPrint('⚠️ [LocationService] Izin notifikasi belum granted, request...');
+      await FlutterForegroundTask.requestNotificationPermission();
+    }
+
     // Jika service masih jalan, stop dulu dan tunggu sampai benar-benar berhenti
     if (await FlutterForegroundTask.isRunningService) {
       debugPrint('⚠️ [LocationService] Service masih jalan, stop dulu...');
@@ -59,7 +66,31 @@ class LocationService {
     }
 
     debugPrint('🚀 [LocationService] Memulai foreground service...');
-    final result = await FlutterForegroundTask.startService(
+    var result = await _doStartService();
+
+    // Retry sekali jika gagal (edge case: service belum fully stopped)
+    if (result is! ServiceRequestSuccess) {
+      debugPrint('⚠️ [LocationService] Start pertama gagal, retry setelah 500ms...');
+      await Future.delayed(const Duration(milliseconds: 500));
+      result = await _doStartService();
+    }
+
+    if (result is ServiceRequestSuccess) {
+      debugPrint('✅ [LocationService] Foreground service berhasil dimulai!');
+      return true;
+    } else if (result is ServiceRequestFailure) {
+      debugPrint('❌ [LocationService] Service GAGAL start setelah retry!');
+      debugPrint('❌ [LocationService] Error detail: ${result.error}');
+      return false;
+    } else {
+      debugPrint('❌ [LocationService] Service GAGAL start (unknown): $result');
+      return false;
+    }
+  }
+
+  /// Internal: eksekusi startService tanpa retry logic
+  static Future<dynamic> _doStartService() async {
+    return await FlutterForegroundTask.startService(
       serviceId: 256,
       notificationTitle: 'Run · 0:00 · 0.00 km',
       notificationText: 'GPS aktif',
@@ -69,18 +100,6 @@ class LocationService {
       ],
       callback: startRunningTaskCallback,
     );
-
-    if (result is ServiceRequestSuccess) {
-      debugPrint('✅ [LocationService] Foreground service berhasil dimulai!');
-      return true;
-    } else if (result is ServiceRequestFailure) {
-      debugPrint('❌ [LocationService] Service GAGAL start!');
-      debugPrint('❌ [LocationService] Error detail: ${result.error}');
-      return false;
-    } else {
-      debugPrint('❌ [LocationService] Service GAGAL start (unknown): $result');
-      return false;
-    }
   }
 
   /// Kirim perintah ke TaskHandler di dalam service.
