@@ -53,9 +53,9 @@ class RunningTaskHandler extends TaskHandler {
     _elapsedSeconds = _elapsedAtPause +
         DateTime.now().difference(_runStartTime!).inSeconds;
 
-    // Update notifikasi setiap detik — format seperti Strava
+    // Update notifikasi setiap detik — format: Durasi · Jarak · Pace
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationTitle: 'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km · ${_buildPaceStr()} /km',
       notificationText: '',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
@@ -116,7 +116,10 @@ class RunningTaskHandler extends TaskHandler {
   }
 
   @override
-  void onNotificationPressed() {}
+  void onNotificationPressed() {
+    // Tap body notifikasi → langsung buka aplikasi KORA ke foreground
+    FlutterForegroundTask.launchApp();
+  }
 
   // ─── Private Logic ────────────────────────────────────────────────────
 
