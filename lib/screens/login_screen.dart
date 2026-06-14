@@ -217,24 +217,10 @@ class _LoginScreenState extends State<LoginScreen>
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                // Google "G" icon
-                                Container(
+                                Image.asset(
+                                  'assets/icons/google.png',
                                   width: context.iconMD,
                                   height: context.iconMD,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      'G',
-                                      style: TextStyle(
-                                        fontSize: context.fontMD,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.blue[700],
-                                      ),
-                                    ),
-                                  ),
                                 ),
                                 SizedBox(width: context.spaceMD),
                                 Text(
