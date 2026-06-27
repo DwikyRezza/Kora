@@ -16,10 +16,11 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 
 // Modular components imports
-import '../widgets/workout_detail/workout_stats_grid.dart';
+import '../widgets/workout_detail/workout_detail_header.dart';
 import '../widgets/workout_detail/workout_detail_map.dart';
+import '../widgets/workout_detail/workout_detail_results.dart';
+import '../widgets/workout_detail/workout_analysis_splits.dart';
 import '../widgets/workout_detail/workout_charts_container.dart';
-import '../widgets/workout_detail/workout_splits_table.dart';
 
 class WorkoutDetailScreen extends StatefulWidget {
   final Workout workout;
@@ -101,71 +102,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     }
   }
 
-  static String _defaultTitle(Workout w) {
-    final hour = w.date.hour;
-    String timeLabel;
-    if (hour >= 5 && hour < 10) {
-      timeLabel = 'Morning';
-    } else if (hour >= 10 && hour < 14) {
-      timeLabel = 'Midday';
-    } else if (hour >= 14 && hour < 17) {
-      timeLabel = 'Afternoon';
-    } else if (hour >= 17 && hour < 20) {
-      timeLabel = 'Evening';
-    } else {
-      timeLabel = 'Night';
-    }
-    switch (w.type) {
-      case 'running':       return '$timeLabel Run';
-      case 'weightlifting': return '$timeLabel Workout';
-      case 'basketball':    return '$timeLabel Basketball';
-      case 'walking':       return '$timeLabel Walk';
-      default:              return '$timeLabel Activity';
-    }
-  }
-
-  Future<void> _editTitle() async {
-    final controller = TextEditingController(text: _workout.title ?? _defaultTitle(_workout));
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: Text('Edit Title', style: TextStyle(color: AppTheme.textPrimary)),
-        content: TextField(
-          controller: controller,
-          style: TextStyle(color: AppTheme.textPrimary),
-          decoration: InputDecoration(
-            hintText: 'Activity Name',
-            hintStyle: TextStyle(color: AppTheme.textMuted),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppTheme.border)),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Batal')),
-          TextButton(
-            onPressed: () async {
-              final newTitle = controller.text;
-              final updated = Workout(
-                id: _workout.id, type: _workout.type, duration: _workout.duration,
-                distance: _workout.distance, sets: _workout.sets, reps: _workout.reps,
-                weight: _workout.weight, caloriesBurned: _workout.caloriesBurned,
-                proteinNeeded: _workout.proteinNeeded, notes: _workout.notes,
-                date: _workout.date, movingTime: _workout.movingTime,
-                elevationGain: _workout.elevationGain, maxElevation: _workout.maxElevation,
-                splitsStr: _workout.splitsStr,
-                polyline: _workout.polyline, title: newTitle,
-              );
-              await DatabaseHelper().updateWorkout(updated);
-              setState(() => _workout = updated);
-              Navigator.pop(context);
-            },
-            child: Text('Simpan', style: TextStyle(color: AppTheme.electricBlue)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _shareActivity() async {
     final image = await _screenshotController.capture();
     if (image != null) {
@@ -182,197 +118,169 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
     final double workoutDistance = _workout.distance ?? 0.0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_workout.typeLabel),
-        backgroundColor: AppTheme.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.share_outlined),
-            onPressed: _shareActivity,
-          ),
-        ],
-      ),
       backgroundColor: AppTheme.background,
       body: ValueListenableBuilder<ThemeMode>(
         valueListenable: AppTheme.themeNotifier,
         builder: (context, _, __) {
           return Screenshot(
             controller: _screenshotController,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 80),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 1. HEADER (Profil Atlet & Info Lari)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: AppTheme.surfaceVariant,
-                          backgroundImage: _userPhotoUrl != null 
-                              ? (_userPhotoUrl!.startsWith('http') 
-                                  ? NetworkImage(_userPhotoUrl!) 
-                                  : (_userPhotoUrl!.startsWith('data:image')
-                                      ? MemoryImage(base64Decode(_userPhotoUrl!.split(',').last.replaceAll(RegExp(r'\s+'), '')))
-                                      : FileImage(File(_userPhotoUrl!)))) as ImageProvider
-                              : null,
-                          child: _userPhotoUrl == null 
-                              ? Text(_userName.isNotEmpty ? _userName[0].toUpperCase() : '', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold))
-                              : null,
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_userName, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(
-                              DateFormat('MMMM d, yyyy • HH:mm', 'id').format(_workout.date),
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                            ),
-                          ],
-                        )
-                      ],
+            child: CustomScrollView(
+              slivers: [
+                // ── 1. MAPS INTERAKTIF DI SLIVERAPPBAR ─────────────────────────
+                SliverAppBar(
+                  expandedHeight: 380,
+                  pinned: true,
+                  elevation: 0,
+                  backgroundColor: AppTheme.background,
+                  leading: Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
+                    child: CircleAvatar(
+                      backgroundColor: AppTheme.background.withOpacity(0.8),
+                      child: IconButton(
+                        icon: Icon(Icons.arrow_back_ios_rounded, color: AppTheme.textPrimary, size: 18),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ),
                   ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _workout.title ?? _defaultTitle(_workout),
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
-                          ),
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
+                      child: CircleAvatar(
+                        backgroundColor: AppTheme.background.withOpacity(0.8),
+                        child: IconButton(
+                          icon: Icon(Icons.share_outlined, color: AppTheme.textPrimary, size: 18),
+                          onPressed: _shareActivity,
                         ),
-                        IconButton(
-                          icon: Icon(Icons.edit_outlined, color: AppTheme.textSecondary, size: 20),
-                          onPressed: _editTitle,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2. GRID METRIK UTAMA (3-Kolom bergaya Strava)
-                  WorkoutStatsGrid(workout: _workout),
-                  const SizedBox(height: 20),
-
-                  // 3. MAPS INTERAKTIF (Modular dengan Live Tracking Pin)
-                  WorkoutDetailMap(
-                    workout: _workout,
-                    trackingPinPositionNotifier: _trackingPinPositionNotifier,
-                  ),
-                  const SizedBox(height: 28),
-
-                  // 4. CHART CONTAINER (Synchronized Touch & Hover)
-                  if (workoutDistance > 0) ...[
-                    WorkoutChartsContainer(
+                  ],
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: WorkoutDetailMap(
                       workout: _workout,
                       trackingPinPositionNotifier: _trackingPinPositionNotifier,
                     ),
-                    const SizedBox(height: 28),
-                  ],
+                  ),
+                ),
 
-                  // 5. TABEL SPLITS (Horizontal Splits Lap)
-                  if (workoutDistance > 0) ...[
-                    WorkoutSplitsTable(workout: _workout),
-                    const SizedBox(height: 28),
-                  ],
-
-                  // MUSCLE DISTRIBUTION (jika weightlifting)
-                  if (_workout.type == 'weightlifting') ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildMuscleSectionFromNotes(),
-                    ),
-                    const SizedBox(height: 28),
-                  ],
-
-                  // DETAIL PER GERAKAN
-                  if (_workout.notes.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildSectionTitle('Detail Per Gerakan'),
+                // ── 2. DAFTAR KONTEN DI SLIVERLIST ─────────────────────────────
+                SliverList(
+                  delegate: SliverChildListDelegate([
+                    // A. HEADER & METRIK UTAMA (3x2)
+                    WorkoutDetailHeader(
+                      workout: _workout,
+                      userName: _userName,
+                      userPhotoUrl: _userPhotoUrl,
                     ),
                     const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildDetailLogsFromNotes(),
-                    ),
-                    const SizedBox(height: 28),
-                  ],
 
-                  // FOTO LATIHAN
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildSectionTitle('Foto Latihan'),
-                        IconButton(
-                          icon: Icon(Icons.add_a_photo, color: AppTheme.electricBlue),
-                          onPressed: _isLoading ? null : _pickImage,
-                        )
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_workout.id != null)
+                    // B. HASIL / BEST EFFORTS
+                    if (workoutDistance > 0) ...[
+                      WorkoutDetailResults(workout: _workout),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // C. ANALISIS WORKOUT & LAP SPLITS
+                    if (workoutDistance > 0) ...[
+                      WorkoutAnalysisSplits(workout: _workout),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // D. PACE GRAFIK, GAP, & PACE ZONES
+                    if (workoutDistance > 0) ...[
+                      WorkoutChartsContainer(
+                        workout: _workout,
+                        trackingPinPositionNotifier: _trackingPinPositionNotifier,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // E. MUSCLE DISTRIBUTION (jika weightlifting)
+                    if (_workout.type == 'weightlifting') ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildMuscleSectionFromNotes(),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+
+                    // F. DETAIL PER GERAKAN (jika notes/weightlifting)
+                    if (_workout.notes.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildSectionTitle('Detail Per Gerakan'),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildDetailLogsFromNotes(),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
+
+                    // G. GALLERY FOTO LATIHAN
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: FutureBuilder<List<String>>(
-                        key: ValueKey('photos_$_photoRefreshKey'),
-                        future: DatabaseHelper().getWorkoutPhotos(_workout.id!),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const SizedBox(
-                              height: 80,
-                              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                            );
-                          }
-                          final photos = snapshot.data ?? [];
-                          if (photos.isEmpty) return const SizedBox.shrink();
-                          return SizedBox(
-                            height: 160,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: photos.length,
-                              itemBuilder: (context, i) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Image.file(
-                                      File(photos[i]),
-                                      width: 240,
-                                      height: 160,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildSectionTitle('Foto Latihan'),
+                          IconButton(
+                            icon: Icon(Icons.add_a_photo, color: AppTheme.electricBlue),
+                            onPressed: _isLoading ? null : _pickImage,
+                          )
+                        ],
                       ),
                     ),
-                ],
-              ),
+                    const SizedBox(height: 12),
+                    if (_workout.id != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: FutureBuilder<List<String>>(
+                          key: ValueKey('photos_$_photoRefreshKey'),
+                          future: DatabaseHelper().getWorkoutPhotos(_workout.id!),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const SizedBox(
+                                height: 80,
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              );
+                            }
+                            final photos = snapshot.data ?? [];
+                            if (photos.isEmpty) return const SizedBox.shrink();
+                            return SizedBox(
+                              height: 160,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: photos.length,
+                                itemBuilder: (context, i) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 12),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.file(
+                                        File(photos[i]),
+                                        width: 240,
+                                        height: 160,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 100),
+                  ]),
+                ),
+              ],
             ),
           );
         },
       ),
     );
   }
-
-  // ─── UTILITIES & WIDGET GENERATOR ──────────────────────────────────────────
 
   // --- PARSE NOTES: Muscle Distribution ---
   Widget _buildMuscleSectionFromNotes() {

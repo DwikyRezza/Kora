@@ -29,8 +29,8 @@ class ActivityFeedCard extends StatefulWidget {
 }
 
 class _ActivityFeedCardState extends State<ActivityFeedCard> {
-  bool _kudosGiven = false;
-  int _kudosCount = 0;
+  bool _isLiked = false;
+  int _likesCount = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -352,25 +352,25 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_kudosCount > 0)
+          if (_likesCount > 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
               child: Text(
-                '$_kudosCount Kudos',
+                '$_likesCount Likes',
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // Kudos / Like
+              // Like
               _socialButton(
-                icon: _kudosGiven ? Icons.thumb_up_rounded : Icons.thumb_up_outlined,
-                label: 'Kudos',
-                color: _kudosGiven ? const Color(0xFFFF5406) : AppTheme.textSecondary,
+                icon: _isLiked ? Icons.thumb_up_rounded : Icons.thumb_up_outlined,
+                label: 'Like',
+                color: _isLiked ? const Color(0xFFFF5406) : AppTheme.textSecondary,
                 onTap: () => setState(() {
-                  _kudosGiven = !_kudosGiven;
-                  _kudosCount += _kudosGiven ? 1 : -1;
+                  _isLiked = !_isLiked;
+                  _likesCount += _isLiked ? 1 : -1;
                 }),
               ),
               // Comment

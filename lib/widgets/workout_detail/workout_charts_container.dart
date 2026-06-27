@@ -101,40 +101,87 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Pace'),
+            // ── SECTION: PACE CHART ───────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Pace',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.info_outline_rounded, color: AppTheme.textSecondary, size: 20),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
             _buildChartFrame(
               chart: _buildPaceChart(activeIndex, avgPaceMins),
               stats: _buildPaceStats(avgPaceMins),
             ),
             const SizedBox(height: 24),
 
-            _buildSectionHeader('Heart Rate'),
-            _buildChartFrame(chart: _buildHeartRateChart(activeIndex)),
+            // ── SECTION: GRADE ADJUSTED PACE ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: const Color(0xFFFF5406), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Grade Adjusted Pace',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildChartFrame(
+              chart: _buildGapChart(activeIndex, avgPaceMins),
+              stats: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _statLabelValue('Avg GAP', '${_formatPaceVal(avgPaceMins * 0.97)} /km'),
+                    const SizedBox.shrink(),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
 
-            _buildSectionHeader('Power'),
-            _buildChartFrame(chart: _buildPowerChart(activeIndex)),
+            // ── SECTION: PACE ZONES ───────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.shield_outlined, color: const Color(0xFFFF5406), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pace Zones',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Based on your predicted 5K time of 19:18',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildPaceZonesWidget(avgPaceMins),
             const SizedBox(height: 24),
-
-            _buildSectionHeader('Cadence'),
-            _buildChartFrame(chart: _buildCadenceChart(activeIndex)),
-            const SizedBox(height: 24),
-
-            _buildSectionHeader('Elevation'),
-            _buildChartFrame(chart: _buildElevationChart(activeIndex)),
           ],
         );
       }
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
-      ),
     );
   }
 
@@ -149,7 +196,7 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
         ),
         child: Column(
           children: [
-            SizedBox(height: 160, child: chart),
+            SizedBox(height: 180, child: chart),
             if (stats != null) ...[
               const SizedBox(height: 12),
               stats,
@@ -161,7 +208,21 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
   }
 
   Widget _buildPaceChart(int? activeIndex, double avgPaceMins) {
-    final spots = _series.map((s) => FlSpot(s.distance, 15.0 - s.pace)).toList();
+    final paceSpots = _series.map((s) => FlSpot(s.distance, 15.0 - s.pace)).toList();
+
+    // Map elevation values linearly to [5.2, 7.8] so they look like a clean background silhouette
+    double minElev = double.maxFinite;
+    double maxElev = -double.maxFinite;
+    for (final s in _series) {
+      if (s.elevation < minElev) minElev = s.elevation;
+      if (s.elevation > maxElev) maxElev = s.elevation;
+    }
+    final double elevRange = (maxElev - minElev) == 0 ? 1.0 : (maxElev - minElev);
+    
+    final elevationSpots = _series.map((s) {
+      final double normalizedElev = 5.2 + ((s.elevation - minElev) / elevRange) * 2.6;
+      return FlSpot(s.distance, normalizedElev);
+    }).toList();
 
     return LineChart(
       LineChartData(
@@ -187,6 +248,8 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
             getTooltipColor: (spot) => const Color(0xFF00A9DD),
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((s) {
+                // If it is the elevation curve, ignore tooltip
+                if (s.barIndex == 1) return null;
                 final double origPace = 15.0 - s.y;
                 final m = origPace.truncate();
                 final sec = ((origPace - m) * 60).round().toString().padLeft(2, '0');
@@ -201,9 +264,9 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
         showingTooltipIndicators: activeIndex != null ? [
           ShowingTooltipIndicators([
             LineBarSpot(
-              LineChartBarData(spots: spots),
+              LineChartBarData(spots: paceSpots),
               0,
-              spots[activeIndex],
+              paceSpots[activeIndex],
             ),
           ]),
         ] : [],
@@ -227,8 +290,21 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
           ],
         ),
         lineBarsData: [
+          // ── Bar Index 1: Background Elevation Silhouette
           LineChartBarData(
-            spots: spots,
+            spots: elevationSpots,
+            isCurved: true,
+            color: AppTheme.isDarkMode ? Colors.grey[800]!.withOpacity(0.3) : Colors.grey[300]!.withOpacity(0.5),
+            barWidth: 1.5,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              color: AppTheme.isDarkMode ? Colors.grey[900]!.withOpacity(0.2) : Colors.grey[200]!.withOpacity(0.4),
+            ),
+          ),
+          // ── Bar Index 0: Foreground Pace Line
+          LineChartBarData(
+            spots: paceSpots,
             isCurved: true,
             color: const Color(0xFF00A9DD),
             barWidth: 2,
@@ -250,15 +326,15 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
     );
   }
 
-  Widget _buildHeartRateChart(int? activeIndex) {
-    final spots = _series.map((s) => FlSpot(s.distance, s.heartRate)).toList();
+  Widget _buildGapChart(int? activeIndex, double avgPaceMins) {
+    final spots = _series.map((s) => FlSpot(s.distance, 15.0 - s.gap)).toList();
 
     return LineChart(
       LineChartData(
         minX: 0,
         maxX: widget.workout.distance ?? 5.0,
-        minY: 100.0,
-        maxY: 200.0,
+        minY: 5.0,
+        maxY: 12.0,
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
@@ -273,11 +349,14 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
           touchCallback: _handleTouch,
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (spot) => Colors.redAccent,
+            getTooltipColor: (spot) => const Color(0xFFFF5406),
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((s) {
+                final double origPace = 15.0 - s.y;
+                final m = origPace.truncate();
+                final sec = ((origPace - m) * 60).round().toString().padLeft(2, '0');
                 return LineTooltipItem(
-                  "${s.y.round()} bpm\n${s.x.toStringAsFixed(2)} km",
+                  "$m:$sec /km\n${s.x.toStringAsFixed(2)} km",
                   const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 );
               }).toList();
@@ -308,251 +387,15 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            color: Colors.redAccent,
+            color: AppTheme.isDarkMode ? Colors.white : const Color(0xFFFF5406).withOpacity(0.8),
             barWidth: 2,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
                 colors: [
-                  Colors.redAccent.withOpacity(0.2),
-                  Colors.redAccent.withOpacity(0.0),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPowerChart(int? activeIndex) {
-    final spots = _series.map((s) => FlSpot(s.distance, s.power)).toList();
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: widget.workout.distance ?? 5.0,
-        minY: 100.0,
-        maxY: 400.0,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: AppTheme.textPrimary.withOpacity(0.06),
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(show: false),
-        lineTouchData: LineTouchData(
-          touchCallback: _handleTouch,
-          handleBuiltInTouches: true,
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (spot) => Colors.deepPurpleAccent,
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((s) {
-                return LineTooltipItem(
-                  "${s.y.round()} W\n${s.x.toStringAsFixed(2)} km",
-                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                );
-              }).toList();
-            },
-          ),
-        ),
-        showingTooltipIndicators: activeIndex != null ? [
-          ShowingTooltipIndicators([
-            LineBarSpot(
-              LineChartBarData(spots: spots),
-              0,
-              spots[activeIndex],
-            ),
-          ]),
-        ] : [],
-        extraLinesData: ExtraLinesData(
-          verticalLines: [
-            if (activeIndex != null)
-              VerticalLine(
-                x: _series[activeIndex].distance,
-                color: Colors.grey.withOpacity(0.8),
-                strokeWidth: 1.5,
-                dashArray: [5, 5],
-              ),
-          ],
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.deepPurpleAccent,
-            barWidth: 2,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.deepPurpleAccent.withOpacity(0.2),
-                  Colors.deepPurpleAccent.withOpacity(0.0),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCadenceChart(int? activeIndex) {
-    final spots = _series.map((s) => FlSpot(s.distance, s.cadence)).toList();
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: widget.workout.distance ?? 5.0,
-        minY: 130.0,
-        maxY: 195.0,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: AppTheme.textPrimary.withOpacity(0.06),
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(show: false),
-        lineTouchData: LineTouchData(
-          touchCallback: _handleTouch,
-          handleBuiltInTouches: true,
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (spot) => Colors.grey[700]!,
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((s) {
-                return LineTooltipItem(
-                  "${s.y.round()} spm\n${s.x.toStringAsFixed(2)} km",
-                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                );
-              }).toList();
-            },
-          ),
-        ),
-        showingTooltipIndicators: activeIndex != null ? [
-          ShowingTooltipIndicators([
-            LineBarSpot(
-              LineChartBarData(spots: spots),
-              0,
-              spots[activeIndex],
-            ),
-          ]),
-        ] : [],
-        extraLinesData: ExtraLinesData(
-          verticalLines: [
-            if (activeIndex != null)
-              VerticalLine(
-                x: _series[activeIndex].distance,
-                color: Colors.grey.withOpacity(0.8),
-                strokeWidth: 1.5,
-                dashArray: [5, 5],
-              ),
-          ],
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.grey[400]!,
-            barWidth: 2,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.grey[400]!.withOpacity(0.2),
-                  Colors.grey[400]!.withOpacity(0.0),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildElevationChart(int? activeIndex) {
-    final spots = _series.map((s) => FlSpot(s.distance, s.elevation)).toList();
-
-    return LineChart(
-      LineChartData(
-        minX: 0,
-        maxX: widget.workout.distance ?? 5.0,
-        minY: 0.0,
-        maxY: 120.0,
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: AppTheme.textPrimary.withOpacity(0.06),
-            strokeWidth: 1,
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(show: false),
-        lineTouchData: LineTouchData(
-          touchCallback: _handleTouch,
-          handleBuiltInTouches: true,
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (spot) => Colors.blueGrey,
-            getTooltipItems: (touchedSpots) {
-              return touchedSpots.map((s) {
-                return LineTooltipItem(
-                  "${s.y.round()} m\n${s.x.toStringAsFixed(2)} km",
-                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                );
-              }).toList();
-            },
-          ),
-        ),
-        showingTooltipIndicators: activeIndex != null ? [
-          ShowingTooltipIndicators([
-            LineBarSpot(
-              LineChartBarData(spots: spots),
-              0,
-              spots[activeIndex],
-            ),
-          ]),
-        ] : [],
-        extraLinesData: ExtraLinesData(
-          verticalLines: [
-            if (activeIndex != null)
-              VerticalLine(
-                x: _series[activeIndex].distance,
-                color: Colors.grey.withOpacity(0.8),
-                strokeWidth: 1.5,
-                dashArray: [5, 5],
-              ),
-          ],
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.blueGrey[700]!,
-            barWidth: 2,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.blueGrey.withOpacity(0.25),
-                  Colors.blueGrey.withOpacity(0.0),
+                  (AppTheme.isDarkMode ? Colors.white : const Color(0xFFFF5406)).withOpacity(0.2),
+                  (AppTheme.isDarkMode ? Colors.white : const Color(0xFFFF5406)).withOpacity(0.0),
                 ],
               ),
             ),
@@ -563,50 +406,122 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
   }
 
   Widget _buildPaceStats(double avgPaceMins) {
-    String formatPace(double paceVal) {
-      final m = paceVal.truncate();
-      final s = ((paceVal - m) * 60).round().toString().padLeft(2, '0');
-      return '$m:$s';
-    }
-
     final totalSeconds = (widget.workout.duration * 60).round();
     final h = totalSeconds ~/ 3600;
     final m = (totalSeconds % 3600) ~/ 60;
     final s = totalSeconds % 60;
-    final movingTimeStr = h > 0 
-        ? "${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}" 
+    final movingTimeStr = h > 0
+        ? "${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}"
         : "${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}";
 
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _statLabelValue('Avg Pace', '${formatPace(avgPaceMins)} /km'),
-              _statLabelValue('Moving Time', movingTimeStr),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _statLabelValue('Avg Elapsed Pace', '${formatPace(avgPaceMins * 1.1)} /km'),
-              _statLabelValue('Elapsed Time', '${(widget.workout.duration * 1.05).round()}m'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _statLabelValue('Fastest Split', '5:32 /km'),
-              const SizedBox.shrink(),
-            ],
-          ),
+          _statRow('Avg Pace', '${_formatPaceVal(avgPaceMins)} /km'),
+          _statRow('Moving Time', movingTimeStr),
+          _statRow('Avg Elapsed Pace', '${_formatPaceVal(avgPaceMins * 1.05)} /km'),
+          _statRow('Elapsed Time', '${(widget.workout.duration * 1.02).round()}m'),
+          _statRow('Fastest Split', '5:14 /km'),
         ],
       ),
     );
+  }
+
+  Widget _statRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text(value, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaceZonesWidget(double avgPace) {
+    final zones = _generatePaceZones(avgPace);
+    final zLabels = ['Z6', 'Z5', 'Z4', 'Z3', 'Z2', 'Z1'];
+    final zRanges = ['< 3:41', '3:41-3:55', '3:55-4:11', '4:11-4:40', '4:40-5:25', '> 5:25'];
+    final zColors = [
+      Colors.red[700]!,
+      Colors.red[400]!,
+      Colors.orange[400]!,
+      Colors.yellow[600]!,
+      const Color(0xFF00A9DD),
+      const Color(0xFF00B33F),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          children: List.generate(6, (i) {
+            final key = zLabels[i];
+            final val = zones[key] ?? 0.0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  SizedBox(width: 24, child: Text(key, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 12))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: val / 100,
+                        minHeight: 12,
+                        backgroundColor: AppTheme.border,
+                        valueColor: AlwaysStoppedAnimation<Color>(zColors[i]),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 32,
+                    child: Text(
+                      '${val.round()}%',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      zRanges[i],
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Map<String, double> _generatePaceZones(double avgPace) {
+    double z1 = 0, z2 = 0, z3 = 0, z4 = 0, z5 = 0, z6 = 0;
+    if (avgPace >= 5.5) {
+      z1 = 92; z2 = 7; z3 = 1;
+    } else if (avgPace >= 4.7) {
+      z1 = 18; z2 = 64; z3 = 15; z4 = 3;
+    } else if (avgPace >= 4.2) {
+      z2 = 12; z3 = 62; z4 = 21; z5 = 5;
+    } else {
+      z3 = 8; z4 = 38; z5 = 44; z6 = 10;
+    }
+    return {'Z1': z1, 'Z2': z2, 'Z3': z3, 'Z4': z4, 'Z5': z5, 'Z6': z6};
   }
 
   Widget _statLabelValue(String label, String value) {
@@ -614,9 +529,15 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
       ],
     );
+  }
+
+  String _formatPaceVal(double paceVal) {
+    final m = paceVal.truncate();
+    final s = ((paceVal - m) * 60).round().toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   List<_ChartsSeriesPoint> _generateSeriesData(double dist, double avgPace) {

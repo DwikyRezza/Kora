@@ -1,12 +1,15 @@
-﻿import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../screens/public_profile_screen.dart';
+import '../screens/workout_detail_screen.dart';
+import '../models/workout.dart';
 import 'comment_bottom_sheet.dart';
+import 'mini_route_painter.dart';
 
 class FeedPostCard extends StatefulWidget {
   final Map<String, dynamic> post;
@@ -71,7 +74,7 @@ class _FeedPostCardState extends State<FeedPostCard> {
         });
       }
     } catch (e) {
-      print('[FeedPostCard] Error fetching profile: $e');
+      // ignore
     }
   }
 
@@ -111,274 +114,419 @@ class _FeedPostCardState extends State<FeedPostCard> {
   String _formatTime(dynamic timestamp) {
     if (timestamp == null) return '';
     final date = timestamp.toDate();
-    return DateFormat('dd MMM yyyy • HH.mm').format(date);
+    return DateFormat('MMMM d, yyyy').format(date) + ' at ' + DateFormat('h:mm a').format(date);
   }
 
-  Widget _buildAvatar(String? photoUrl) {
-    if (photoUrl != null && photoUrl.isNotEmpty) {
+  ImageProvider? _buildAvatarImage() {
+    final url = _photoUrl;
+    if (url == null) return null;
+    if (url.startsWith('http')) return NetworkImage(url);
+    if (url.startsWith('data:image')) {
       try {
-        if (photoUrl.startsWith('data:image')) {
-          final parts = photoUrl.split(',');
-          if (parts.length > 1) {
-            return ClipOval(child: Image.memory(base64Decode(parts[1]), fit: BoxFit.cover));
-          }
-        }
-        return ClipOval(child: Image.network(photoUrl, fit: BoxFit.cover, errorBuilder: (c, e, s) => const Icon(Icons.person, color: Colors.grey)));
-      } catch (_) {}
+        return MemoryImage(
+          base64Decode(url.split(',').last.replaceAll(RegExp(r'\s+'), '')),
+        );
+      } catch (_) {
+        return null;
+      }
     }
-    return const Icon(Icons.person, color: Colors.grey);
+    return null;
   }
 
-  Widget _buildMap(String polylineStr) {
-    try {
-      final List<dynamic> decoded = jsonDecode(polylineStr);
-      if (decoded.isEmpty) return Container(color: Colors.grey[200]);
-      final List<LatLng> points = decoded.map((p) => LatLng(p[0] as double, p[1] as double)).toList();
-      
-      double minLat = points.first.latitude;
-      double maxLat = points.first.latitude;
-      double minLng = points.first.longitude;
-      double maxLng = points.first.longitude;
-      for (var p in points) {
-        if (p.latitude < minLat) minLat = p.latitude;
-        if (p.latitude > maxLat) maxLat = p.latitude;
-        if (p.longitude < minLng) minLng = p.longitude;
-        if (p.longitude > maxLng) maxLng = p.longitude;
-      }
-      
-      return GoogleMap(
-        initialCameraPosition: CameraPosition(target: points.first, zoom: 14),
-        liteModeEnabled: true,
-        zoomControlsEnabled: false,
-        myLocationButtonEnabled: false,
-        polylines: {
-          Polyline(
-            polylineId: const PolylineId('route'),
-            points: points,
-            color: const Color(0xFFFF5406),
-            width: 4,
-          )
-        },
-        onMapCreated: (controller) {
-          Future.delayed(const Duration(milliseconds: 200), () {
-            controller.animateCamera(CameraUpdate.newLatLngBounds(
-              LatLngBounds(
-                southwest: LatLng(minLat, minLng),
-                northeast: LatLng(maxLat, maxLng),
-              ),
-              20.0,
-            ));
-          });
-        },
-      );
-    } catch (e) {
-      return Container(color: Colors.grey[200]);
-    }
+  void _navigateToDetail() {
+    final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
+    final workout = Workout(
+      id: null,
+      type: (workoutData['type'] ?? 'running').toString().toLowerCase(),
+      duration: (workoutData['duration'] as num? ?? 0.0).toDouble(),
+      distance: (workoutData['distance'] as num?)?.toDouble(),
+      sets: (workoutData['sets'] as num?)?.toInt(),
+      reps: (workoutData['reps'] as num?)?.toInt(),
+      weight: (workoutData['weight'] as num?)?.toDouble(),
+      caloriesBurned: (workoutData['caloriesBurned'] as num? ?? 0).toInt(),
+      proteinNeeded: (workoutData['proteinNeeded'] as num? ?? 0.0).toDouble(),
+      notes: workoutData['notes'] ?? '',
+      date: widget.post['timestamp'] != null ? (widget.post['timestamp'] as dynamic).toDate() : DateTime.now(),
+      polyline: workoutData['polyline'] as String?,
+      title: workoutData['title'] as String?,
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WorkoutDetailScreen(workout: workout)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
     final typeLower = (workoutData['type'] ?? 'workout').toString().toLowerCase();
-    final title = workoutData['title'] ?? 'Aktivitas Latihan';
+    final title = workoutData['title'] ?? (typeLower == 'running' ? 'Morning Run' : 'Workout');
     final dist = workoutData['distance'] as num? ?? 0.0;
     final dur = workoutData['duration'] as num? ?? 0.0; // minutes
-    final calories = workoutData['caloriesBurned'] as num? ?? 0;
     final polylineStr = workoutData['polyline'] as String?;
 
-    String defaultImage;
-    if (typeLower == 'running' || typeLower == 'lari') {
-      defaultImage = 'https://images.unsplash.com/photo-1552674605-15c2145efa38?q=80&w=800&auto=format&fit=crop'; 
-    } else if (typeLower == 'weightlifting' || typeLower == 'beban' || typeLower == 'gym') {
-      defaultImage = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop';
-    } else if (typeLower == 'basketball' || typeLower == 'basket') {
-      defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
-    } else {
-      defaultImage = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop';
-    }
+    final routePoints = polylineStr != null && polylineStr.isNotEmpty
+        ? MiniRoutePainter.parsePolyline(polylineStr)
+        : <LatLng>[];
 
-    final bool hasMap = (typeLower == 'running' || typeLower == 'lari') && polylineStr != null && polylineStr.isNotEmpty;
+    final hasRoute = routePoints.isNotEmpty;
 
     return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
+        color: AppTheme.surface,
+        border: Border(
+          top: BorderSide(color: AppTheme.border, width: 0.5),
+          bottom: BorderSide(color: AppTheme.border, width: 0.5),
+        ),
       ),
-      padding: const EdgeInsets.only(top: 24, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header User
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => PublicProfileScreen(uid: widget.post['uid'])),
-              );
-            },
-            behavior: HitTestBehavior.opaque,
-            child: Row(
+          // ── HEADER ──────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: _buildAvatar(_photoUrl)
+                _buildHeader(typeLower),
+                const SizedBox(height: 12),
+
+                // ── JUDUL AKTIVITAS ─────────────────────────────────────
+                InkWell(
+                  onTap: _navigateToDetail,
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                 ),
+                const SizedBox(height: 12),
+
+                // ── 3 KOLOM METRIK ──────────────────────────────────────
+                InkWell(
+                  onTap: _navigateToDetail,
+                  child: typeLower == 'running' || typeLower == 'walking'
+                      ? _buildRunMetrics(dist, dur)
+                      : _buildStrengthMetrics(workoutData, dur),
+                ),
+
+                const SizedBox(height: 14),
+              ],
+            ),
+          ),
+
+          // ── CHALLENGE / ENCOURAGEMENT BANNER ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(Icons.thumb_up_rounded, color: Color(0xFFFF5406), size: 28),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _authorName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600, 
-                          fontSize: 16, 
-                          color: AppTheme.textPrimary
-                        ),
-                      ),
-                      Text(
-                        _formatTime(widget.post['timestamp']),
-                        style: TextStyle(
-                          color: AppTheme.textSecondary, 
-                          fontSize: 12
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    'Nicely done! Keep moving by joining a challenge',
+                    style: TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5406),
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'See More',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          
-          // Judul Aktivitas
-          Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w700, 
-              fontSize: 22, 
-              color: AppTheme.textPrimary
+
+          // ── MAP SNAPSHOT ─────────────────────────────────────────────
+          if (hasRoute) _buildMapSnapshot(routePoints),
+          if (!hasRoute)
+            Container(
+              height: 8,
+              color: AppTheme.surfaceVariant,
             ),
+
+          // ── FOOTER: INTERAKSI SOSIAL ─────────────────────────────────
+          _buildSocialFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(String typeLower) {
+    return Row(
+      children: [
+        // Avatar
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => PublicProfileScreen(uid: widget.post['uid'])),
+            );
+          },
+          child: CircleAvatar(
+            radius: 22,
+            backgroundColor: AppTheme.surfaceVariant,
+            backgroundImage: _buildAvatarImage(),
+            child: _buildAvatarImage() == null
+                ? Text(
+                    _authorName.isNotEmpty ? _authorName[0].toUpperCase() : 'A',
+                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                  )
+                : null,
           ),
-          const SizedBox(height: 16),
-          
-          // Baris Statistik
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (typeLower == 'running' || typeLower == 'lari') ...[
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Jarak', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                    Text('${dist > 0 ? dist.toStringAsFixed(2) : "0.0"} km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  ],
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => PublicProfileScreen(uid: widget.post['uid'])),
+                  );
+                },
+                child: Text(
+                  _authorName,
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Pace', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                    Text('${(dur / (dist == 0 ? 1 : dist)).toStringAsFixed(2)} /km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Waktu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                    Text('${dur.toStringAsFixed(0)}m', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  ],
-                ),
-              ] else ...[
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Durasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                    Text('${dur.toStringAsFixed(0)} mnt', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Kalori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                    Text('${calories} kkal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  ],
-                ),
-              ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${_formatTime(widget.post['timestamp'])} • Kora App',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(
+                    typeLower == 'running' ? Icons.directions_run_rounded : Icons.fitness_center_rounded,
+                    size: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Karah, East Java',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 24),
-          
-          // Gambar/Visual Aktivitas
-          if (hasMap) ...[
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                color: AppTheme.surfaceVariant,
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: _buildMap(polylineStr!),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          
-          // Aksi (Like & Komen)
-          Container(
-            padding: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
-            ),
-            child: Row(
-              children: [
-                InkWell(
-                  onTap: _toggleLike,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _isLiked ? Icons.favorite : Icons.favorite_border, 
-                          color: _isLiked ? Colors.red : AppTheme.textSecondary, 
-                          size: 24
-                        ),
-                        const SizedBox(width: 8),
-                        Text('$_likesCount', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                InkWell(
-                  onTap: _showComments,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.chat_bubble_outline, color: AppTheme.textSecondary, size: 24),
-                        const SizedBox(width: 8),
-                        Text('$_commentsCount', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRunMetrics(num dist, num dur) {
+    return Row(
+      children: [
+        _metricCell(
+          label: 'Distance',
+          value: '${dist.toDouble().toStringAsFixed(2)} km',
+        ),
+        _verticalDivider(),
+        _metricCell(
+          label: 'Pace',
+          value: dist > 0 ? '${_calcPace(dist, dur)} /km' : '—',
+        ),
+        _verticalDivider(),
+        _metricCell(
+          label: 'Time',
+          value: _formatDuration(dur.toDouble()),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStrengthMetrics(Map<String, dynamic> workoutData, num dur) {
+    final sets = workoutData['sets'] as num? ?? 0;
+    final reps = workoutData['reps'] as num? ?? 0;
+
+    return Row(
+      children: [
+        _metricCell(
+          label: 'Distance',
+          value: '—',
+        ),
+        _verticalDivider(),
+        _metricCell(
+          label: 'Pace',
+          value: '—',
+        ),
+        _verticalDivider(),
+        _metricCell(
+          label: 'Time',
+          value: _formatDuration(dur.toDouble()),
+        ),
+      ],
+    );
+  }
+
+  Widget _metricCell({required String label, required String value}) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.3),
           ),
         ],
       ),
     );
+  }
+
+  Widget _verticalDivider() {
+    return Container(
+      width: 1,
+      height: 36,
+      color: AppTheme.border,
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+    );
+  }
+
+  Widget _buildMapSnapshot(List<LatLng> routePoints) {
+    return Container(
+      height: 220,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.isDarkMode ? const Color(0xFF1A1F2E) : const Color(0xFFE8EDF5),
+        border: Border(
+          top: BorderSide(color: AppTheme.border, width: 0.5),
+          bottom: BorderSide(color: AppTheme.border, width: 0.5),
+        ),
+      ),
+      child: InkWell(
+        onTap: _navigateToDetail,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRect(
+                child: CustomPaint(
+                  painter: MiniRoutePainter(
+                    routePoints,
+                    routeColor: const Color(0xFFFF5406),
+                  ),
+                  child: Container(),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 8,
+              bottom: 8,
+              child: Text(
+                '© OpenMapTiles © OpenStreetMap',
+                style: TextStyle(
+                  color: (AppTheme.isDarkMode ? Colors.white : Colors.black).withOpacity(0.4),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialFooter() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_likesCount > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Text(
+                '$_likesCount Likes',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Like
+              _socialButton(
+                icon: _isLiked ? Icons.thumb_up_rounded : Icons.thumb_up_outlined,
+                label: 'Like',
+                color: _isLiked ? const Color(0xFFFF5406) : AppTheme.textSecondary,
+                onTap: _toggleLike,
+              ),
+              // Comment
+              _socialButton(
+                icon: Icons.chat_bubble_outline_rounded,
+                label: 'Komentar',
+                color: AppTheme.textSecondary,
+                onTap: _showComments,
+              ),
+              // Share
+              _socialButton(
+                icon: Icons.share_outlined,
+                label: 'Bagikan',
+                color: AppTheme.textSecondary,
+                onTap: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _socialButton({required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 20, color: color),
+      label: Text(label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
+  }
+
+  String _calcPace(num dist, num dur) {
+    if (dist == 0) return '0:00';
+    final paceMins = dur / dist;
+    final m = paceMins.truncate();
+    final s = ((paceMins - m) * 60).truncate().toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  String _formatDuration(double mins) {
+    final h = (mins / 60).truncate();
+    final m = mins.truncate() % 60;
+    final s = ((mins - mins.truncate()) * 60).round();
+    if (h > 0) return '${h}h ${m}m';
+    if (m > 0) return '${m}m ${s}s';
+    return '${(mins * 60).round()}s';
   }
 }

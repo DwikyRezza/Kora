@@ -9,11 +9,13 @@ import '../../theme/app_theme.dart';
 class WorkoutDetailMap extends StatefulWidget {
   final Workout workout;
   final ValueNotifier<LatLng?> trackingPinPositionNotifier;
+  final double? height;
 
   const WorkoutDetailMap({
     super.key,
     required this.workout,
     required this.trackingPinPositionNotifier,
+    this.height,
   });
 
   @override
@@ -84,7 +86,7 @@ class _WorkoutDetailMapState extends State<WorkoutDetailMap> {
     final activePin = widget.trackingPinPositionNotifier.value;
 
     return Container(
-      height: 250,
+      height: widget.height,
       width: double.infinity,
       decoration: BoxDecoration(
         border: Border(
