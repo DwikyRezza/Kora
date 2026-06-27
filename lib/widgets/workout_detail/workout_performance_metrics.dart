@@ -9,9 +9,6 @@ class WorkoutPerformanceMetrics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double workoutDistance = workout.distance ?? 0.0;
-    final double avgPaceMins = workoutDistance > 0 ? (workout.duration / workoutDistance) : 0.0;
-
     final speedLabel = workout.type == 'running' ? 'Avg Pace' : 'Total Reps';
     final speedVal = workout.type == 'running' ? _calculatePace() : '${workout.reps ?? 0}';
 

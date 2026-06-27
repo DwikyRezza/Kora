@@ -15,6 +15,8 @@ import 'workout_detail_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
 import 'weekly_report_screen.dart';
+import '../widgets/activity/activity_feed_card.dart';
+import '../widgets/mini_route_painter.dart';
 
 class WorkoutScreen extends StatefulWidget {
   WorkoutScreen({super.key});
@@ -138,7 +140,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                 labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                 tabs: [
                   Tab(text: 'Progress'),
-                  Tab(text: 'Riwayat'),
+                  Tab(text: 'Aktivitas'),
                 ],
               ),
               Container(height: 1, color: AppTheme.surfaceVariant),
@@ -272,141 +274,49 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
 
   Widget _buildActivitiesTab() {
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00B33F)));
-    if (_workouts.isEmpty) return const Center(child: Text('Belum ada aktivitas.', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)));
+    if (_workouts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.directions_run_rounded, size: 64, color: AppTheme.textSecondary.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text('Belum ada aktivitas', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 6),
+            Text('Mulai berlari atau latihan untuk melihat feed-mu!', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: _refreshData,
       color: const Color(0xFF00B33F),
       backgroundColor: AppTheme.surface,
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 100, top: 16),
+        padding: const EdgeInsets.only(bottom: 100),
         itemCount: _workouts.length,
-        itemBuilder: (context, index) => _activityCard(_workouts[index]),
+        itemBuilder: (context, index) {
+          final workout = _workouts[index];
+          return ActivityFeedCard(
+            workout: workout,
+            userName: _userName.isNotEmpty ? _userName : 'Atlet',
+            onRefresh: _loadData,
+          );
+        },
       ),
     );
   }
 
+  // Retained for backward compat (unused but keeps other methods clean)
   Widget _activityCard(Workout workout) {
-    return Dismissible(
-      key: Key(workout.id?.toString() ?? UniqueKey().toString()),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 16, right: 24, left: 24),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFF3400),
-          borderRadius: BorderRadius.circular(26),
-        ),
-        child: const Icon(Icons.delete_rounded, color: Colors.white, size: 30),
-      ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-            title: Text('Hapus Aktivitas?', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-            content: const Text('Aktivitas ini akan dihapus secara permanen.', style: TextStyle(color: Colors.grey)),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
-              TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Hapus', style: TextStyle(color: Color(0xFFFF3400), fontWeight: FontWeight.bold))),
-            ],
-          ),
-        );
-      },
-      onDismissed: (direction) async {
-        if (workout.id != null) {
-          await _db.deleteWorkout(workout.id!);
-          await CloudSyncService.deleteWorkout(workout.id!);
-          _loadData();
-        }
-      },
-      child: InkWell(
-        onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => WorkoutDetailScreen(workout: workout))).then((_) => _loadData());
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceVariant,
-            borderRadius: BorderRadius.circular(26),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(color: AppTheme.surface, shape: BoxShape.circle),
-                        child: Icon(workout.typeIcon, size: 16, color: const Color(0xFFFF5406)),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            workout.title ?? (workout.type == 'running' ? 'Lari' : (workout.type == 'walking' ? 'Jalan' : 'Latihan')),
-                            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
-                          ),
-                          Text(
-                            DateFormat('dd MMM yyyy • HH:mm').format(workout.date),
-                            style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (workout.distance != null && workout.distance! > 0)
-                          _miniCardStat('Jarak', '${workout.distance!.toStringAsFixed(2)} km'),
-                        if (workout.type == 'running')
-                          _miniCardStat('Pace', '${_calcPace(workout)} /km'),
-                        _miniCardStat('Waktu', _formatMins(workout.duration)),
-                      ],
-                    ),
-                  ),
-                  if (workout.polyline != null && workout.polyline!.isNotEmpty) ...[
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: AppTheme.surface.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CustomPaint(
-                          painter: MiniRoutePainter(
-                            _parsePolyline(workout.polyline!),
-                            routeColor: const Color(0xFFFF5406),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ActivityFeedCard(
+      workout: workout,
+      userName: _userName,
+      onRefresh: _loadData,
     );
   }
+
 
   List<LatLng> _parsePolyline(String polylineStr) {
     try {

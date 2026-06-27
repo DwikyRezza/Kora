@@ -23,7 +23,6 @@ class WorkoutDetailMap extends StatefulWidget {
 class _WorkoutDetailMapState extends State<WorkoutDetailMap> {
   BitmapDescriptor? _trackingIcon;
   List<LatLng> _routePoints = [];
-  GoogleMapController? _mapController;
 
   @override
   void initState() {
@@ -153,7 +152,6 @@ class _WorkoutDetailMapState extends State<WorkoutDetailMap> {
                 ),
             },
             onMapCreated: (controller) {
-              _mapController = controller;
               Future.delayed(const Duration(milliseconds: 150), () {
                 double minLat = _routePoints.first.latitude;
                 double maxLat = _routePoints.first.latitude;
