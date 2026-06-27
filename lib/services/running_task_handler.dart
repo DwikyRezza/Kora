@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
@@ -30,16 +30,26 @@ class RunningTaskHandler extends TaskHandler {
 
   StreamSubscription<Position>? _positionStream;
 
+  // ── GPS Watchdog ────────────────────────────────────────────────────────
+  // Deteksi "silent freeze": stream tidak error tapi juga tidak mengirim data.
+  // Sering terjadi saat layar mati di Xiaomi MIUI / Samsung OneUI / ColorOS.
+  Timer? _gpsWatchdog;
+  DateTime? _lastGpsUpdateTime;
+  // Jika tidak ada update GPS selama N detik → anggap freeze → restart stream
+  static const int _kWatchdogTimeoutSeconds = 10;
+
   // ── Lifecycle ──────────────────────────────────────────────────────────
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    print(' [SERVICE] RunningTaskHandler started');
+    print('🚀 [SERVICE] RunningTaskHandler started');
     _handleStart({});
   }
 
   @override
   Future<void> onDestroy(DateTime timestamp) async {
-    print(' [SERVICE] RunningTaskHandler destroyed');
+    print('💀 [SERVICE] RunningTaskHandler destroyed');
+    _gpsWatchdog?.cancel();
+    _gpsWatchdog = null;
     await _positionStream?.cancel();
     _positionStream = null;
   }
@@ -53,9 +63,13 @@ class RunningTaskHandler extends TaskHandler {
     _elapsedSeconds = _elapsedAtPause +
         DateTime.now().difference(_runStartTime!).inSeconds;
 
+    // Cek watchdog setiap tick — restart stream jika GPS freeze terdeteksi
+    _tickWatchdog();
+
     // Update notifikasi setiap detik — format: Durasi · Jarak · Pace
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km · ${_buildPaceStr()} /km',
+      notificationTitle:
+          'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km · ${_buildPaceStr()} /km',
       notificationText: '',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
@@ -80,7 +94,7 @@ class RunningTaskHandler extends TaskHandler {
   // ── Terima perintah dari Flutter UI ───────────────────────────────────
   @override
   void onReceiveData(Object data) {
-    print(' [SERVICE] Received: $data');
+    print('📨 [SERVICE] Received: $data');
     if (data is! Map) return;
     final cmd = data['command'] as String?;
     switch (cmd) {
@@ -101,7 +115,7 @@ class RunningTaskHandler extends TaskHandler {
 
   @override
   void onNotificationButtonPressed(String id) {
-    print(' [SERVICE] Button: $id');
+    print('🔘 [SERVICE] Button: $id');
     if (id == 'pause_btn') {
       _handlePause();
       FlutterForegroundTask.sendDataToMain({'type': 'pause_from_notif'});
@@ -138,6 +152,7 @@ class RunningTaskHandler extends TaskHandler {
     _splits.clear();
     _routePoints.clear();
     _lastValidPosition = null;
+    _lastGpsUpdateTime = null;
     print('▶️ [SERVICE] Run started');
     _startGpsStream();
   }
@@ -146,9 +161,12 @@ class RunningTaskHandler extends TaskHandler {
     _isRunning = false;
     _elapsedAtPause = _elapsedSeconds; // Simpan elapsed saat ini sebelum pause
     _runStartTime = null; // Reset agar onRepeatEvent skip
+    _gpsWatchdog?.cancel();
+    _gpsWatchdog = null;
     print('⏸️ [SERVICE] Paused at ${_elapsedSeconds}s, dist: ${_distanceKm.toStringAsFixed(3)} km');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Paused · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationTitle:
+          'Paused · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
       notificationText: '',
       notificationButtons: const [
         NotificationButton(id: 'resume_btn', text: 'Resume'),
@@ -162,10 +180,14 @@ class RunningTaskHandler extends TaskHandler {
     // lalu elapsed final = _elapsedAtPause + diff(now, _runStartTime)
     _runStartTime = DateTime.now();
     _isRunning = true;
-    _lastValidPosition = null; // Reset agar tidak ada lompatan jarak saat resume
+    // Reset agar tidak ada lompatan jarak saat resume
+    _lastValidPosition = null;
+    // Reset watchdog agar tidak langsung trigger restart
+    _lastGpsUpdateTime = DateTime.now();
     print('▶️ [SERVICE] Resumed, elapsed so far: ${_elapsedAtPause}s');
     FlutterForegroundTask.updateService(
-      notificationTitle: 'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationTitle:
+          'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
       notificationText: '',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
@@ -176,6 +198,8 @@ class RunningTaskHandler extends TaskHandler {
 
   void _handleStop() {
     _isRunning = false;
+    _gpsWatchdog?.cancel();
+    _gpsWatchdog = null;
     print(
         '⏹️ [SERVICE] Stopped. dist: ${_distanceKm.toStringAsFixed(3)} km, points: ${_routePoints.length}');
     FlutterForegroundTask.sendDataToMain({
@@ -190,17 +214,42 @@ class RunningTaskHandler extends TaskHandler {
     });
   }
 
+  // ─── GPS Stream (PERBAIKAN UTAMA) ─────────────────────────────────────
+
   void _startGpsStream() {
     _positionStream?.cancel();
-    print(' [SERVICE] Starting GPS stream...');
+    _gpsWatchdog?.cancel();
+    _gpsWatchdog = null;
+    print('📡 [SERVICE] Starting GPS stream...');
 
-    // Gunakan AndroidSettings tanpa ForegroundNotificationConfig
-    // karena notifikasi sudah dihandle oleh FlutterForegroundTask
     final locationSettings = AndroidSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 1,
       intervalDuration: const Duration(seconds: 1),
-      forceLocationManager: false,
+
+      // ── KRITIS #1: forceLocationManager = true ──────────────────────────
+      // Bypass Fused Location Provider (FLP) dan langsung ke LocationManager
+      // hardware (GPS/GNSS chip). FLP bisa dibekukan Doze Mode, sedangkan
+      // LocationManager jauh lebih tahan terhadap agresivitas baterai
+      // MIUI (Xiaomi), OneUI (Samsung), dan ColorOS (Oppo/Realme).
+      forceLocationManager: true,
+
+      // ── KRITIS #2: useMSLAltitude = true ───────────────────────────────
+      // Gunakan Mean Sea Level altitude agar data elevasi/ketinggian akurat
+      useMSLAltitude: true,
+
+      // ── KRITIS #3: foregroundNotificationConfig ─────────────────────────
+      // Memberitahu Android 12+ bahwa update lokasi ini terkait foreground
+      // service yang sudah aktif. Tanpa ini sistem bisa throttle/freeze
+      // update lokasi saat background meski foreground service jalan.
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationText: 'GPS lari aktif — jangan matikan',
+        notificationTitle: 'Kora GPS',
+        // Tap notifikasi → buka app
+        enableLaunchIntent: true,
+        // setOngoing agar notifikasi GPS tidak bisa di-dismiss
+        setOngoing: true,
+      ),
     );
 
     _positionStream = Geolocator.getPositionStream(
@@ -209,14 +258,60 @@ class RunningTaskHandler extends TaskHandler {
       _onPositionUpdate,
       onError: (e) {
         print('❌ [SERVICE] GPS error: $e');
+        // Auto-restart stream setelah error dengan backoff 3 detik
         Future.delayed(const Duration(seconds: 3), _startGpsStream);
       },
       cancelOnError: false,
     );
-    print('✅ [SERVICE] GPS stream started');
+
+    // Mulai watchdog timer setelah stream berjalan
+    _startGpsWatchdog();
+    print('✅ [SERVICE] GPS stream started (forceLocationManager=true)');
   }
 
+  // ─── GPS Watchdog ──────────────────────────────────────────────────────
+
+  /// Mulai watchdog timer periodik.
+  /// Jika tidak ada update GPS selama [_kWatchdogTimeoutSeconds] detik,
+  /// stream dianggap freeze secara diam-diam dan akan di-restart otomatis.
+  void _startGpsWatchdog() {
+    _gpsWatchdog?.cancel();
+    _lastGpsUpdateTime = DateTime.now();
+    _gpsWatchdog = Timer.periodic(
+      const Duration(seconds: _kWatchdogTimeoutSeconds),
+      (_) {
+        if (!_isRunning) return;
+        final lastUpdate = _lastGpsUpdateTime;
+        if (lastUpdate == null) return;
+        final secondsSinceUpdate =
+            DateTime.now().difference(lastUpdate).inSeconds;
+        if (secondsSinceUpdate >= _kWatchdogTimeoutSeconds) {
+          print(
+            '🐕 [WATCHDOG] GPS freeze! ${secondsSinceUpdate}s tanpa update. '
+            'Restart stream...',
+          );
+          // Reset anchor agar tidak ada garis lurus saat GPS aktif kembali
+          _lastValidPosition = null;
+          _startGpsStream();
+        }
+      },
+    );
+  }
+
+  /// Dipanggil setiap tick onRepeatEvent saat running.
+  /// Jika watchdog tidak aktif (misal setelah resume), hidupkan kembali.
+  void _tickWatchdog() {
+    if (_gpsWatchdog == null || !_gpsWatchdog!.isActive) {
+      _startGpsWatchdog();
+    }
+  }
+
+  // ─── Position Update ──────────────────────────────────────────────────
+
   void _onPositionUpdate(Position position) {
+    // Update watchdog timestamp setiap kali dapat data GPS
+    _lastGpsUpdateTime = DateTime.now();
+
     // Selalu kirim lokasi ke UI (untuk update marker di peta)
     FlutterForegroundTask.sendDataToMain({
       'type': 'location',
@@ -246,7 +341,8 @@ class RunningTaskHandler extends TaskHandler {
         _lastAltitude = position.altitude;
         _maxElevation = position.altitude;
       }
-      print('[SERVICE] First point recorded: ${position.latitude}, ${position.longitude}, acc=${position.accuracy}m');
+      print(
+          '[SERVICE] First point recorded: ${position.latitude}, ${position.longitude}, acc=${position.accuracy}m');
       return;
     }
 
@@ -259,9 +355,12 @@ class RunningTaskHandler extends TaskHandler {
     final segmentDistanceKm = segmentDistanceM / 1000.0;
 
     if (segmentDistanceM >= 200.0) {
-      // GPS teleport — update last position but don't add distance
-      print('⚠️ [SERVICE] GPS teleport: ${segmentDistanceM.toStringAsFixed(0)}m — skipped');
-      _lastValidPosition = position;
+      // GPS teleport (sering terjadi saat layar menyala setelah freeze)
+      // Reset _lastValidPosition ke null sehingga titik berikutnya dianggap
+      // "titik pertama baru" — mencegah garis lurus di peta.
+      print(
+          '⚠️ [SERVICE] GPS teleport: ${segmentDistanceM.toStringAsFixed(0)}m — reset anchor');
+      _lastValidPosition = null;
       return;
     }
 
@@ -270,7 +369,8 @@ class RunningTaskHandler extends TaskHandler {
       _distanceKm += segmentDistanceKm;
       _movingSeconds++;
       _lastValidPosition = position;
-      print('✅ [SERVICE] +${segmentDistanceM.toStringAsFixed(1)}m, total: ${(_distanceKm * 1000).toStringAsFixed(0)}m, acc:${position.accuracy.toStringAsFixed(0)}m');
+      print(
+          '✅ [SERVICE] +${segmentDistanceM.toStringAsFixed(1)}m, total: ${(_distanceKm * 1000).toStringAsFixed(0)}m, acc:${position.accuracy.toStringAsFixed(0)}m');
 
       // Elevation
       if (_lastAltitude > -9000 && position.altitude != 0) {

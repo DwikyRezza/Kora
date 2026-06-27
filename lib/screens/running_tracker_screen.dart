@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -409,7 +409,10 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   Future<void> _initGps() async {
     LocationService.initialize();
     try {
-      await LocationService.requestPermissions();
+      // context diperlukan untuk dialog edukatif battery optimization
+      if (mounted) {
+        await LocationService.requestPermissions(context);
+      }
     } catch (e) {
       debugPrint('⚠️ Permission error: $e');
     }
