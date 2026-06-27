@@ -15,8 +15,6 @@ class LocationService {
         // MAX agar notifikasi tidak bisa dikuburkan oleh OS / MIUI / OneUI
         channelImportance: NotificationChannelImportance.MAX,
         priority: NotificationPriority.MAX,
-        // isSticky = true → notifikasi ONGOING, tidak bisa di-swipe user maupun sistem
-        isSticky: true,
         // Matikan suara & getar agar OS tidak throttle/rate-limit notifikasi ini
         enableVibration: false,
         playSound: false,

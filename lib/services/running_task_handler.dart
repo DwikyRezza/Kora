@@ -245,8 +245,9 @@ class RunningTaskHandler extends TaskHandler {
       foregroundNotificationConfig: const ForegroundNotificationConfig(
         notificationText: 'GPS lari aktif — jangan matikan',
         notificationTitle: 'Kora GPS',
-        // Tap notifikasi → buka app
-        enableLaunchIntent: true,
+        // WakeLock & WifiLock agar CPU/WiFi tetap aktif saat layar mati
+        enableWakeLock: true,
+        enableWifiLock: true,
         // setOngoing agar notifikasi GPS tidak bisa di-dismiss
         setOngoing: true,
       ),
