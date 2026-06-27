@@ -244,27 +244,16 @@ class RunningTaskHandler extends TaskHandler {
       // ── KRITIS #1: forceLocationManager = true ──────────────────────────
       // Bypass Fused Location Provider (FLP) dan langsung ke LocationManager
       // hardware (GPS/GNSS chip). FLP bisa dibekukan Doze Mode, sedangkan
-      // LocationManager jauh lebih tahan terhadap agresivitas baterai
-      // MIUI (Xiaomi), OneUI (Samsung), dan ColorOS (Oppo/Realme).
+      // LocationManager jauh lebih tahan terhadap agresivitas baterai.
       forceLocationManager: true,
 
-      // ── KRITIS #2: useMSLAltitude = true ───────────────────────────────
       // Gunakan Mean Sea Level altitude agar data elevasi/ketinggian akurat
       useMSLAltitude: true,
-
-      // ── KRITIS #3: foregroundNotificationConfig ─────────────────────────
-      // Memberitahu Android 12+ bahwa update lokasi ini terkait foreground
-      // service yang sudah aktif. Tanpa ini sistem bisa throttle/freeze
-      // update lokasi saat background meski foreground service jalan.
-      foregroundNotificationConfig: ForegroundNotificationConfig(
-        notificationText: 'GPS lari $_userName aktif',
-        notificationTitle: 'Kora GPS',
-        // WakeLock & WifiLock agar CPU/WiFi tetap aktif saat layar mati
-        enableWakeLock: true,
-        enableWifiLock: true,
-        // setOngoing agar notifikasi GPS tidak bisa di-dismiss
-        setOngoing: true,
-      ),
+      
+      // CATATAN PENTING: Jangan gunakan foregroundNotificationConfig di sini!
+      // Karena kita sudah menggunakan flutter_foreground_task sebagai pengelola
+      // foreground service. Memaksa Geolocator membuat foreground service kedua
+      // tanpa deklarasi di AndroidManifest akan menyebabkan crash seketika!
     );
 
     _positionStream = Geolocator.getPositionStream(
