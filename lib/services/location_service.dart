@@ -19,13 +19,7 @@ class LocationService {
         enableVibration: false,
         playSound: false,
         showWhen: false,
-        // Tampil di atas lockscreen — penting untuk Xiaomi MIUI
         visibility: NotificationVisibility.VISIBILITY_PUBLIC,
-        iconData: const NotificationIconData(
-          resType: ResourceType.drawable,
-          resPrefix: ResourcePrefix.ic,
-          name: 'stat_logo',
-        ),
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: false,

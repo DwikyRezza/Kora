@@ -86,6 +86,10 @@
             android:exported="false"
             android:stopWithTask="false"
             android:directBootAware="true" />
+            
+        <meta-data
+            android:name="com.pravera.flutter_foreground_task.default_icon"
+            android:resource="@drawable/ic_stat_logo" />
 
 
         <!-- Don't delete the meta-data below.
