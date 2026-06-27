@@ -394,8 +394,6 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                   child: _buildDynamicMetrics(),
                 ),
                 SizedBox(height: 32),
-                _build7DayBarChart(),
-                SizedBox(height: 32),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: _buildSummaryCard(),
@@ -475,7 +473,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Filter pills: Run | Walk ─────────────────────────────────
+              // ── Filter pills: Run | Walk | Lift ─────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Row(
@@ -490,6 +488,12 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                       label: 'Jalan',
                       icon: Icons.directions_walk_rounded,
                       key: 'walk',
+                    ),
+                    const SizedBox(width: 10),
+                    _buildProgressPill(
+                      label: 'Angkat Beban',
+                      icon: Icons.fitness_center_rounded,
+                      key: 'lift',
                     ),
                   ],
                 ),
@@ -593,17 +597,25 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
     final monthStart = DateFormat('MMM d').format(thisMonday);
     final yearEnd = DateFormat('MMM d, yyyy').format(thisSunday);
 
-    // Hitung total jarak & durasi minggu ini dari _weekWorkouts
-    final m = _computeWeekMetrics();
-    final distStr = m.distance < 0.01
-        ? '0 km'
-        : '${m.distance.toStringAsFixed(2)} km';
+    // Hitung total metrik khusus untuk filter progress minggu ini
+    final m = _computeProgressWeekMetrics();
+    
+    // Format metrik Jarak / Volume
+    final String firstLabel = _progressFilter == 'lift' ? 'Volume' : 'Distance';
+    final String firstVal = _progressFilter == 'lift'
+        ? (m.volume > 999 ? '${(m.volume / 1000).toStringAsFixed(1)}k kg' : '${m.volume.round()} kg')
+        : (m.distance < 0.01 ? '0 km' : '${m.distance.toStringAsFixed(2)} km');
+
+    // Format Durasi
     final timeStr = m.duration < 1
         ? '0m'
         : m.duration >= 60
             ? '${(m.duration ~/ 60)}h ${(m.duration % 60).round()}m'
             : '${m.duration.round()}m';
-    final elevStr = '${m.elevation.round()} m';
+
+    // Format metrik Elevasi / Jumlah Set
+    final String thirdLabel = _progressFilter == 'lift' ? 'Total Set' : 'Elev Gain';
+    final String thirdVal = _progressFilter == 'lift' ? '${m.sets}' : '${m.elevation.round()} m';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -622,11 +634,11 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              _progressStatItem('Distance', distStr),
+              _progressStatItem(firstLabel, firstVal),
               const SizedBox(width: 24),
               _progressStatItem('Time', timeStr),
               const SizedBox(width: 24),
-              _progressStatItem('Elev Gain', elevStr),
+              _progressStatItem(thirdLabel, thirdVal),
             ],
           ),
         ],
@@ -668,11 +680,24 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
     }
 
     // Nilai max untuk skala Y
-    final maxKm = _twelveWeekData.fold(0.0,
+    final maxVal = _twelveWeekData.fold(0.0,
         (m, p) => p.distanceKm > m ? p.distanceKm : m);
-    final yMax = maxKm < 1.0 ? 2.0 : (maxKm * 1.4).ceilToDouble();
-    // Y-axis labels: 0, yMax/2, yMax — dibulatkan ke 0.5 terdekat
+    final yMax = _progressFilter == 'lift'
+        ? (maxVal < 10.0 ? 200.0 : (maxVal * 1.35).ceilToDouble())
+        : (maxVal < 1.0 ? 2.0 : (maxVal * 1.4).ceilToDouble());
+    // Y-axis labels: 0, yMax/2, yMax
     final yMid = (yMax / 2).roundToDouble();
+
+    // Helper untuk format label/tooltip
+    String formatVal(double v) {
+      if (_progressFilter == 'lift') {
+        if (v >= 1000) {
+          return '${(v / 1000).toStringAsFixed(1)}k kg';
+        }
+        return '${v.round()} kg';
+      }
+      return '${v.toStringAsFixed(v == v.truncate() ? 0 : 1)} km';
+    }
 
     // Buat spot untuk LineChart
     final spots = List.generate(
@@ -775,7 +800,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                       getTooltipColor: (_) => AppTheme.surfaceVariant,
                       getTooltipItems: (spots) => spots.map((s) {
                         return LineTooltipItem(
-                          '${s.y.toStringAsFixed(2)} km',
+                          formatVal(s.y),
                           const TextStyle(
                               color: Color(0xFFFF5406),
                               fontWeight: FontWeight.bold,
@@ -818,26 +843,26 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
               ),
             ),
 
-            // ── Y-axis labels di kanan (0 km, yMid km, yMax km) ──────────
+            // ── Y-axis labels di kanan (0 km, yMid, yMax) ──────────
             Positioned(
               right: 0,
               top: 0,
               bottom: 28,
-              width: 48,
+              width: 52,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '${yMax.toStringAsFixed(yMax == yMax.truncate() ? 0 : 1)} km',
+                    formatVal(yMax),
                     style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    '${yMid.toStringAsFixed(yMid == yMid.truncate() ? 0 : 1)} km',
+                    formatVal(yMid),
                     style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500),
                   ),
                   Text(
-                    '0 km',
+                    formatVal(0),
                     style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500),
                   ),
                 ],
