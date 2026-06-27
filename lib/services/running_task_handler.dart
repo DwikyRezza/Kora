@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── Entry point — HARUS top-level function ───────────────────────────────
 @pragma('vm:entry-point')
@@ -38,10 +39,23 @@ class RunningTaskHandler extends TaskHandler {
   // Jika tidak ada update GPS selama N detik → anggap freeze → restart stream
   static const int _kWatchdogTimeoutSeconds = 10;
 
+  String _userName = 'Pelari';
+
+  Future<void> _loadUserName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _userName = prefs.getString('user_name') ?? 'Pelari';
+      print('👤 [SERVICE] Loaded username: $_userName');
+    } catch (e) {
+      print('⚠️ [SERVICE] Failed to load username: $e');
+    }
+  }
+
   // ── Lifecycle ──────────────────────────────────────────────────────────
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     print('🚀 [SERVICE] RunningTaskHandler started');
+    await _loadUserName();
     _handleStart({});
   }
 
@@ -66,11 +80,11 @@ class RunningTaskHandler extends TaskHandler {
     // Cek watchdog setiap tick — restart stream jika GPS freeze terdeteksi
     _tickWatchdog();
 
-    // Update notifikasi setiap detik — format: Durasi · Jarak · Pace
+    // Update notifikasi setiap detik — format: Nama User · Durasi · Jarak
     FlutterForegroundTask.updateService(
       notificationTitle:
-          'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km · ${_buildPaceStr()} /km',
-      notificationText: '',
+          '$_userName · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: 'Pace: ${_buildPaceStr()} /km',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
         NotificationButton(id: 'finish_btn', text: 'Stop'),
@@ -166,8 +180,8 @@ class RunningTaskHandler extends TaskHandler {
     print('⏸️ [SERVICE] Paused at ${_elapsedSeconds}s, dist: ${_distanceKm.toStringAsFixed(3)} km');
     FlutterForegroundTask.updateService(
       notificationTitle:
-          'Paused · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
-      notificationText: '',
+          '$_userName (Paused) · ${_formattedTime()}',
+      notificationText: '${_distanceKm.toStringAsFixed(2)} km',
       notificationButtons: const [
         NotificationButton(id: 'resume_btn', text: 'Resume'),
         NotificationButton(id: 'finish_btn', text: 'Stop'),
@@ -187,8 +201,8 @@ class RunningTaskHandler extends TaskHandler {
     print('▶️ [SERVICE] Resumed, elapsed so far: ${_elapsedAtPause}s');
     FlutterForegroundTask.updateService(
       notificationTitle:
-          'Run · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
-      notificationText: '',
+          '$_userName · ${_formattedTime()} · ${_distanceKm.toStringAsFixed(2)} km',
+      notificationText: 'Pace: ${_buildPaceStr()} /km',
       notificationButtons: const [
         NotificationButton(id: 'pause_btn', text: 'Pause'),
         NotificationButton(id: 'finish_btn', text: 'Stop'),
@@ -242,8 +256,8 @@ class RunningTaskHandler extends TaskHandler {
       // Memberitahu Android 12+ bahwa update lokasi ini terkait foreground
       // service yang sudah aktif. Tanpa ini sistem bisa throttle/freeze
       // update lokasi saat background meski foreground service jalan.
-      foregroundNotificationConfig: const ForegroundNotificationConfig(
-        notificationText: 'GPS lari aktif — jangan matikan',
+      foregroundNotificationConfig: ForegroundNotificationConfig(
+        notificationText: 'GPS lari $_userName aktif',
         notificationTitle: 'Kora GPS',
         // WakeLock & WifiLock agar CPU/WiFi tetap aktif saat layar mati
         enableWakeLock: true,

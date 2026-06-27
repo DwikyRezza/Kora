@@ -55,11 +55,12 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
   };
 
   // ── Apple Fitness-style progress section state ───────────────────────────
-  // 'run' | 'walk'
+  // 'run' | 'walk' | 'lift'
   String _progressFilter = 'run';
   // 12 data points — satu per minggu, 12 minggu ke belakang
   List<_WeekPoint> _twelveWeekData = [];
   bool _twelveWeekLoading = true;
+  List<Workout> _currentWeekWorkouts = [];
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
   @override
@@ -187,36 +188,54 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         Duration(days: (todayMidnight.weekday - 1) % 7));
 
     final List<_WeekPoint> points = [];
+    List<Workout> currentWkList = [];
     for (int w = 11; w >= 0; w--) {
       final weekStart = thisMonday.subtract(Duration(days: w * 7));
       final weekEnd = weekStart
           .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
 
-      final dbType = (_progressFilter == 'walk') ? null : 'running';
+      final dbType = (_progressFilter == 'lift')
+          ? 'weightlifting'
+          : ((_progressFilter == 'walk') ? null : 'running');
       final workouts = await _db.getWorkoutsByDateRange(
         start: weekStart,
         end: weekEnd,
         type: dbType,
       );
 
-      double distKm = 0;
+      if (w == 0) {
+        currentWkList = workouts;
+      }
+
+      double val = 0;
       for (final wk in workouts) {
         if (_progressFilter == 'walk') {
           // Hanya hitung sesi running berjarak pendek sebagai walking
           if (wk.type == 'running' && (wk.distance ?? 0) <= 2.0) {
-            distKm += wk.distance ?? 0;
+            val += wk.distance ?? 0;
           }
-        } else {
-          distKm += wk.distance ?? 0;
+        } else if (_progressFilter == 'run') {
+          // Hanya hitung sesi running berjarak jauh sebagai running
+          if (wk.type == 'running' && (wk.distance ?? 0) > 2.0) {
+            val += wk.distance ?? 0;
+          }
+        } else if (_progressFilter == 'lift') {
+          // Hitung volume latihan beban untuk angkat beban
+          if (wk.type == 'weightlifting') {
+            double vol = (wk.weight ?? 0) * (wk.reps ?? 0) * (wk.sets ?? 1);
+            if (vol == 0) vol = wk.weight ?? 0;
+            val += vol;
+          }
         }
       }
 
-      points.add(_WeekPoint(weekStart: weekStart, distanceKm: distKm));
+      points.add(_WeekPoint(weekStart: weekStart, distanceKm: val));
     }
 
     if (mounted) {
       setState(() {
         _twelveWeekData = points;
+        _currentWeekWorkouts = currentWkList;
         _twelveWeekLoading = false;
       });
     }
@@ -306,6 +325,40 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         elevation += w.elevationGain ?? 0;
         volume += (w.weight ?? 0) * (w.reps ?? 0) * (w.sets ?? 1);
         sets += w.sets ?? 0;
+      }
+    }
+    return _WeekMetrics(
+        distance: distance,
+        duration: duration,
+        elevation: elevation,
+        volume: volume,
+        sets: sets.round());
+  }
+
+  _WeekMetrics _computeProgressWeekMetrics() {
+    double distance = 0, duration = 0, elevation = 0;
+    double volume = 0, sets = 0;
+    for (final w in _currentWeekWorkouts) {
+      if (_progressFilter == 'walk') {
+        if (w.type == 'running' && (w.distance ?? 0) <= 2.0) {
+          distance += w.distance ?? 0;
+          duration += w.duration;
+          elevation += w.elevationGain ?? 0;
+        }
+      } else if (_progressFilter == 'run') {
+        if (w.type == 'running' && (w.distance ?? 0) > 2.0) {
+          distance += w.distance ?? 0;
+          duration += w.duration;
+          elevation += w.elevationGain ?? 0;
+        }
+      } else if (_progressFilter == 'lift') {
+        if (w.type == 'weightlifting') {
+          double vol = (w.weight ?? 0) * (w.reps ?? 0) * (w.sets ?? 1);
+          if (vol == 0) vol = w.weight ?? 0;
+          volume += vol;
+          duration += w.duration;
+          sets += w.sets ?? 0;
+        }
       }
     }
     return _WeekMetrics(

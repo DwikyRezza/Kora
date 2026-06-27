@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'setting_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
@@ -9,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/workout.dart';
 import '../services/database_helper.dart';
 import '../services/location_service.dart';
+import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/social_service.dart';
 import '../utils/responsive.dart';
@@ -409,6 +412,16 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
   Future<void> _initGps() async {
     LocationService.initialize();
     try {
+      // Simpan nama user ke SharedPreferences agar bisa dibaca background service
+      try {
+        final profile = await ProfileService.getProfile();
+        final name = profile[ProfileService.keyName] as String? ?? 'Pelari';
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_name', name);
+      } catch (err) {
+        debugPrint('⚠️ Gagal menyimpan nama user ke SharedPreferences: $err');
+      }
+
       // context diperlukan untuk dialog edukatif battery optimization
       if (mounted) {
         await LocationService.requestPermissions(context);
