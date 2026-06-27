@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -134,18 +134,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         backgroundColor: AppTheme.surface,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.bar_chart, color: AppTheme.textPrimary, size: 28),
-            tooltip: 'Laporan Mingguan',
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => const WeeklyReportScreen(),
-              ));
-            },
-          ),
-          SizedBox(width: 16),
-        ],
+        actions: [],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(

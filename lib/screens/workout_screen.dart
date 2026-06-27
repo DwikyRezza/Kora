@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -12,6 +12,7 @@ import 'workout_setup_screen.dart';
 import 'workout_detail_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
+import 'weekly_report_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
   WorkoutScreen({super.key});
@@ -147,7 +148,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildProgressTab(),
+          const WeeklyReportScreen(embedMode: true),
           _buildActivitiesTab(),
         ],
       ),

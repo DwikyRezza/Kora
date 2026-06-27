@@ -13,7 +13,8 @@ import '../services/database_helper.dart';
 import '../services/profile_service.dart';
 
 class WeeklyReportScreen extends StatefulWidget {
-  const WeeklyReportScreen({super.key});
+  final bool embedMode;
+  const WeeklyReportScreen({super.key, this.embedMode = false});
 
   @override
   State<WeeklyReportScreen> createState() => _WeeklyReportScreenState();
@@ -320,6 +321,65 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
   // ═══════════════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
+    final bodyWidget = _isLoading
+        ? const Center(
+            child: CircularProgressIndicator(color: Color(0xFFFF5406)))
+        : SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Apple Fitness-style Progress Section ─────────────────
+                _buildAppleFitnessProgressSection(),
+                Divider(height: 1, thickness: 1, color: AppTheme.divider),
+                SizedBox(height: 24),
+                // ── Existing Sections ─────────────────────────────────────
+                _buildFilterChips(),
+                SizedBox(height: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildDynamicMetrics(),
+                ),
+                SizedBox(height: 32),
+                _build7DayBarChart(),
+                SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildSummaryCard(),
+                ),
+                SizedBox(height: 32),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Screenshot(
+                    controller: _screenshotController,
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(26),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildStreakHero(),
+                          SizedBox(height: 24),
+                          _buildAiryFireGrid(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 32),
+                _buildMonthlyLinearChart(),
+                SizedBox(height: 32),
+                _buildAssistantEvaluation(),
+              ],
+            ),
+          );
+
+    if (widget.embedMode) {
+      return bodyWidget;
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       appBar: AppBar(
@@ -345,60 +405,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
           SizedBox(width: 8),
         ],
       ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF5406)))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Apple Fitness-style Progress Section ─────────────────
-                  _buildAppleFitnessProgressSection(),
-                  Divider(height: 1, thickness: 1, color: AppTheme.divider),
-                  SizedBox(height: 24),
-                  // ── Existing Sections ─────────────────────────────────────
-                  _buildFilterChips(),
-                  SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: _buildDynamicMetrics(),
-                  ),
-                  SizedBox(height: 32),
-                  _build7DayBarChart(),
-                  SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: _buildSummaryCard(),
-                  ),
-                  SizedBox(height: 32),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Screenshot(
-                      controller: _screenshotController,
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(26),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildStreakHero(),
-                            SizedBox(height: 24),
-                            _buildAiryFireGrid(),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 32),
-                  _buildMonthlyLinearChart(),
-                  SizedBox(height: 32),
-                  _buildAssistantEvaluation(),
-                ],
-              ),
-            ),
+      body: bodyWidget,
     );
   }
 
