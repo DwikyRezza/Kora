@@ -567,9 +567,11 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
   }
 
   Widget _buildCustomPaintRoute(List<LatLng> routePoints) {
-    return CustomPaint(
-      size: Size.infinite,
-      painter: MiniRoutePainter(routePoints),
+    return RepaintBoundary(
+      child: CustomPaint(
+        size: Size.infinite,
+        painter: MiniRoutePainter(routePoints),
+      ),
     );
   }
 

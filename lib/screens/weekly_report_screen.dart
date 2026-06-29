@@ -743,7 +743,8 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
             // ── LineChart ─────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.only(right: 44),
-              child: LineChart(
+              child: RepaintBoundary(
+                child: LineChart(
                 LineChartData(
                   minX: 0,
                   maxX: maxX,
@@ -855,6 +856,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                     ),
                   ],
                 ),
+              ),
               ),
             ),
 

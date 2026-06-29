@@ -199,6 +199,7 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
               // ── FOOTER: INTERAKSI SOSIAL ─────────────────────────────────
               _buildSocialFooter(),
             ],
+            ),
           ),
         ),
       ),
@@ -357,12 +358,14 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
         children: [
           Positioned.fill(
               child: ClipRect(
-                child: CustomPaint(
-                  painter: MiniRoutePainter(
-                    routePoints.cast(),
-                    routeColor: const Color(0xFFFF5406),
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: MiniRoutePainter(
+                      routePoints.cast(),
+                      routeColor: const Color(0xFFFF5406),
+                    ),
+                    child: Container(),
                   ),
-                  child: Container(),
                 ),
               ),
             ),
@@ -380,8 +383,7 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
 
