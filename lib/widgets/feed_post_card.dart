@@ -152,7 +152,17 @@ class _FeedPostCardState extends State<FeedPostCard> {
     );
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => WorkoutDetailScreen(workout: workout)),
+      MaterialPageRoute(
+        builder: (_) => WorkoutDetailScreen(
+          workout: workout,
+          postId: widget.post['postId'] as String?,
+          likedBy: widget.post['likedBy'] as List<dynamic>?,
+          commentsCount: widget.post['commentsCount'] as int?,
+          authorName: _authorName,
+          authorPhotoUrl: _photoUrl,
+          authorUid: widget.post['uid'] as String?,
+        ),
+      ),
     );
   }
 

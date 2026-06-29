@@ -133,8 +133,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     await _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _isLoading = true);
+    }
     final today = DateTime.now();
     try {
       await _db.checkLateSchedules();
@@ -772,7 +774,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ..._feedPosts.map((post) {
             return FeedPostCard(
               post: post,
-              onDataChanged: () => _loadData(),
+              onDataChanged: () => _loadData(silent: true),
             );
           }),
       ],

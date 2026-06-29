@@ -4,17 +4,26 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/workout.dart';
 import '../../theme/app_theme.dart';
+import '../../services/auth_service.dart';
+import '../../services/social_service.dart';
+import '../comment_bottom_sheet.dart';
 
 class WorkoutDetailHeader extends StatefulWidget {
   final Workout workout;
   final String userName;
   final String? userPhotoUrl;
+  final String? postId;
+  final List<dynamic>? likedBy;
+  final int? commentsCount;
 
   const WorkoutDetailHeader({
     super.key,
     required this.workout,
     required this.userName,
     this.userPhotoUrl,
+    this.postId,
+    this.likedBy,
+    this.commentsCount,
   });
 
   @override
@@ -23,7 +32,53 @@ class WorkoutDetailHeader extends StatefulWidget {
 
 class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
   bool _isLiked = false;
-  int _likesCount = 0; // Starts at 0 until social sync is implemented
+  int _likesCount = 0;
+  bool _isLiking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.postId != null) {
+      final currentUid = AuthService.uid;
+      final likedBy = widget.likedBy ?? [];
+      _isLiked = likedBy.contains(currentUid);
+      _likesCount = likedBy.length;
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    if (widget.postId == null || _isLiking) return;
+
+    setState(() {
+      _isLiking = true;
+      if (_isLiked) {
+        _likesCount--;
+      } else {
+        _likesCount++;
+      }
+      _isLiked = !_isLiked;
+    });
+
+    final likedBy = widget.likedBy ?? [];
+    await SocialService.toggleLike(widget.postId!, likedBy);
+    
+    if (mounted) {
+      setState(() => _isLiking = false);
+    }
+  }
+
+  void _showComments() {
+    if (widget.postId == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: CommentBottomSheet(postId: widget.postId!),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +187,7 @@ class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
 
           // ── BARIS 5: SOCIAL BAR (KUDOS & IKON TOMBOL) ────────────────────
           Text(
-            '$_likesCount suka',
+            '$_likesCount suka${(widget.commentsCount ?? 0) > 0 ? ' • ${widget.commentsCount} komentar' : ''}',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -146,18 +201,13 @@ class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
                   icon: _isLiked ? Icons.thumb_up_rounded : Icons.thumb_up_outlined,
                   label: 'Like',
                   color: _isLiked ? const Color(0xFFFF5406) : AppTheme.textSecondary,
-                  onTap: () {
-                    setState(() {
-                      _isLiked = !_isLiked;
-                      _likesCount += _isLiked ? 1 : -1;
-                    });
-                  },
+                  onTap: _toggleLike,
                 ),
                 _socialButton(
                   icon: Icons.chat_bubble_outline_rounded,
                   label: 'Komentar',
                   color: AppTheme.textSecondary,
-                  onTap: () {},
+                  onTap: _showComments,
                 ),
                 _socialButton(
                   icon: Icons.share_outlined,
