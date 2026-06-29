@@ -1,6 +1,55 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image/image.dart' as img;
+import 'package:flutter/foundation.dart';
 import 'database_helper.dart';
 import 'auth_service.dart';
+
+// ── Top-level function required by compute() — must be static/top-level ──
+// This runs on a background Isolate to keep UI thread free from CPU load.
+Future<String?> _cropAndCompressToBase64(Uint8List rawBytes) async {
+  try {
+    final decoded = img.decodeImage(rawBytes);
+    if (decoded == null) return null;
+
+    // Crop to 16:9 aspect ratio
+    final targetWidth = decoded.width;
+    final targetHeight = (decoded.width * 9 ~/ 16);
+    final cropY = ((decoded.height - targetHeight) ~/ 2).clamp(0, decoded.height - 1);
+    final safeHeight = targetHeight.clamp(1, decoded.height - cropY);
+    final cropped = img.copyCrop(decoded, x: 0, y: cropY, width: targetWidth, height: safeHeight);
+
+    // Guarded compression loop
+    int quality = 70;
+    int maxWidth = 600;
+    const int maxIterations = 5;
+    const int qualityFloor = 30;
+    const int widthFloor = 300;
+    const int maxBase64Bytes = 200 * 1024; // 200KB
+
+    for (int i = 0; i < maxIterations; i++) {
+      final resizeWidth = maxWidth.clamp(widthFloor, 600);
+      final resized = img.copyResize(cropped, width: resizeWidth);
+      final jpegBytes = img.encodeJpg(resized, quality: quality);
+      final base64Str = base64Encode(jpegBytes);
+
+      if (base64Str.length <= maxBase64Bytes || quality <= qualityFloor) {
+        // Either small enough or floor reached — accept result
+        return base64Str;
+      }
+
+      // Reduce quality and width for next attempt
+      quality = (quality - 10).clamp(qualityFloor, 100);
+      maxWidth = (maxWidth - 50).clamp(widthFloor, 600);
+    }
+
+    // After max iterations, return last attempt regardless of size
+    final finalResized = img.copyResize(cropped, width: maxWidth.clamp(widthFloor, 600));
+    return base64Encode(img.encodeJpg(finalResized, quality: quality));
+  } catch (_) {
+    return null;
+  }
+}
 
 /// CloudSyncService — Opsi B Strategy
 ///
@@ -330,6 +379,23 @@ class CloudSyncService {
       print('[CloudSync] ✅ Body measurements restored from Firestore');
     } catch (e) {
       print('[CloudSync] ⚠️ Body measurements restore failed: $e');
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MAP SNAPSHOT — Compress & convert to Base64 using background Isolate
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Takes raw PNG bytes from GoogleMapController.takeSnapshot(),
+  /// crops to 16:9, compresses as JPEG, returns a Base64 string.
+  /// Runs entirely on a background Isolate via compute() — zero UI lag.
+  /// Returns null if processing fails (e.g. insufficient route data).
+  static Future<String?> compressMapSnapshotToBase64(Uint8List rawBytes) async {
+    try {
+      return await compute(_cropAndCompressToBase64, rawBytes);
+    } catch (e) {
+      debugPrint('[CloudSync] ⚠️ Map snapshot compression failed: $e');
+      return null;
     }
   }
 

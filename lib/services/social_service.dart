@@ -1,4 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
 import 'notification_service.dart';
 
@@ -211,40 +211,54 @@ class SocialService {
     }
   }
 
-  /// Mengambil Feed Posts (dari orang yang di-follow + diri sendiri)
-  static Future<List<Map<String, dynamic>>> getFeedPosts() async {
-    if (!AuthService.isLoggedIn) return [];
+  /// Mengambil Feed Posts dengan pagination (10 post per halaman)
+  /// [startAfter]: DocumentSnapshot untuk cursor pagination (null = mulai dari awal)
+  static Future<Map<String, dynamic>> getFeedPosts({
+    DocumentSnapshot? startAfter,
+    int limit = 10,
+  }) async {
+    if (!AuthService.isLoggedIn) return {'posts': [], 'lastDoc': null};
     final uid = AuthService.uid;
 
     try {
       // 1. Ambil daftar UID yang kita follow
-      final followingSnap = await _firestore.collection('users').doc(uid).collection('following').get();
-      final List<String> followingUids = followingSnap.docs.map((d) => d.id).toList();
+      final followingSnap = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('following')
+          .get();
+      final List<String> followingUids =
+          followingSnap.docs.map((d) => d.id).toList();
       followingUids.add(uid); // Masukkan post sendiri ke dalam feed
 
-      // Karena Firestore limit query 'in' maksimal 10 elemen,
-      // kita akan mengambil semua post yang terbaru lalu memfilter secara lokal
-      // ATAU mengambil per batch. Untuk kemudahan & skala MVP, kita fetch recent.
-      
-      final postsSnap = await _firestore
+      // 2. Build query dengan orderBy + limit + optional startAfter
+      Query query = _firestore
           .collection('feed_posts')
           .orderBy('timestamp', descending: true)
-          .limit(50)
-          .get();
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final postsSnap = await query.get();
 
       List<Map<String, dynamic>> feed = [];
       for (var doc in postsSnap.docs) {
-        final data = doc.data();
+        final data = doc.data() as Map<String, dynamic>;
         final postUid = data['uid'] as String;
         // Filter: hanya post dari following atau diri sendiri
         if (followingUids.contains(postUid)) {
           feed.add(data);
         }
       }
-      return feed;
+
+      // Return both posts and last document (for next page cursor)
+      final lastDoc = postsSnap.docs.isNotEmpty ? postsSnap.docs.last : null;
+      return {'posts': feed, 'lastDoc': lastDoc};
     } catch (e) {
       print('[SocialService] Error getFeedPosts: $e');
-      return [];
+      return {'posts': [], 'lastDoc': null};
     }
   }
 

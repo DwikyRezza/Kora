@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/social_service.dart';
@@ -9,7 +10,6 @@ import '../screens/workout_detail_screen.dart';
 import '../models/workout.dart';
 import 'comment_bottom_sheet.dart';
 import 'mini_route_painter.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../utils/responsive.dart';
 
@@ -34,6 +34,9 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
   bool _isLiking = false;
   bool _isKeyboardOpen = false;
   
+  // Map snapshot decoded once in initState — never re-decoded in build()
+  Uint8List? _decodedMapSnapshot;
+
   String _authorName = 'Athlete';
   String? _photoUrl;
 
@@ -42,6 +45,7 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initData();
+    _decodeSnapshot();
   }
 
   @override
@@ -68,6 +72,12 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
     if (widget.post != oldWidget.post) {
       _initData();
     }
+    // Only re-decode if the Base64 string itself changed (not just Map reference)
+    final newBase64 = widget.post['workoutData']?['mapSnapshotBase64'] as String?;
+    final oldBase64 = oldWidget.post['workoutData']?['mapSnapshotBase64'] as String?;
+    if (newBase64 != oldBase64) {
+      _decodeSnapshot();
+    }
   }
 
   void _initData() {
@@ -81,6 +91,22 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
     _photoUrl = widget.post['authorPhotoUrl'];
     
     _fetchLatestProfile();
+  }
+
+  /// Decode Base64 snapshot once — stored as Uint8List for Image.memory.
+  /// Uses try-catch so corrupt strings gracefully fallback to CustomPaint.
+  void _decodeSnapshot() {
+    final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
+    final base64Str = workoutData['mapSnapshotBase64'] as String?;
+    if (base64Str == null || base64Str.isEmpty) {
+      _decodedMapSnapshot = null;
+      return;
+    }
+    try {
+      _decodedMapSnapshot = base64Decode(base64Str);
+    } catch (_) {
+      _decodedMapSnapshot = null; // Fallback to CustomPaint on corrupt data
+    }
   }
 
   Future<void> _fetchLatestProfile() async {
@@ -446,13 +472,11 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
   }
 
   Widget _buildMapSnapshot(List<LatLng> routePoints) {
-    if (routePoints.isEmpty) return const SizedBox.shrink();
-
     return Container(
       height: 220,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E), // Dark background for the minimap
+        color: const Color(0xFF1E1E1E),
         border: Border(
           top: BorderSide(color: AppTheme.border, width: 0.5),
           bottom: BorderSide(color: AppTheme.border, width: 0.5),
@@ -461,12 +485,17 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
       child: Stack(
         children: [
           Positioned.fill(
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: MiniRoutePainter(routePoints),
-            ),
+            child: _decodedMapSnapshot != null
+                // ── Show real map snapshot (Image.memory = pure 2D, zero GPU lag) ──
+                ? Image.memory(
+                    _decodedMapSnapshot!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildCustomPaintRoute(routePoints),
+                  )
+                // ── Fallback: 2D route painter (no snapshot yet or corrupt) ──
+                : _buildCustomPaintRoute(routePoints),
           ),
-          // Gradient overlay for better text contrast if needed
+          // Gradient overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -496,6 +525,13 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCustomPaintRoute(List<LatLng> routePoints) {
+    return CustomPaint(
+      size: Size.infinite,
+      painter: MiniRoutePainter(routePoints),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'setting_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
@@ -853,17 +854,39 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
     await DatabaseHelper().insertWorkout(workout);
 
+    // ── Ambil snapshot peta sebagai Base64 (non-blocking via Isolate) ──────
+    String? mapSnapshotBase64;
+    if (_mapController.isCompleted && _routePoints.length > 1) {
+      try {
+        final controller = await _mapController.future;
+        final Uint8List? rawPng = await controller.takeSnapshot();
+        if (rawPng != null) {
+          mapSnapshotBase64 =
+              await CloudSyncService.compressMapSnapshotToBase64(rawPng);
+        }
+      } catch (e) {
+        debugPrint('[RunTracker] ⚠️ takeSnapshot failed: $e');
+      }
+    }
+
+    // Build workout map with optional snapshot
+    final workoutMap = workout.toMap();
+    if (mapSnapshotBase64 != null) {
+      workoutMap['mapSnapshotBase64'] = mapSnapshotBase64;
+    }
+
     // Auto-backup ke Firestore setelah sesi selesai disimpan
     CloudSyncService.backupToCloud().catchError((_) {});
 
-    // Publish ke Social Feed
-    SocialService.publishWorkoutToFeed(workout.toMap()).catchError((_) {});
+    // Publish ke Social Feed (includes map snapshot if available)
+    SocialService.publishWorkoutToFeed(workoutMap).catchError((_) {});
 
     if (mounted) {
-      _showSnackBar('Sesi lari berhasil disimpan! ');
+      _showSnackBar('Sesi lari berhasil disimpan! 🏃');
       Navigator.pop(context);
     }
   }
+
 
   void _showSnackBar(String msg) {
     if (mounted) {

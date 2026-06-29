@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -54,6 +55,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<Map<String, dynamic>> _feedPosts = [];
   bool _isLoadingFeed = true;
 
+  // ── Pagination state ───────────────────────────────────────────────────
+  DocumentSnapshot? _lastFeedDoc;
+  bool _isLoadingMore = false; // Debounce: prevent multiple simultaneous loads
+  bool _hasMoreData = true;   // Flag: false when last page is empty
+  late ScrollController _scrollController;
+
   Timer? _whistleTimer;
 
   double get _totalProteinToday =>
@@ -67,6 +74,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     _whistleTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       _checkWhistleblower();
     });
@@ -75,8 +84,41 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _whistleTimer?.cancel();
     super.dispose();
+  }
+
+  // ── Scroll listener for infinite scrolling ──────────────────────────────
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      _loadMoreFeed();
+    }
+  }
+
+  Future<void> _loadMoreFeed() async {
+    // Debounce: skip if already loading or no more data
+    if (_isLoadingMore || !_hasMoreData) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await SocialService.getFeedPosts(startAfter: _lastFeedDoc);
+      final newPosts = result['posts'] as List<Map<String, dynamic>>;
+      final newLastDoc = result['lastDoc'] as DocumentSnapshot?;
+
+      if (mounted) {
+        setState(() {
+          _feedPosts.addAll(newPosts);
+          _lastFeedDoc = newLastDoc;
+          _hasMoreData = newPosts.isNotEmpty;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
   }
 
   void _checkWhistleblower() async {
@@ -128,9 +170,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _refreshData() async {
+    // Reset pagination state before re-fetching from top
+    _lastFeedDoc = null;
+    _hasMoreData = true;
     try {
       await CloudSyncService.restoreAllFromCloud();
-    } catch (_) {} 
+    } catch (_) {}
     await _loadData();
   }
 
@@ -146,9 +191,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final events = await _db.getScheduleEventsByDate(_selectedScheduleDate);
       final profile = await ProfileService.getProfile();
       final unread = await NotificationService.getUnreadCount();
-      
-      final posts = await SocialService.getFeedPosts();
-      
+
+      // Load first page of feed (always fresh)
+      final feedResult = await SocialService.getFeedPosts();
+      final posts = feedResult['posts'] as List<Map<String, dynamic>>;
+      final lastDoc = feedResult['lastDoc'] as DocumentSnapshot?;
+
       if (mounted) {
         setState(() {
           _todayWorkouts = workouts;
@@ -159,6 +207,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _baseTargetProtein = profile[ProfileService.keyTargetProtein] ?? 0.0;
           _unreadNotifs = unread;
           _feedPosts = posts;
+          _lastFeedDoc = lastDoc;
+          _hasMoreData = posts.isNotEmpty;
           _isLoadingFeed = false;
         });
       }
@@ -207,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           color: const Color(0xFF00B33F),
           backgroundColor: AppTheme.surface,
           child: SingleChildScrollView(
+            controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
@@ -743,7 +794,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ],
         ),
         const SizedBox(height: 24),
-        
+
         if (_isLoadingFeed)
           const Center(child: CircularProgressIndicator(color: Color(0xFF00B33F)))
         else if (_feedPosts.isEmpty)
@@ -772,12 +823,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           )
         else
-          ..._feedPosts.map((post) {
+          ..._feedPosts.asMap().entries.map((entry) {
+            final post = entry.value;
             return FeedPostCard(
+              key: ValueKey(post['postId']),
               post: post,
               onDataChanged: () => _loadData(silent: true),
             );
           }),
+
+        // ── Load More indicator ──────────────────────────────────────────
+        if (_isLoadingMore)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator(color: Color(0xFF00B33F), strokeWidth: 2)),
+          )
+        else if (!_hasMoreData && _feedPosts.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                '— Sudah mencapai akhir —',
+                style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ),
       ],
     );
   }
