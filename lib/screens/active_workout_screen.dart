@@ -735,7 +735,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
             children: [
               Text('RECOVERY',
                   style: TextStyle(
-                      color: const Color(0xFFFFB830),
+                      color: AppTheme.neonGreen,
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 4.0)),
