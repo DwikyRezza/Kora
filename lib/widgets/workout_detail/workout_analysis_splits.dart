@@ -53,7 +53,7 @@ class WorkoutAnalysisSplits extends StatelessWidget {
         barRods: [
           BarChartRodData(
             toY: barHeight,
-            color: const Color(0xFF00A9DD).withOpacity(0.35),
+            color: const Color(0xFFFF5406).withOpacity(0.35),
             width: 16,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(4),
@@ -191,7 +191,7 @@ class WorkoutAnalysisSplits extends StatelessWidget {
                                 value: progress,
                                 minHeight: 12,
                                 backgroundColor: AppTheme.border,
-                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00A9DD)),
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF5406)),
                               ),
                             ),
                           ),

@@ -245,7 +245,7 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
           touchCallback: _handleTouch,
           handleBuiltInTouches: true,
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (spot) => const Color(0xFF00A9DD),
+            getTooltipColor: (spot) => const Color(0xFFFF5406),
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((s) {
                 // If it is the elevation curve, ignore tooltip
@@ -306,7 +306,7 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
           LineChartBarData(
             spots: paceSpots,
             isCurved: true,
-            color: const Color(0xFF00A9DD),
+            color: const Color(0xFFFF5406),
             barWidth: 2,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
@@ -315,8 +315,8 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  const Color(0xFF00A9DD).withOpacity(0.2),
-                  const Color(0xFF00A9DD).withOpacity(0.0),
+                  const Color(0xFFFF5406).withOpacity(0.2),
+                  const Color(0xFFFF5406).withOpacity(0.0),
                 ],
               ),
             ),
@@ -446,12 +446,12 @@ class _WorkoutChartsContainerState extends State<WorkoutChartsContainer> {
     final zLabels = ['Z6', 'Z5', 'Z4', 'Z3', 'Z2', 'Z1'];
     final zRanges = ['< 3:41', '3:41-3:55', '3:55-4:11', '4:11-4:40', '4:40-5:25', '> 5:25'];
     final zColors = [
-      Colors.red[700]!,
-      Colors.red[400]!,
-      Colors.orange[400]!,
-      Colors.yellow[600]!,
-      const Color(0xFF00A9DD),
+      const Color(0xFFFF5406),
+      const Color(0xFFFF9966),
+      const Color(0xFF4DCC60),
       const Color(0xFF00B33F),
+      const Color(0xFF006623),
+      Colors.black87,
     ];
 
     return Padding(

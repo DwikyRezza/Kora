@@ -15,12 +15,12 @@ class WorkoutPaceZones extends StatelessWidget {
 
     final zLabels = ['Z6', 'Z5', 'Z4', 'Z3', 'Z2', 'Z1'];
     final zColors = [
-      Colors.red[700]!,
-      Colors.red[400]!,
-      Colors.orange[400]!,
-      Colors.yellow[600]!,
-      Colors.green[400]!,
-      Colors.blue[400]!,
+      const Color(0xFFFF5406),
+      const Color(0xFFFF9966),
+      const Color(0xFF4DCC60),
+      const Color(0xFF00B33F),
+      const Color(0xFF006623),
+      Colors.black87,
     ];
 
     return Padding(

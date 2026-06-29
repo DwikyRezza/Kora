@@ -105,7 +105,7 @@ class WorkoutChartsSection extends StatelessWidget {
                     LineChartBarData(
                       spots: spots,
                       isCurved: true,
-                      color: const Color(0xFF00A9DD),
+                      color: const Color(0xFFFF5406),
                       barWidth: 2,
                       dotData: const FlDotData(show: false),
                       belowBarData: BarAreaData(
@@ -114,8 +114,8 @@ class WorkoutChartsSection extends StatelessWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            const Color(0xFF00A9DD).withOpacity(0.25),
-                            const Color(0xFF00A9DD).withOpacity(0.0),
+                            const Color(0xFFFF5406).withOpacity(0.25),
+                            const Color(0xFFFF5406).withOpacity(0.0),
                           ],
                         ),
                       ),
