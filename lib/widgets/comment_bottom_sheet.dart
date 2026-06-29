@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'dart:convert';
 import '../services/social_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/responsive.dart';
 
 class CommentBottomSheet extends StatefulWidget {
   final String postId;
@@ -71,13 +72,13 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: context.spaceXL, vertical: context.spaceSM),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 'Komentar',
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: context.fontLG,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.textPrimary,
                 ),
@@ -92,19 +93,19 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 : _comments.isEmpty
                     ? const Center(child: Text('Belum ada komentar', style: TextStyle(color: Colors.grey)))
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        padding: EdgeInsets.symmetric(horizontal: context.spaceXL, vertical: context.spaceLG),
                         itemCount: _comments.length,
                         itemBuilder: (context, i) {
                           final c = _comments[i];
                           final photoUrl = c['authorPhotoUrl'];
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
+                            padding: EdgeInsets.only(bottom: context.spaceLG),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 36,
-                                  height: 36,
+                                  width: context.avatarSM,
+                                  height: context.avatarSM,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: AppTheme.surfaceVariant,
@@ -114,13 +115,13 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                                         ? (photoUrl.startsWith('data:image')
                                             ? Image.memory(base64Decode(photoUrl.split(',')[1]), fit: BoxFit.cover)
                                             : Image.network(photoUrl, fit: BoxFit.cover))
-                                        : const Icon(Icons.person, size: 20, color: Colors.grey),
+                                        : Icon(Icons.person, size: context.iconSM, color: Colors.grey),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: context.spaceMD),
                                 Expanded(
                                   child: Container(
-                                    padding: const EdgeInsets.all(12),
+                                    padding: EdgeInsets.all(context.spaceMD),
                                     decoration: BoxDecoration(
                                       color: AppTheme.surfaceVariant,
                                       borderRadius: BorderRadius.circular(16),
@@ -133,18 +134,18 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                                           children: [
                                             Text(
                                               c['authorName'] ?? 'Anon',
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.fontSM, color: AppTheme.textPrimary),
                                             ),
                                             Text(
                                               _formatTime(c['timestamp']),
-                                              style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                              style: TextStyle(fontSize: context.fontXS, color: Colors.grey),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
+                                        SizedBox(height: context.spaceXS),
                                         Text(
                                           c['text'] ?? '',
-                                          style: TextStyle(fontSize: 14, color: AppTheme.textPrimary, height: 1.4),
+                                          style: TextStyle(fontSize: context.fontBase, color: AppTheme.textPrimary, height: 1.4),
                                         ),
                                       ],
                                     ),
@@ -159,7 +160,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           
           // Input field
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            padding: EdgeInsets.symmetric(horizontal: context.spaceXL, vertical: context.spaceLG),
             decoration: BoxDecoration(
               color: AppTheme.surface,
               border: Border(top: BorderSide(color: AppTheme.surfaceVariant)),
@@ -169,13 +170,13 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                 Expanded(
                   child: TextField(
                     controller: _commentCtrl,
-                    style: const TextStyle(fontSize: 14),
+                    style: TextStyle(fontSize: context.fontBase),
                     decoration: InputDecoration(
                       hintText: 'Tulis komentar...',
                       hintStyle: const TextStyle(color: Colors.grey),
                       filled: true,
                       fillColor: AppTheme.surfaceVariant,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: EdgeInsets.symmetric(horizontal: context.spaceLG, vertical: context.spaceMD),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(26),
                         borderSide: BorderSide.none,
@@ -183,11 +184,11 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: context.spaceMD),
                 GestureDetector(
                   onTap: _submitComment,
                   child: Container(
-                    width: 48, height: 48,
+                    width: context.buttonHeight * 0.9, height: context.buttonHeight * 0.9,
                     decoration: BoxDecoration(
                       color: Color(0xFF00B33F),
                       shape: BoxShape.circle,
@@ -197,7 +198,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
                             padding: EdgeInsets.all(16.0),
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
-                        : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                        : Icon(Icons.send_rounded, color: Colors.white, size: context.iconSM),
                   ),
                 ),
               ],

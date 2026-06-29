@@ -8,6 +8,7 @@ import '../services/cloud_sync_service.dart';
 import '../services/notification_service.dart';
 import 'weekly_report_screen.dart';
 import 'ai_nutrition_screen.dart';
+import '../utils/responsive.dart';
 
 class ProteinScreen extends StatefulWidget {
   const ProteinScreen({super.key});
@@ -141,13 +142,13 @@ class _ProteinScreenState extends State<ProteinScreen> {
           children: [
             Text('Nutrisi',
                 style: TextStyle(
-                    fontSize: 30,
+                    fontSize: context.font3XL,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFFFF5406),
+                    color: const Color(0xFFFF5406),
                     letterSpacing: -1)),
             Text('Harian',
                 style: TextStyle(
-                    fontSize: 30,
+                    fontSize: context.font3XL,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.textPrimary,
                     letterSpacing: -1,
@@ -235,11 +236,11 @@ class _ProteinScreenState extends State<ProteinScreen> {
                         style: TextStyle(
                             color: AppTheme.textPrimary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 18)),
+                            fontSize: context.fontLG)),
                     Text(unit,
                         style: TextStyle(
                             color: Colors.grey,
-                            fontSize: 10,
+                            fontSize: context.fontXS,
                             fontWeight: FontWeight.bold)),
                   ],
                 ),

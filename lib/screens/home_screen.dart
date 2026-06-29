@@ -20,6 +20,7 @@ import 'workout_detail_screen.dart';
 import 'running_tracker_screen.dart';
 import 'workout_setup_screen.dart';
 import '../widgets/feed_post_card.dart';
+import '../utils/responsive.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onGoToWorkout;
@@ -208,31 +209,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
+                  SizedBox(height: context.spaceLG),
                   _buildHeader(),
-                  const SizedBox(height: 24),
+                  SizedBox(height: context.spaceXL),
                   
                   if (_isLoading)
                     const Center(child: CircularProgressIndicator(color: Color(0xFFFF5406)))
                   else ...[
                     _buildProteinCard(),
-                    const SizedBox(height: 32),
+                    SizedBox(height: context.space2XL),
                     
                     _buildQuickActions(),
-                    const SizedBox(height: 32),
+                    SizedBox(height: context.space2XL),
                     
                     _buildStatGrid(),
-                    const SizedBox(height: 32),
+                    SizedBox(height: context.space2XL),
                     
                     _buildKoraAssistant(),
-                    const SizedBox(height: 32),
+                    SizedBox(height: context.space2XL),
                     
                     _buildTodayWorkouts(),
-                    const SizedBox(height: 32),
+                    SizedBox(height: context.space2XL),
                     
                     _buildSocialFeed(),
                     const SizedBox(height: 100), // padding bottom
@@ -265,12 +266,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'KORA',
           style: TextStyle(
-            color: Color(0xFF00B33F),
+            color: const Color(0xFF00B33F),
             fontWeight: FontWeight.w800,
-            fontSize: 24,
+            fontSize: context.fontXL * 1.1,
             letterSpacing: -1,
           ),
         ),
@@ -330,7 +331,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         : 0.0;
         
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.spaceXL),
       decoration: BoxDecoration(
         color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(26),
@@ -346,19 +347,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('CAPAIAN PROTEIN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 1.5)),
-                    const SizedBox(height: 4),
+                    Text('CAPAIAN PROTEIN', style: TextStyle(fontSize: context.fontSM * 0.9, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 1.5)),
+                    SizedBox(height: context.spaceXS),
                     Text(
                       isSufficient ? 'Target tercapai!' : 'Di bawah target harian',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isSufficient ? const Color(0xFF00B33F) : const Color(0xFFFF3400)),
+                      style: TextStyle(fontSize: context.fontBase, fontWeight: FontWeight.bold, color: isSufficient ? const Color(0xFF00B33F) : const Color(0xFFFF3400)),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: context.spaceSM),
               Text(
                 '${(progress * 100).round()}%',
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                style: TextStyle(fontSize: context.font2XL * 1.15, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
               ),
             ],
           ),

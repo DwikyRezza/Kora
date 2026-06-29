@@ -11,6 +11,8 @@ import '../models/workout.dart';
 import 'comment_bottom_sheet.dart';
 import 'mini_route_painter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/responsive.dart';
+
 class FeedPostCard extends StatefulWidget {
   final Map<String, dynamic> post;
   final VoidCallback onDataChanged;
@@ -195,12 +197,12 @@ class _FeedPostCardState extends State<FeedPostCard> {
         children: [
           // ── HEADER ──────────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: EdgeInsets.fromLTRB(context.spaceLG, context.spaceLG, context.spaceLG, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(typeLower),
-                const SizedBox(height: 12),
+                RSpace.md(),
 
                 // ── JUDUL AKTIVITAS ─────────────────────────────────────
                 InkWell(
@@ -210,12 +212,12 @@ class _FeedPostCardState extends State<FeedPostCard> {
                     style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontWeight: FontWeight.w900,
-                      fontSize: 20,
+                      fontSize: context.fontLG,
                       letterSpacing: -0.3,
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                RSpace.md(),
 
                 // ── 3 KOLOM METRIK ──────────────────────────────────────
                 InkWell(
@@ -225,41 +227,43 @@ class _FeedPostCardState extends State<FeedPostCard> {
                       : _buildStrengthMetrics(workoutData, dur),
                 ),
 
-                const SizedBox(height: 14),
+                RSpace.md(),
               ],
             ),
           ),
 
           // ── CHALLENGE / ENCOURAGEMENT BANNER ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: EdgeInsets.symmetric(horizontal: context.spaceLG, vertical: context.spaceMD),
             child: Row(
               children: [
-                const Icon(Icons.thumb_up_rounded, color: Color(0xFFFF5406), size: 28),
-                const SizedBox(width: 12),
+                Icon(Icons.thumb_up_rounded,
+                    color: const Color(0xFFFF5406), size: context.iconLG),
+                RSpace.md(horizontal: true),
                 Expanded(
                   child: Text(
                     'Nicely done! Keep moving by joining a challenge',
                     style: TextStyle(
                       color: AppTheme.textPrimary,
-                      fontSize: 13,
+                      fontSize: context.fontSM,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                RSpace.sm(horizontal: true),
                 ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFF5406),
                     foregroundColor: Colors.white,
                     shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: context.spaceMD, vertical: context.spaceXS),
                     elevation: 0,
                   ),
-                  child: const Text(
+                  child: Text(
                     'See More',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: context.fontSM, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -440,28 +444,88 @@ class _FeedPostCardState extends State<FeedPostCard> {
               ignoring: true,
               child: Builder(
                 builder: (context) {
-                  final apiKey = dotenv.env['MAPS_API_KEY'] ?? '';
-                  if (apiKey.isEmpty || routePoints.isEmpty) {
+                  final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+                  
+                  if (isKeyboardOpen || routePoints.isEmpty) {
                     return CustomPaint(
                       size: Size.infinite,
                       painter: MiniRoutePainter(routePoints),
                     );
                   }
-                  final enc = _encodePolyline(routePoints);
-                  final start = '${routePoints.first.latitude},${routePoints.first.longitude}';
-                  final end = '${routePoints.last.latitude},${routePoints.last.longitude}';
-                  final markers = '&markers=color:green|size:mid|$start&markers=color:red|size:mid|$end';
-                  
-                  // Gunakan style default untuk Maps
-                  final url = 'https://maps.googleapis.com/maps/api/staticmap?size=600x400&path=color:0xFFFF5406ff|weight:4|enc:$enc$markers&key=$apiKey';
-                  
-                  return Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => CustomPaint(
-                      size: Size.infinite,
-                      painter: MiniRoutePainter(routePoints),
+
+                  return GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: routePoints[routePoints.length ~/ 2],
+                      zoom: 14.0,
                     ),
+                    liteModeEnabled: true,
+                    mapToolbarEnabled: false,
+                    myLocationEnabled: false,
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    scrollGesturesEnabled: false,
+                    zoomGesturesEnabled: false,
+                    rotateGesturesEnabled: false,
+                    tiltGesturesEnabled: false,
+                    style: AppTheme.isDarkMode ? '''[
+                      {"elementType":"geometry","stylers":[{"color":"#212121"}]},
+                      {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+                      {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
+                      {"elementType":"labels.text.stroke","stylers":[{"color":"#212121"}]},
+                      {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#2c2c2c"}]},
+                      {"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#373737"}]},
+                      {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#3c3c3c"}]},
+                      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#000000"}]},
+                      {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#181818"}]}
+                    ]''' : null,
+                    polylines: {
+                      Polyline(
+                        polylineId: const PolylineId('route'),
+                        points: routePoints,
+                        color: const Color(0xFFFF5406),
+                        width: 5,
+                        jointType: JointType.round,
+                        startCap: Cap.roundCap,
+                        endCap: Cap.roundCap,
+                      ),
+                    },
+                    markers: {
+                      Marker(
+                        markerId: const MarkerId('start'),
+                        position: routePoints.first,
+                        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                      ),
+                      if (routePoints.length > 1)
+                        Marker(
+                          markerId: const MarkerId('end'),
+                          position: routePoints.last,
+                          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                        ),
+                    },
+                    onMapCreated: (controller) {
+                      Future.delayed(const Duration(milliseconds: 150), () {
+                        if (!mounted) return;
+                        double minLat = routePoints.first.latitude;
+                        double maxLat = routePoints.first.latitude;
+                        double minLng = routePoints.first.longitude;
+                        double maxLng = routePoints.first.longitude;
+                        for (final p in routePoints) {
+                          if (p.latitude < minLat) minLat = p.latitude;
+                          if (p.latitude > maxLat) maxLat = p.latitude;
+                          if (p.longitude < minLng) minLng = p.longitude;
+                          if (p.longitude > maxLng) maxLng = p.longitude;
+                        }
+                        controller.animateCamera(
+                          CameraUpdate.newLatLngBounds(
+                            LatLngBounds(
+                              southwest: LatLng(minLat, minLng),
+                              northeast: LatLng(maxLat, maxLng),
+                            ),
+                            20.0,
+                          ),
+                        );
+                      });
+                    },
                   );
                 },
               ),
@@ -484,16 +548,19 @@ class _FeedPostCardState extends State<FeedPostCard> {
 
   Widget _buildSocialFooter() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(horizontal: context.spaceSM),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_likesCount > 0)
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              padding: EdgeInsets.fromLTRB(context.spaceMD, context.spaceSM, context.spaceMD, 0),
               child: Text(
                 '$_likesCount Likes',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: context.fontSM,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           Row(
@@ -522,7 +589,7 @@ class _FeedPostCardState extends State<FeedPostCard> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: context.spaceXS),
         ],
       ),
     );
@@ -532,18 +599,18 @@ class _FeedPostCardState extends State<FeedPostCard> {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(context.radiusSM),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: EdgeInsets.symmetric(vertical: context.spaceSM),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 20, color: color),
-              const SizedBox(width: 4),
+              Icon(icon, size: context.iconMD * 0.9, color: color),
+              SizedBox(width: context.spaceXS),
               Flexible(
                 child: Text(
                   label,
-                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: color, fontSize: context.fontSM, fontWeight: FontWeight.w600),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -571,29 +638,5 @@ class _FeedPostCardState extends State<FeedPostCard> {
     return '${(mins * 60).round()}s';
   }
 
-  String _encodePolyline(List<LatLng> points) {
-    int _round(double value) => (value * 1e5).round();
-    String _encode(int value) {
-      value = value < 0 ? ~(value << 1) : value << 1;
-      String str = '';
-      while (value >= 0x20) {
-        str += String.fromCharCode((0x20 | (value & 0x1f)) + 63);
-        value >>= 5;
-      }
-      str += String.fromCharCode(value + 63);
-      return str;
-    }
-    int lastLat = 0;
-    int lastLng = 0;
-    String result = '';
-    for (var point in points) {
-      int lat = _round(point.latitude);
-      int lng = _round(point.longitude);
-      result += _encode(lat - lastLat);
-      result += _encode(lng - lastLng);
-      lastLat = lat;
-      lastLng = lng;
-    }
-    return result;
   }
 }

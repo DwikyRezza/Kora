@@ -15,6 +15,7 @@ import 'setting_screen.dart';
 import 'edit_profile_screen.dart';
 import 'social_screen.dart';
 import '../widgets/feed_post_card.dart';
+import '../utils/responsive.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -187,16 +188,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Profile',
               style: TextStyle(
                 color: primaryColor,
-                fontSize: 22,
+                fontSize: context.fontXL * 1.1,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            SizedBox(width: 8),
+            SizedBox(width: context.spaceSM),
             Text(
               '@$username',
               style: TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: 14,
+                fontSize: context.fontSM,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -213,11 +214,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 16),
+              SizedBox(height: context.spaceLG),
               
               // Profile Header Section
               Row(
@@ -229,8 +230,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       alignment: Alignment.bottomRight,
                       children: [
                         Container(
-                          width: 96,
-                          height: 96,
+                          width: context.avatarLG * 1.5,
+                          height: context.avatarLG * 1.5,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(color: AppTheme.surfaceVariant, width: 4),
@@ -242,25 +243,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     : Image.network(photoUrl, fit: BoxFit.cover))
                                 : Container(
                                     color: AppTheme.surfaceVariant,
-                                    child: Icon(Icons.person, size: 48, color: Colors.grey),
+                                    child: Icon(Icons.person, size: context.iconXL * 1.5, color: Colors.grey),
                                   ),
                           ),
                         ),
                         Container(
-                          width: 24,
-                          height: 24,
+                          width: context.spaceXL,
+                          height: context.spaceXL,
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF5406),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
-                          child: Icon(Icons.photo_camera, color: Colors.white, size: 14),
+                          child: Icon(Icons.photo_camera, color: Colors.white, size: context.iconSM * 0.7),
                         ),
                       ],
                     ),
                   ),
                   
-                  SizedBox(width: 16),
+                  SizedBox(width: context.spaceLG),
                   
                   // Stats
                   Expanded(

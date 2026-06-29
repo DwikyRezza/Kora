@@ -19,6 +19,7 @@ import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/feed_post_card.dart';
 import '../widgets/mini_route_painter.dart';
+import '../utils/responsive.dart';
 
 class WorkoutScreen extends StatefulWidget {
   WorkoutScreen({super.key});
@@ -131,8 +132,8 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       appBar: AppBar(
         title: Row(
           children: [
-            Text('Aktivitas ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00B33F), letterSpacing: -1)),
-            Text('Latihan', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -1)),
+            Text('Aktivitas ', style: TextStyle(fontSize: context.font3XL, fontWeight: FontWeight.w900, color: const Color(0xFF00B33F), letterSpacing: -1)),
+            Text('Latihan', style: TextStyle(fontSize: context.font3XL, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -1)),
           ],
         ),
         backgroundColor: AppTheme.surface,
@@ -148,8 +149,8 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
                 indicatorWeight: 4,
                 labelColor: AppTheme.textPrimary,
                 unselectedLabelColor: Colors.grey,
-                labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-                tabs: [
+                labelStyle: TextStyle(fontWeight: FontWeight.w900, fontSize: context.fontMD),
+                tabs: const [
                   Tab(text: 'Progress'),
                   Tab(text: 'Aktivitas'),
                 ],
@@ -342,21 +343,21 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 2),
-        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+        Text(label, style: TextStyle(color: Colors.grey, fontSize: context.fontXS, fontWeight: FontWeight.w600)),
+        SizedBox(height: context.spaceXS),
+        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: context.fontSM, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
   Widget _actStat(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(right: 32),
+      padding: EdgeInsets.only(right: context.space2XL),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-          Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(color: Colors.grey, fontSize: context.fontSM * 0.9, fontWeight: FontWeight.bold)),
+          Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: context.fontMD, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -409,9 +410,9 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 18)),
+        Text(label, style: TextStyle(color: Colors.grey, fontSize: context.fontSM, fontWeight: FontWeight.bold)),
+        SizedBox(height: context.spaceXS),
+        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: context.fontLG)),
       ],
     );
   }
