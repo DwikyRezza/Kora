@@ -128,7 +128,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Text('Agenda ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00A9DD), letterSpacing: -1)),
+            Text('Agenda ', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: const Color(0xFFFF5406), letterSpacing: -1)),
             Text('Hari Ini', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: AppTheme.textPrimary, letterSpacing: -1)),
           ],
         ),
@@ -147,7 +147,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               HapticFeedback.lightImpact();
               _showAddEditEventSheet();
             },
-            backgroundColor: const Color(0xFF00A9DD),
+            backgroundColor: const Color(0xFFFF5406),
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
             icon: Icon(Icons.add_rounded, color: Colors.white),
@@ -156,10 +156,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: Color(0xFF00A9DD)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5406)))
           : RefreshIndicator(
               onRefresh: _refreshEvents,
-              color: const Color(0xFF00A9DD),
+              color: const Color(0xFFFF5406),
               backgroundColor: AppTheme.surface,
               child: _events.isEmpty
                   ? ListView(
@@ -568,7 +568,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.calendar_today,
-                                color: Color(0xFF00A9DD), size: 20),
+                                color: const Color(0xFFFF5406), size: 20),
                             SizedBox(width: 8),
                             Text(DateFormat('d MMM').format(_selectedDate),
                                 style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
@@ -591,7 +591,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.access_time,
-                                color: Color(0xFF00A9DD), size: 20),
+                                color: const Color(0xFFFF5406), size: 20),
                             SizedBox(width: 8),
                             Text(_selectedTime.format(context),
                                 style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
@@ -639,7 +639,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                           horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF00A9DD)
+                            ? const Color(0xFFFF5406)
                             : AppTheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(26),
                       ),
@@ -667,7 +667,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                         fontWeight: FontWeight.bold)),
                 subtitle: Text('Alarm akan berbunyi di waktu terjadwal',
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
-                activeColor: const Color(0xFF00A9DD),
+                activeColor: const Color(0xFFFF5406),
                 value: _isReminderOn,
                 onChanged: (val) => setState(() => _isReminderOn = val),
               ),
@@ -678,7 +678,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                 child: ElevatedButton(
                   onPressed: _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00A9DD),
+                    backgroundColor: const Color(0xFFFF5406),
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
