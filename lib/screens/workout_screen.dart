@@ -15,7 +15,9 @@ import 'workout_detail_screen.dart';
 import 'profile_screen.dart';
 import 'setting_screen.dart';
 import 'weekly_report_screen.dart';
-import '../widgets/activity/activity_feed_card.dart';
+import '../services/social_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/feed_post_card.dart';
 import '../widgets/mini_route_painter.dart';
 
 class WorkoutScreen extends StatefulWidget {
@@ -56,10 +58,18 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     await _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  List<Map<String, dynamic>> _userPosts = [];
+
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
+    
     final workouts = await _db.getRecentWorkouts(limit: 50);
     final profile = await ProfileService.getProfile();
+    
+    List<Map<String, dynamic>> userPosts = [];
+    if (AuthService.isLoggedIn) {
+      userPosts = await SocialService.getUserPosts(AuthService.uid!);
+    }
     
     final now = DateTime.now();
     Map<String, double> weekly = {};
@@ -104,6 +114,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     if (mounted) {
       setState(() {
         _workouts = workouts;
+        _userPosts = userPosts;
         _weeklyStats = weekly;
         _weeklySets = weeklySets;
         _weeklyPace = weeklyPace;
@@ -274,7 +285,14 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
 
   Widget _buildActivitiesTab() {
     if (_isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00B33F)));
-    if (_workouts.isEmpty) {
+    
+    final filteredPosts = _userPosts.where((post) {
+      final wData = post['workoutData'] as Map<String, dynamic>? ?? {};
+      final type = wData['type']?.toString().toLowerCase() ?? 'running';
+      return type == _activeTypeFilter;
+    }).toList();
+
+    if (filteredPosts.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -295,27 +313,17 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       backgroundColor: AppTheme.surface,
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 100),
-        itemCount: _workouts.length,
+        itemCount: filteredPosts.length,
         itemBuilder: (context, index) {
-          final workout = _workouts[index];
-          return ActivityFeedCard(
-            workout: workout,
-            userName: _userName.isNotEmpty ? _userName : 'Atlet',
-            onRefresh: _loadData,
+          return FeedPostCard(
+            post: filteredPosts[index],
+            onDataChanged: () => _loadData(silent: true),
           );
         },
       ),
     );
   }
 
-  // Retained for backward compat (unused but keeps other methods clean)
-  Widget _activityCard(Workout workout) {
-    return ActivityFeedCard(
-      workout: workout,
-      userName: _userName,
-      onRefresh: _loadData,
-    );
-  }
 
 
   List<LatLng> _parsePolyline(String polylineStr) {

@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import 'setting_screen.dart';
 import 'edit_profile_screen.dart';
 import 'social_screen.dart';
+import '../widgets/feed_post_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,12 +30,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _followingCount = 0;
   int _activitiesCount = 0;
   List<Workout> _activitiesList = [];
+  List<Map<String, dynamic>> _userPosts = [];
   Set<int> _workoutsWithPhotos = {};  // Lazy-loading: Set ID workout yang punya foto
-
-  // State untuk Fitur Sosial (Lokal/Simulasi)
-  final Map<int, int> _likesCount = {};
-  final Map<int, bool> _isLiked = {};
-  final Map<int, List<Map<String, String>>> _comments = {};
 
   // Constants for custom colors
   static const Color primaryColor = Color(0xFFA83300);
@@ -45,8 +42,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
     
     // Load profile
     final profile = await ProfileService.getProfile();
@@ -55,15 +52,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final uid = AuthService.uid;
     int followers = 0;
     int following = 0;
+    List<Map<String, dynamic>> userPosts = [];
     if (uid != null && uid.isNotEmpty) {
       followers = await SocialService.getFollowersCount(uid);
       following = await SocialService.getFollowingCount(uid);
+      userPosts = await SocialService.getUserPosts(uid);
     }
     
     // Load activities
     final allWorkouts = await DatabaseHelper().getAllWorkouts();
     
-    // Batch check: workout mana saja yang punya foto (lazy â€” tanpa load data foto)
+    // Batch check: workout mana saja yang punya foto (lazy — tanpa load data foto)
     final workoutIds = allWorkouts.map((w) => w.id).where((id) => id != null).cast<int>().toList();
     final idsWithPhotos = await DatabaseHelper().getWorkoutIdsWithPhotos(workoutIds);
     
@@ -73,71 +72,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _followersCount = followers;
       _followingCount = following;
       _activitiesList = allWorkouts;
-      _activitiesCount = allWorkouts.length;
+      _userPosts = userPosts;
+      _activitiesCount = userPosts.length;
       _workoutsWithPhotos = idsWithPhotos;
       _isLoading = false;
     });
   }
 
-  void _toggleLike(int index) {
-    setState(() {
-      final currentlyLiked = _isLiked[index] ?? false;
-      _isLiked[index] = !currentlyLiked;
-      final currentCount = _likesCount[index] ?? 0;
-      _likesCount[index] = currentlyLiked ? (currentCount > 0 ? currentCount - 1 : 0) : currentCount + 1;
-    });
-  }
 
-  void _deleteWorkout(Workout workout) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Hapus Aktivitas?'),
-        content: Text('Tindakan ini tidak dapat dibatalkan.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Batal')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true), 
-            child: Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-    if (confirm == true && workout.id != null) {
-      await DatabaseHelper().deleteWorkout(workout.id!);
-      _loadData();
-    }
-  }
-
-  void _shareWorkout(Workout workout) {
-    final title = workout.title ?? workout.typeLabel;
-    final text = 'Saya baru saja menyelesaikan $title selama ${workout.duration.toStringAsFixed(0)} menit dan membakar ${workout.caloriesBurned} kalori! #AthleteSync';
-    Share.share(text);
-  }
-
-  void _showComments(int index) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: _CommentBottomSheet(
-          comments: _comments[index] ?? [],
-        onCommentAdded: (text) {
-          setState(() {
-            if (_comments[index] == null) _comments[index] = [];
-            _comments[index]!.add({
-              'name': _profile[ProfileService.keyName] ?? 'Atlet Elit',
-              'text': text,
-              'time': 'Baru saja',
-            });
-          });
-        },
-      ),
-      ),
-    );
-  }
 
   Widget _buildMap(String polylineStr) {
     try {
@@ -464,10 +406,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-
-
   Widget _buildListFeed() {
-    if (_activitiesList.isEmpty) {
+    if (_userPosts.isEmpty) {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
@@ -475,362 +415,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     }
-    return ListView.separated(
+    return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _activitiesList.length,
-      separatorBuilder: (context, index) => SizedBox(height: 16),
+      itemCount: _userPosts.length,
       itemBuilder: (context, index) {
-        final workout = _activitiesList[index];
-        final hasPhoto = workout.id != null && _workoutsWithPhotos.contains(workout.id);
-        final dateStr = DateFormat('dd MMM yyyy • HH.mm').format(workout.date);
-
-        final typeLower = workout.type.toLowerCase();
-        String defaultImage;
-        if (typeLower == 'running' || typeLower == 'lari') {
-          // Visual running track map / lari
-          defaultImage = 'https://images.unsplash.com/photo-1552674605-15c2145efa38?q=80&w=800&auto=format&fit=crop'; 
-        } else if (typeLower == 'weightlifting' || typeLower == 'beban' || typeLower == 'gym') {
-          // Visual angkat beban
-          defaultImage = 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop';
-        } else if (typeLower == 'basketball' || typeLower == 'basket') {
-          // Visual basket
-          defaultImage = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
-        } else {
-          defaultImage = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&auto=format&fit=crop';
-        }
-
-        final title = workout.title ?? workout.typeLabel;
-        final profilePhoto = _profile?['photoUrl'] as String?;
-        final profileName = _profile?['name'] ?? 'User';
-        
-        return Container(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
-          ),
-          padding: const EdgeInsets.only(top: 24, bottom: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header User
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: (profilePhoto != null && profilePhoto.isNotEmpty)
-                          ? (profilePhoto.startsWith('data:image')
-                              ? Image.memory(base64Decode(profilePhoto.split(',')[1]), fit: BoxFit.cover)
-                              : Image.network(profilePhoto, fit: BoxFit.cover))
-                          : Icon(Icons.person, color: Colors.grey),
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          profileName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600, 
-                            fontSize: 16, 
-                            color: AppTheme.textPrimary
-                          ),
-                        ),
-                        Text(
-                          dateStr,
-                          style: TextStyle(
-                            color: AppTheme.textSecondary, 
-                            fontSize: 12
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, color: AppTheme.textSecondary),
-                    onSelected: (value) {
-                      if (value == 'share') _shareWorkout(workout);
-                      if (value == 'delete') _deleteWorkout(workout);
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'share', child: Text('Bagikan')),
-                      const PopupMenuItem(value: 'delete', child: Text('Hapus', style: TextStyle(color: Colors.red))),
-                    ],
-                  ),
-                ],
-              ),
-              SizedBox(height: 16),
-              
-              // Judul Aktivitas
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700, 
-                  fontSize: 22, 
-                  color: AppTheme.textPrimary
-                ),
-              ),
-              SizedBox(height: 16),
-              
-              // Baris Statistik
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (workout.type == 'running') ...[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Jarak', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                          Text('${workout.distance?.toStringAsFixed(2) ?? "0.0"} km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Pace', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                          Text('${(workout.duration / (workout.distance == null || workout.distance == 0 ? 1 : workout.distance!)).toStringAsFixed(2)} /km', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Waktu', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                          Text('${workout.duration.toStringAsFixed(0)}m', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                  ] else ...[
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Durasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                          Text('${workout.duration.toStringAsFixed(0)} mnt', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Kalori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary, letterSpacing: 0.7)),
-                          Text('${workout.caloriesBurned} kkal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              SizedBox(height: 24),
-              
-              if (typeLower == 'running' || typeLower == 'lari' || hasPhoto) ...[
-                // Gambar/Visual Aktivitas
-                Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(26),
-                    color: AppTheme.surfaceVariant,
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: AspectRatio(
-                    aspectRatio: 4 / 3,
-                    child: hasPhoto 
-                      ? FutureBuilder<String?>(
-                          future: DatabaseHelper().getFirstWorkoutPhoto(workout.id!),
-                          builder: (context, snap) {
-                            if (snap.connectionState == ConnectionState.waiting) {
-                              return Center(child: CircularProgressIndicator(strokeWidth: 2));
-                            }
-                            final path = snap.data;
-                            if (path != null && File(path).existsSync()) {
-                              return Image.file(File(path), fit: BoxFit.cover);
-                            }
-                            // Fallback jika file hilang
-                            return ((typeLower == 'running' || typeLower == 'lari') && workout.polyline != null && workout.polyline!.isNotEmpty)
-                                ? _buildMap(workout.polyline!)
-                                : Image.network(defaultImage, fit: BoxFit.cover);
-                          },
-                        )
-                      : ((typeLower == 'running' || typeLower == 'lari') && workout.polyline != null && workout.polyline!.isNotEmpty)
-                          ? _buildMap(workout.polyline!)
-                          : Image.network(defaultImage, fit: BoxFit.cover),
-                  ),
-                ),
-                SizedBox(height: 16),
-              ],
-              
-              // Aksi (Like & Komen)
-              Container(
-                padding: const EdgeInsets.only(top: 8),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
-                ),
-                child: Row(
-                  children: [
-                    InkWell(
-                      onTap: () => _toggleLike(index),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: Row(
-                          children: [
-                            Icon(
-                              (_isLiked[index] ?? false) ? Icons.favorite : Icons.favorite_border, 
-                              color: (_isLiked[index] ?? false) ? Colors.red : AppTheme.textSecondary, 
-                              size: 24
-                            ),
-                            SizedBox(width: 8),
-                            Text('${_likesCount[index] ?? 0}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    InkWell(
-                      onTap: () => _showComments(index),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: Row(
-                          children: [
-                            Icon(Icons.chat_bubble_outline, color: AppTheme.textSecondary, size: 24),
-                            SizedBox(width: 8),
-                            Text('${_comments[index]?.length ?? 0}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        return FeedPostCard(
+          post: _userPosts[index],
+          onDataChanged: () => _loadData(silent: true),
         );
       },
-    );
-  }
-}
-
-class _CommentBottomSheet extends StatefulWidget {
-  final List<Map<String, String>> comments;
-  final Function(String) onCommentAdded;
-  
-  const _CommentBottomSheet({required this.comments, required this.onCommentAdded});
-
-  @override
-  State<_CommentBottomSheet> createState() => _CommentBottomSheetState();
-}
-
-class _CommentBottomSheetState extends State<_CommentBottomSheet> {
-  final _controller = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: kToolbarHeight),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      child: Column(
-        children: [
-          // Drag handle
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Text('Komentar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          Divider(),
-          Expanded(
-            child: widget.comments.isEmpty
-                ? Center(child: Text('Belum ada komentar. Jadilah yang pertama!', style: TextStyle(color: Colors.grey)))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: widget.comments.length,
-                    itemBuilder: (context, i) {
-                      final c = widget.comments[i];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(radius: 16, backgroundColor: Colors.grey[300], child: Icon(Icons.person, size: 20, color: Colors.grey)),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(c['name']!, style: TextStyle(fontWeight: FontWeight.bold)),
-                                      SizedBox(width: 8),
-                                      Text(c['time']!, style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                    ],
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(c['text']!),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              border: Border(top: BorderSide(color: AppTheme.surfaceVariant)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: 'Tambahkan komentar...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.send, color: Color(0xFFA83300)),
-                  onPressed: () {
-                    if (_controller.text.trim().isNotEmpty) {
-                      widget.onCommentAdded(_controller.text.trim());
-                      _controller.clear();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
