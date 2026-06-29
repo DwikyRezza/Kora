@@ -119,12 +119,19 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
       }
 
       final resJson = jsonDecode(res.body);
+
+      // Handle jika Groq mengembalikan error object
+      if (resJson['error'] != null) {
+        final errMsg = resJson['error']['message'] ?? 'Unknown API Error';
+        throw Exception('Groq API Error: $errMsg');
+      }
+
       final text = resJson['text'] as String? ?? resJson['choices']?[0]?['message']?['content'] as String? ?? '';
 
       final jsonStart = text.indexOf('[');
       final jsonEnd = text.lastIndexOf(']');
       if (jsonStart == -1 || jsonEnd == -1) {
-        throw Exception('Format respons tidak valid');
+        throw Exception('Format respons tidak valid (AI tidak merespons dalam format JSON)');
       }
       final jsonStr = text.substring(jsonStart, jsonEnd + 1);
       final List<dynamic> parsed = jsonDecode(jsonStr);

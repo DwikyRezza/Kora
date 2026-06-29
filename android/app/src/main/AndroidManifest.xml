@@ -31,6 +31,11 @@
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />
 
+        <!-- Mengatur Channel Notifikasi Default untuk FCM (Wajib untuk notifikasi Background) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="Kora_channel" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
