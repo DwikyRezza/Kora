@@ -726,7 +726,7 @@ class MiniRoutePainter extends CustomPainter {
 
     if (points.length > 1) {
       final endPaint = Paint()
-        ..color = const Color(0xFFFF3400)
+        ..color = const Color(0xFFFF5406)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(getOffset(points.last), 4.5, endPaint);
     }

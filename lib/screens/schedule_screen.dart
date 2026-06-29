@@ -61,7 +61,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     child: Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: Text('Hapus', style: TextStyle(color: Color(0xFFFF3400), fontWeight: FontWeight.bold))),
+                    child: Text('Hapus', style: TextStyle(color: const Color(0xFFFF5406), fontWeight: FontWeight.bold))),
               ],
             ));
 
@@ -224,7 +224,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       Text(
                                           '${DateFormat('d MMM yyyy • HH:mm').format(event.dateTime)}',
                                           style: TextStyle(
-                                              color: Color(0xFF00A9DD),
+                                              color: const Color(0xFFFF5406),
                                               fontWeight: FontWeight.bold, fontSize: 12)),
                                       if (event.durationMinutes > 0)
                                         Padding(
@@ -242,7 +242,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   children: [
                                     IconButton(
                                       icon: Icon(Icons.delete_outline,
-                                          color: Color(0xFFFF3400)),
+                                          color: const Color(0xFFFF5406)),
                                       onPressed: () => _deleteEvent(event),
                                     ),
                                     IconButton(
@@ -277,8 +277,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     switch (type) {
       case 'workout': return const Color(0xFF00B33F);
       case 'meal': return const Color(0xFFFF5406);
-      case 'rest': return const Color(0xFFBD4BE5);
-      default: return const Color(0xFF00A9DD);
+      case 'rest': return AppTheme.textPrimary;
+      default: return const Color(0xFFFF5406);
     }
   }
 }
@@ -341,7 +341,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: ColorScheme.light(
-            primary: const Color(0xFF00A9DD),
+            primary: const Color(0xFFFF5406),
             onPrimary: Colors.white,
             surface: AppTheme.surface,
             onSurface: AppTheme.textPrimary,
@@ -362,7 +362,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: ColorScheme.light(
-            primary: const Color(0xFF00A9DD),
+            primary: const Color(0xFFFF5406),
             onPrimary: Colors.white,
             surface: AppTheme.surface,
             onSurface: AppTheme.textPrimary,

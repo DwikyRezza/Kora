@@ -1043,7 +1043,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                 child: Container(
                   height: 64,
                   decoration: BoxDecoration(
-                    color: _isSaving ? AppTheme.surfaceVariant : Color(0xFF00A9DD),
+                    color: _isSaving ? AppTheme.surfaceVariant : Color(0xFF00B33F),
                     borderRadius: BorderRadius.circular(26),
                   ),
                   child: Row(
@@ -1320,7 +1320,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       Expanded(
                           child: _actionButton(
                         label: _isSaving ? 'Menyimpan...' : 'Finish',
-                        color: _isSaving ? AppTheme.surfaceVariant : Color(0xFF00A9DD),
+                        color: _isSaving ? AppTheme.surfaceVariant : Color(0xFF00B33F),
                         icon: _isSaving ? Icons.hourglass_empty : Icons.stop,
                         textColor: _isSaving ? Colors.grey : Colors.white,
                         onTap: _isSaving ? () {} : _stopRun,
