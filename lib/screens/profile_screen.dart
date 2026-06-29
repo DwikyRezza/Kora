@@ -307,7 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SizedBox(height: 4),
               Text(
-                bio.isNotEmpty ? '$bio â€¢ $goal Goal' : '$goal Goal',
+                bio.isNotEmpty ? '$bio • $goal Goal' : '$goal Goal',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
                   fontSize: 17,

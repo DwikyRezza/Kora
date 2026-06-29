@@ -438,79 +438,9 @@ class _FeedPostCardState extends State<FeedPostCard> {
           Positioned.fill(
             child: IgnorePointer(
               ignoring: true,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: routePoints[routePoints.length ~/ 2],
-                  zoom: 14.0,
-                ),
-                liteModeEnabled: true,
-                mapToolbarEnabled: false,
-                myLocationEnabled: false,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled: false,
-                scrollGesturesEnabled: false,
-                zoomGesturesEnabled: false,
-                rotateGesturesEnabled: false,
-                tiltGesturesEnabled: false,
-                style: AppTheme.isDarkMode ? '''[
-                  {"elementType":"geometry","stylers":[{"color":"#212121"}]},
-                  {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
-                  {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
-                  {"elementType":"labels.text.stroke","stylers":[{"color":"#212121"}]},
-                  {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#2c2c2c"}]},
-                  {"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#373737"}]},
-                  {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#3c3c3c"}]},
-                  {"featureType":"water","elementType":"geometry","stylers":[{"color":"#000000"}]},
-                  {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#181818"}]}
-                ]''' : null,
-                polylines: {
-                  Polyline(
-                    polylineId: const PolylineId('route'),
-                    points: routePoints,
-                    color: const Color(0xFFFF5406),
-                    width: 5,
-                    jointType: JointType.round,
-                    startCap: Cap.roundCap,
-                    endCap: Cap.roundCap,
-                  ),
-                },
-                markers: {
-                  Marker(
-                    markerId: const MarkerId('start'),
-                    position: routePoints.first,
-                    icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                  ),
-                  if (routePoints.length > 1)
-                    Marker(
-                      markerId: const MarkerId('end'),
-                      position: routePoints.last,
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-                    ),
-                },
-                onMapCreated: (controller) {
-                  Future.delayed(const Duration(milliseconds: 150), () {
-                    if (!mounted) return;
-                    double minLat = routePoints.first.latitude;
-                    double maxLat = routePoints.first.latitude;
-                    double minLng = routePoints.first.longitude;
-                    double maxLng = routePoints.first.longitude;
-                    for (final p in routePoints) {
-                      if (p.latitude < minLat) minLat = p.latitude;
-                      if (p.latitude > maxLat) maxLat = p.latitude;
-                      if (p.longitude < minLng) minLng = p.longitude;
-                      if (p.longitude > maxLng) maxLng = p.longitude;
-                    }
-                    controller.animateCamera(
-                      CameraUpdate.newLatLngBounds(
-                        LatLngBounds(
-                          southwest: LatLng(minLat, minLng),
-                          northeast: LatLng(maxLat, maxLng),
-                        ),
-                        20.0,
-                      ),
-                    );
-                  });
-                },
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: MiniRoutePainter(routePoints),
               ),
             ),
           ),
