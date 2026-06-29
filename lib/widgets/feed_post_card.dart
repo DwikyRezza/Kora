@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
@@ -10,7 +9,8 @@ import '../screens/workout_detail_screen.dart';
 import '../models/workout.dart';
 import 'comment_bottom_sheet.dart';
 import 'mini_route_painter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../utils/responsive.dart';
 
 class FeedPostCard extends StatefulWidget {
@@ -27,11 +27,12 @@ class FeedPostCard extends StatefulWidget {
   State<FeedPostCard> createState() => _FeedPostCardState();
 }
 
-class _FeedPostCardState extends State<FeedPostCard> {
+class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver {
   late bool _isLiked;
   late int _likesCount;
   late int _commentsCount;
   bool _isLiking = false;
+  bool _isKeyboardOpen = false;
   
   String _authorName = 'Athlete';
   String? _photoUrl;
@@ -39,7 +40,26 @@ class _FeedPostCardState extends State<FeedPostCard> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+    final isOpen = view.viewInsets.bottom > 0;
+    if (_isKeyboardOpen != isOpen) {
+      setState(() {
+        _isKeyboardOpen = isOpen;
+      });
+    }
   }
 
   @override
@@ -432,6 +452,7 @@ class _FeedPostCardState extends State<FeedPostCard> {
       height: 220,
       width: double.infinity,
       decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E), // Dark background for the minimap
         border: Border(
           top: BorderSide(color: AppTheme.border, width: 0.5),
           bottom: BorderSide(color: AppTheme.border, width: 0.5),
@@ -440,94 +461,26 @@ class _FeedPostCardState extends State<FeedPostCard> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: IgnorePointer(
-              ignoring: true,
-              child: Builder(
-                builder: (context) {
-                  final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-                  
-                  if (isKeyboardOpen || routePoints.isEmpty) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: MiniRoutePainter(routePoints),
-                    );
-                  }
-
-                  return GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: routePoints[routePoints.length ~/ 2],
-                      zoom: 14.0,
-                    ),
-                    liteModeEnabled: true,
-                    mapToolbarEnabled: false,
-                    myLocationEnabled: false,
-                    myLocationButtonEnabled: false,
-                    zoomControlsEnabled: false,
-                    scrollGesturesEnabled: false,
-                    zoomGesturesEnabled: false,
-                    rotateGesturesEnabled: false,
-                    tiltGesturesEnabled: false,
-                    style: AppTheme.isDarkMode ? '''[
-                      {"elementType":"geometry","stylers":[{"color":"#212121"}]},
-                      {"elementType":"labels.icon","stylers":[{"visibility":"off"}]},
-                      {"elementType":"labels.text.fill","stylers":[{"color":"#757575"}]},
-                      {"elementType":"labels.text.stroke","stylers":[{"color":"#212121"}]},
-                      {"featureType":"road","elementType":"geometry.fill","stylers":[{"color":"#2c2c2c"}]},
-                      {"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#373737"}]},
-                      {"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#3c3c3c"}]},
-                      {"featureType":"water","elementType":"geometry","stylers":[{"color":"#000000"}]},
-                      {"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#181818"}]}
-                    ]''' : null,
-                    polylines: {
-                      Polyline(
-                        polylineId: const PolylineId('route'),
-                        points: routePoints,
-                        color: const Color(0xFFFF5406),
-                        width: 5,
-                        jointType: JointType.round,
-                        startCap: Cap.roundCap,
-                        endCap: Cap.roundCap,
-                      ),
-                    },
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId('start'),
-                        position: routePoints.first,
-                        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                      ),
-                      if (routePoints.length > 1)
-                        Marker(
-                          markerId: const MarkerId('end'),
-                          position: routePoints.last,
-                          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-                        ),
-                    },
-                    onMapCreated: (controller) {
-                      Future.delayed(const Duration(milliseconds: 150), () {
-                        if (!mounted) return;
-                        double minLat = routePoints.first.latitude;
-                        double maxLat = routePoints.first.latitude;
-                        double minLng = routePoints.first.longitude;
-                        double maxLng = routePoints.first.longitude;
-                        for (final p in routePoints) {
-                          if (p.latitude < minLat) minLat = p.latitude;
-                          if (p.latitude > maxLat) maxLat = p.latitude;
-                          if (p.longitude < minLng) minLng = p.longitude;
-                          if (p.longitude > maxLng) maxLng = p.longitude;
-                        }
-                        controller.animateCamera(
-                          CameraUpdate.newLatLngBounds(
-                            LatLngBounds(
-                              southwest: LatLng(minLat, minLng),
-                              northeast: LatLng(maxLat, maxLng),
-                            ),
-                            20.0,
-                          ),
-                        );
-                      });
-                    },
-                  );
-                },
+            child: CustomPaint(
+              size: Size.infinite,
+              painter: MiniRoutePainter(routePoints),
+            ),
+          ),
+          // Gradient overlay for better text contrast if needed
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.1),
+                  ],
+                  stops: const [0.0, 0.2, 0.8, 1.0],
+                ),
               ),
             ),
           ),
