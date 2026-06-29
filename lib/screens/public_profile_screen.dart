@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
@@ -32,8 +32,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) setState(() => _isLoading = true);
     try {
       final profile = await SocialService.getUserProfile(widget.uid);
       final posts = await SocialService.getUserPosts(widget.uid);
@@ -221,7 +221,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     else
                       ..._userPosts.map((post) => FeedPostCard(
                             post: post,
-                            onDataChanged: _loadData,
+                            onDataChanged: () => _loadData(silent: true),
                           )),
                   ],
                 ),
