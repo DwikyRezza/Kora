@@ -668,7 +668,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('SARAN KORA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00B33F), letterSpacing: 1.5)),
+                  const Text('JADWAL KORA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF00B33F), letterSpacing: 1.5)),
                   Text(DateFormat('HH:mm').format(heroEvent.dateTime), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
                 ],
               ),
@@ -709,7 +709,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ) : const Center(
             child: Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('Tidak ada saran jadwal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              child: Text('Tidak ada jadwal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             ),
           ),
         ),
