@@ -121,7 +121,7 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
                           child: ListTile(
                             leading: CircleAvatar(backgroundColor: AppTheme.surfaceVariant, child: Icon(Icons.monitor_weight_rounded, color: AppTheme.electricBlue)),
                             title: Text('${m.weight} kg', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                            subtitle: Text('BMI: ${m.bmi.toStringAsFixed(1)} â€¢ ${DateFormat('dd MMM yy', 'id').format(m.date)}', style: TextStyle(color: AppTheme.textMuted)),
+                            subtitle: Text('BMI: ${m.bmi.toStringAsFixed(1)} • ${DateFormat('dd MMM yy', 'id').format(m.date)}', style: TextStyle(color: AppTheme.textMuted)),
                             trailing: IconButton(
                               icon: Icon(Icons.delete_outline, color: AppTheme.accentRed),
                               onPressed: () async {

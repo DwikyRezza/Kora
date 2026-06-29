@@ -11,6 +11,7 @@ import '../models/workout.dart';
 import 'comment_bottom_sheet.dart';
 import 'mini_route_painter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 import '../utils/responsive.dart';
 
 class FeedPostCard extends StatefulWidget {
@@ -39,6 +40,7 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
 
   String _authorName = 'Athlete';
   String? _photoUrl;
+  String _locationName = 'Mencari lokasi...';
 
   @override
   void initState() {
@@ -46,6 +48,38 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _initData();
     _decodeSnapshot();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
+    final polylineStr = workoutData['polyline'] as String?;
+    if (polylineStr != null && polylineStr.isNotEmpty) {
+      final routePoints = MiniRoutePainter.parsePolyline(polylineStr);
+      if (routePoints.isNotEmpty) {
+        try {
+          final pt = routePoints.first;
+          final placemarks = await placemarkFromCoordinates(pt.latitude, pt.longitude);
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            String loc = '';
+            if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+              loc = place.subLocality!;
+            } else if (place.locality != null && place.locality!.isNotEmpty) {
+              loc = place.locality!;
+            }
+            if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+              loc += (loc.isNotEmpty ? ', ' : '') + place.administrativeArea!;
+            }
+            if (mounted) setState(() => _locationName = loc.isNotEmpty ? loc : 'Aktivitas Kora');
+            return;
+          }
+        } catch (e) {
+          // Fallback on error
+        }
+      }
+    }
+    if (mounted) setState(() => _locationName = 'Aktivitas Kora');
   }
 
   @override
@@ -71,6 +105,7 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
     super.didUpdateWidget(oldWidget);
     if (widget.post != oldWidget.post) {
       _initData();
+      _fetchLocation();
     }
     // Only re-decode if the Base64 string itself changed (not just Map reference)
     final newBase64 = widget.post['workoutData']?['mapSnapshotBase64'] as String?;
@@ -98,13 +133,15 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
   void _decodeSnapshot() {
     final workoutData = widget.post['workoutData'] as Map<String, dynamic>? ?? {};
     final base64Str = workoutData['mapSnapshotBase64'] as String?;
+    
     if (base64Str == null || base64Str.isEmpty) {
       _decodedMapSnapshot = null;
       return;
     }
+    
     try {
       _decodedMapSnapshot = base64Decode(base64Str);
-    } catch (_) {
+    } catch (e) {
       _decodedMapSnapshot = null; // Fallback to CustomPaint on corrupt data
     }
   }
@@ -238,40 +275,38 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
           bottom: BorderSide(color: AppTheme.border, width: 0.5),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── HEADER ──────────────────────────────────────────────────────
-          Padding(
-            padding: EdgeInsets.fromLTRB(context.spaceLG, context.spaceLG, context.spaceLG, 0),
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _navigateToDetail,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── HEADER ──────────────────────────────────────────────────────
+              Padding(
+                padding: EdgeInsets.fromLTRB(context.spaceLG, context.spaceLG, context.spaceLG, 0),
+                child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(typeLower),
                 RSpace.md(),
 
                 // ── JUDUL AKTIVITAS ─────────────────────────────────────
-                InkWell(
-                  onTap: _navigateToDetail,
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.w900,
-                      fontSize: context.fontLG,
-                      letterSpacing: -0.3,
-                    ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w900,
+                    fontSize: context.fontLG,
+                    letterSpacing: -0.3,
                   ),
                 ),
                 RSpace.md(),
 
                 // ── 3 KOLOM METRIK ──────────────────────────────────────
-                InkWell(
-                  onTap: _navigateToDetail,
-                  child: typeLower == 'running' || typeLower == 'walking'
-                      ? _buildRunMetrics(dist, dur)
-                      : _buildStrengthMetrics(workoutData, dur),
-                ),
+                typeLower == 'running' || typeLower == 'walking'
+                    ? _buildRunMetrics(dist, dur)
+                    : _buildStrengthMetrics(workoutData, dur),
 
                 RSpace.md(),
               ],
@@ -386,7 +421,7 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Karah, East Java',
+                    _locationName,
                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -521,9 +556,10 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
                 splashColor: Colors.black12,
                 highlightColor: Colors.transparent,
               ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

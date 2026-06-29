@@ -356,7 +356,7 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
                           });
                         },
                         title: Text(ex.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                        subtitle: Text('${ex.difficulty} â€¢ ${ex.muscleGroups.join(', ')}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        subtitle: Text('${ex.difficulty} • ${ex.muscleGroups.join(', ')}', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                         secondary: Icon(ex.icon, color: AppTheme.textMuted),
                         activeColor: AppTheme.electricBlue,
                         checkColor: Colors.white,

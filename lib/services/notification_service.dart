@@ -1,4 +1,4 @@
-﻿import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/schedule_event.dart';
@@ -137,7 +137,7 @@ class NotificationService {
     }
     await flutterLocalNotificationsPlugin.zonedSchedule(
       1000,
-      'Waktu hampir habis, Za! 🔥',
+      'Waktu hampir habis, ${AuthService.displayName}! 🔥',
       'Segera penuhi target protein/kalori kamu sekarang atau biarkan streak apimu padam malam ini. Disiplin adalah kunci!',
       tz.TZDateTime.from(eveningDate, tz.local),
       const NotificationDetails(

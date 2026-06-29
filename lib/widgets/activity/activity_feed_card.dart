@@ -6,6 +6,8 @@ import '../../models/workout.dart';
 import '../../theme/app_theme.dart';
 import '../../screens/workout_detail_screen.dart';
 import '../mini_route_painter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Activity feed card ala Strava. Bisa dipakai di halaman Aktivitas Pribadi maupun Aktivitas Teman.
 class ActivityFeedCard extends StatefulWidget {
@@ -31,6 +33,43 @@ class ActivityFeedCard extends StatefulWidget {
 class _ActivityFeedCardState extends State<ActivityFeedCard> {
   bool _isLiked = false;
   int _likesCount = 0;
+  String _locationName = 'Mencari lokasi...';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    final workout = widget.workout;
+    if (workout.polyline != null && workout.polyline!.isNotEmpty) {
+      final routePoints = MiniRoutePainter.parsePolyline(workout.polyline!);
+      if (routePoints.isNotEmpty) {
+        try {
+          final pt = routePoints.first;
+          final placemarks = await placemarkFromCoordinates(pt.latitude, pt.longitude);
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            String loc = '';
+            if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+              loc = place.subLocality!;
+            } else if (place.locality != null && place.locality!.isNotEmpty) {
+              loc = place.locality!;
+            }
+            if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+              loc += (loc.isNotEmpty ? ', ' : '') + place.administrativeArea!;
+            }
+            if (mounted) setState(() => _locationName = loc.isNotEmpty ? loc : 'Aktivitas Kora');
+            return;
+          }
+        } catch (e) {
+          // Fallback on error
+        }
+      }
+    }
+    if (mounted) setState(() => _locationName = 'Aktivitas Kora');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,13 +113,15 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
             bottom: BorderSide(color: AppTheme.border, width: 0.5),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── HEADER ──────────────────────────────────────────────────────
-            InkWell(
-              onTap: _navigateToDetail,
-              child: Padding(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _navigateToDetail,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── HEADER ──────────────────────────────────────────────────────
+                Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,9 +151,8 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
                   ],
                 ),
               ),
-            ),
 
-            // ── CHALLENGE / ENCOURAGEMENT BANNER ──
+              // ── CHALLENGE / ENCOURAGEMENT BANNER ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
@@ -156,9 +196,10 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
                 color: AppTheme.surfaceVariant,
               ),
 
-            // ── FOOTER: INTERAKSI SOSIAL ─────────────────────────────────
-            _buildSocialFooter(),
-          ],
+              // ── FOOTER: INTERAKSI SOSIAL ─────────────────────────────────
+              _buildSocialFooter(),
+            ],
+          ),
         ),
       ),
     );
@@ -210,7 +251,7 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Karah, East Java',
+                    _locationName,
                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -312,11 +353,9 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
           bottom: BorderSide(color: AppTheme.border, width: 0.5),
         ),
       ),
-      child: InkWell(
-        onTap: _navigateToDetail,
-        child: Stack(
-          children: [
-            Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned.fill(
               child: ClipRect(
                 child: CustomPaint(
                   painter: MiniRoutePainter(

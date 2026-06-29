@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/workout.dart';
 import '../services/database_helper.dart';
@@ -245,7 +245,6 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
             controller: controller,
             keyboardType: TextInputType.numberWithOptions(decimal: !isInteger),
             style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-            onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               hintText: hint,
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -374,7 +373,12 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Total Volume Kerja:', style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w600)),
-                    Text('$_volumeTotal', style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w900, fontSize: 18)),
+                    AnimatedBuilder(
+                      animation: Listenable.merge([_weightController, _repsController, _setsController, _durationController]),
+                      builder: (context, child) {
+                        return Text('$_volumeTotal', style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w900, fontSize: 18));
+                      }
+                    ),
                   ],
                 ),
               ),

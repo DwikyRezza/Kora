@@ -767,7 +767,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           Text(w.type.substring(0, 1).toUpperCase() + w.type.substring(1), style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary, fontSize: 16)),
                           const SizedBox(height: 4),
                           Text(
-                            'Selesai â€¢ ${DateFormat('HH:mm').format(w.date)} WIB',
+                            'Selesai • ${DateFormat('HH:mm').format(w.date)} WIB',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.textMuted, letterSpacing: 0.5),
                           ),
                         ],

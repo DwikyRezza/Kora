@@ -296,8 +296,8 @@ class _ProteinScreenState extends State<ProteinScreen> {
                   SizedBox(height: 4),
                   Text(
                       isWater
-                          ? '${entry.waterMl} ml â€¢ Hidrasi'
-                          : '${entry.calories.toStringAsFixed(0)} kcal â€¢ ${entry.mealLabel}',
+                          ? '${entry.waterMl} ml • Hidrasi'
+                          : '${entry.calories.toStringAsFixed(0)} kcal • ${entry.mealLabel}',
                       style: TextStyle(
                           color: Colors.grey,
                           fontSize: 13,
