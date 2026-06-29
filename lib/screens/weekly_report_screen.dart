@@ -805,10 +805,10 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                   // ── Touch interaction: update stats header on drag ───────
                   lineTouchData: LineTouchData(
                     enabled: true,
-                    handleBuiltInTouches: false,
+                    handleBuiltInTouches: true,
                     touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
                       if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
-                        if (event is FlPanEndEvent || event is FlTapUpEvent || event is FlLongPressEnd) {
+                        if (event is FlPanEndEvent || event is FlTapUpEvent || event is FlLongPressEnd || event is FlPanCancelEvent) {
                           setState(() => _selectedChartIndex = null);
                         }
                         return;
