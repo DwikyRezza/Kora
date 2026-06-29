@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../models/workout.dart';
 import '../../theme/app_theme.dart';
@@ -98,6 +100,11 @@ class _WorkoutDetailMapState extends State<WorkoutDetailMap> {
         valueListenable: AppTheme.themeNotifier,
         builder: (context, _, __) {
           return GoogleMap(
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<OneSequenceGestureRecognizer>(
+                () => EagerGestureRecognizer(),
+              ),
+            },
             initialCameraPosition: CameraPosition(
               target: _routePoints[_routePoints.length ~/ 2],
               zoom: 14.0,

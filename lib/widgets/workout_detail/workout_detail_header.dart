@@ -23,7 +23,7 @@ class WorkoutDetailHeader extends StatefulWidget {
 
 class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
   bool _isLiked = false;
-  int _likesCount = 377; // Dummy Strava Kudos Count matching visual spec
+  int _likesCount = 0; // Starts at 0 until social sync is implemented
 
   @override
   Widget build(BuildContext context) {
@@ -102,16 +102,6 @@ class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            "59 Training Load -- from COROS",
-            style: TextStyle(
-              fontSize: 13,
-              color: AppTheme.textSecondary,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 20),
-
           // ── BARIS 3: GRID METRIK UTAMA (3x2) ─────────────────────────────
           Table(
             children: [
@@ -133,43 +123,16 @@ class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
                 children: [
                   _gridMetricCell('Moving Time', _formatDuration(workout.duration)),
                   _gridMetricCell('Calories', '${workout.caloriesBurned} Cal'),
-                  _gridMetricCell('Avg Heart Rate', '130 bpm'),
+                  _gridMetricCell('Avg Heart Rate', '-'),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 24),
 
-          // ── BARIS 4: INFO PERANGKAT & CUACA ──────────────────────────────
-          Row(
-            children: [
-              Icon(Icons.watch_rounded, size: 20, color: AppTheme.textSecondary),
-              const SizedBox(width: 8),
-              Text(
-                'COROS NOMAD',
-                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.cloud_queue_rounded, size: 20, color: AppTheme.textSecondary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Cloudy, 24 °C. Feels like 25 °C. Humidity 93%. Wind 3.2 km/h from WSW.',
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
           // ── BARIS 5: SOCIAL BAR (KUDOS & IKON TOMBOL) ────────────────────
           Text(
-            '$_likesCount gave kudos',
+            '$_likesCount suka',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),

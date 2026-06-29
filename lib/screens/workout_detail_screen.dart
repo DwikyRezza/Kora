@@ -125,11 +125,13 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
           return Screenshot(
             controller: _screenshotController,
             child: CustomScrollView(
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               slivers: [
                 // ── 1. MAPS INTERAKTIF DI SLIVERAPPBAR ─────────────────────────
                 SliverAppBar(
                   expandedHeight: 380,
                   pinned: true,
+                  stretch: true, // Allow it to stretch full screen when pulled down
                   elevation: 0,
                   backgroundColor: AppTheme.background,
                   leading: Padding(
@@ -155,6 +157,10 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                     ),
                   ],
                   flexibleSpace: FlexibleSpaceBar(
+                    stretchModes: const [
+                      StretchMode.zoomBackground,
+                      StretchMode.blurBackground,
+                    ],
                     background: WorkoutDetailMap(
                       workout: _workout,
                       trackingPinPositionNotifier: _trackingPinPositionNotifier,
