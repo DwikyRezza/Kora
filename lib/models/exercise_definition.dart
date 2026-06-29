@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class ExerciseDefinition {
   final String id;
@@ -303,11 +303,20 @@ final List<ExerciseDefinition> exerciseDatabase = [
     difficulty: 'Intermediate',
   ),
   const ExerciseDefinition(
-    id: 'wt_db_press',
-    name: 'Dumbbell Chest Press',
+    id: 'wt_incline_bench',
+    name: 'Incline Bench Press',
     category: 'weighted',
-    muscleGroups: ['Dada', 'Tricep'],
-    techniqueTip: 'Turunkan dumbbell sejajar dada, berikan rentang gerak yang lebih dalam dari barbell.',
+    muscleGroups: ['Dada Atas', 'Tricep', 'Bahu Depan'],
+    techniqueTip: 'Gunakan kemiringan bangku 30-45 derajat untuk memfokuskan tarikan pada otot dada bagian atas.',
+    icon: Icons.fitness_center_rounded,
+    difficulty: 'Intermediate',
+  ),
+  const ExerciseDefinition(
+    id: 'wt_tricep_pushdown',
+    name: 'Tricep Pushdown',
+    category: 'weighted',
+    muscleGroups: ['Tricep'],
+    techniqueTip: 'Jaga siku agar tetap menempel pada sisi tubuh dan dorong kabel lurus ke bawah.',
     icon: Icons.fitness_center_rounded,
     difficulty: 'Beginner',
   ),
@@ -350,6 +359,15 @@ final List<ExerciseDefinition> exerciseDatabase = [
     difficulty: 'Beginner',
   ),
   const ExerciseDefinition(
+    id: 'wt_seated_row',
+    name: 'Seated Cable Row',
+    category: 'weighted',
+    muscleGroups: ['Punggung Tengah', 'Bicep'],
+    techniqueTip: 'Jaga dada tetap tegak dan tarik handle ke arah perut bawah sambil merapatkan tulang belikat.',
+    icon: Icons.fitness_center_rounded,
+    difficulty: 'Beginner',
+  ),
+  const ExerciseDefinition(
     id: 'wt_deadlift',
     name: 'Deadlift',
     category: 'weighted',
@@ -367,15 +385,7 @@ final List<ExerciseDefinition> exerciseDatabase = [
     icon: Icons.accessibility_new_rounded,
     difficulty: 'Beginner',
   ),
-  const ExerciseDefinition(
-    id: 'wt_back_extension',
-    name: 'Weighted Back Extension',
-    category: 'weighted',
-    muscleGroups: ['Punggung Bawah'],
-    techniqueTip: 'Angkat dada secara terkontrol, tahan kontraksi di pinggang belakang.',
-    icon: Icons.accessibility_new_rounded,
-    difficulty: 'Intermediate',
-  ),
+
   const ExerciseDefinition(
     id: 'wt_db_curl',
     name: 'Dumbbell Bicep Curl',
@@ -444,6 +454,15 @@ final List<ExerciseDefinition> exerciseDatabase = [
 
   // -- Legs --
   const ExerciseDefinition(
+    id: 'wt_barbell_squat',
+    name: 'Barbell Back Squat',
+    category: 'weighted',
+    muscleGroups: ['Paha Depan', 'Pantat', 'Paha Belakang'],
+    techniqueTip: 'Jaga punggung lurus, turun perlahan hingga paha sejajar dengan lutut atau lebih rendah.',
+    icon: Icons.fitness_center_rounded,
+    difficulty: 'Intermediate',
+  ),
+  const ExerciseDefinition(
     id: 'wt_goblet_squat',
     name: 'Goblet Squat',
     category: 'weighted',
@@ -458,6 +477,15 @@ final List<ExerciseDefinition> exerciseDatabase = [
     category: 'weighted',
     muscleGroups: ['Paha Depan'],
     techniqueTip: 'Dorong beban menggunakan kekuatan paha depan hingga kaki lurus sempurna.',
+    icon: Icons.fitness_center_rounded,
+    difficulty: 'Beginner',
+  ),
+  const ExerciseDefinition(
+    id: 'wt_leg_curl',
+    name: 'Lying/Seated Leg Curl',
+    category: 'weighted',
+    muscleGroups: ['Paha Belakang'],
+    techniqueTip: 'Tarik beban menggunakan paha belakang hingga tumit mendekati bokong.',
     icon: Icons.fitness_center_rounded,
     difficulty: 'Beginner',
   ),
