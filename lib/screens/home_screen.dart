@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _lastFeedDoc = null;
     _hasMoreData = true;
     try {
-      await CloudSyncService.restoreAllFromCloud();
+      await CloudSyncService.restoreAllFromCloud().timeout(const Duration(seconds: 5));
     } catch (_) {}
     await _loadData();
   }

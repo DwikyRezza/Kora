@@ -74,12 +74,15 @@ class _LandingScreenState extends State<LandingScreen>
         // Di-await agar SQLite sudah terisi saat screen pertama kali dibuka
         print('[LandingScreen] Memulihkan data dari Firestore...');
         try {
-          await CloudSyncService.restoreAllFromCloud();
+          await CloudSyncService.restoreAllFromCloud().timeout(const Duration(seconds: 5));
         } catch (e) {
-          print('[LandingScreen] Restore gagal (mungkin offline): $e');
+          print('[LandingScreen] Restore gagal (mungkin offline/timeout): $e');
         }
 
         if (!mounted) return;
+        // Matikan loading SEBELUM pindah halaman (best practice)
+        setState(() => _isLoadingLogin = false);
+        
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainNavigation()),
         );
