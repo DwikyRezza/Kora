@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
     _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.1, 0.7, curve: Curves.easeOutBack),
+        curve: const Interval(0.1, 0.7, curve: Curves.easeOut),
       ),
     );
 
@@ -137,18 +137,8 @@ class _SplashScreenState extends State<SplashScreen>
     final logoPath = 'assets/icons/logo_splash_screen.png';
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.4), // Soft vignette effect
-            ],
-            radius: 1.2,
-          ),
-        ),
-        child: Center(
+      backgroundColor: Colors.white,
+      body: Center(
         child: AnimatedBuilder(
           animation: _animController,
           builder: (context, child) {
@@ -176,7 +166,6 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             );
           },
-        ),
         ),
       ),
     );
