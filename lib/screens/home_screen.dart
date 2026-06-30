@@ -464,20 +464,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.surface.withOpacity(0.6),
-              borderRadius: BorderRadius.circular(26),
-            ),
-            child: Text(
-              isSufficient 
-                  ? 'Pertahankan performa ini! Otot Anda berterima kasih.' 
-                  : 'Tingkatkan asupan protein Anda di makan berikutnya untuk pemulihan optimal.',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textPrimary, height: 1.5),
-            ),
-          ),
+
         ],
       ),
     );
