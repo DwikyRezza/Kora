@@ -54,3 +54,9 @@ TECHNICAL_DOCUMENTATION.md
 
 node_modules/
 penjelasan_kora.md
+
+# Firebase config files
+.firebaserc
+firebase.json
+firestore.rules
+storage.rules
