@@ -140,8 +140,8 @@ class _HomeScreenState extends State<HomeScreen>
           await CloudSyncService.restoreAllFromCloud()
               .timeout(const Duration(seconds: 5));
         } else {
-          await CloudSyncService.syncWorkoutsToCloud();
-          await CloudSyncService.syncNutritionToCloud();
+          await CloudSyncService.syncWorkoutsToCloud().timeout(const Duration(seconds: 3));
+          await CloudSyncService.syncNutritionToCloud().timeout(const Duration(seconds: 3));
         }
       }
     } catch (_) {}
@@ -160,8 +160,8 @@ class _HomeScreenState extends State<HomeScreen>
           await CloudSyncService.restoreAllFromCloud()
               .timeout(const Duration(seconds: 5));
         } else {
-          await CloudSyncService.syncWorkoutsToCloud();
-          await CloudSyncService.syncNutritionToCloud();
+          await CloudSyncService.syncWorkoutsToCloud().timeout(const Duration(seconds: 3));
+          await CloudSyncService.syncNutritionToCloud().timeout(const Duration(seconds: 3));
         }
       }
     } catch (_) {
@@ -293,44 +293,58 @@ class _HomeScreenState extends State<HomeScreen>
     }
     final today = DateTime.now();
     try {
+      // 1. Load Local SQLite Data (Fast & Reliable)
       await _db.checkLateSchedules();
       final workouts = await _db.getWorkoutsByDate(today);
       final protein = await _db.getProteinEntriesByDate(today);
       final events = await _db.getScheduleEventsByDate(_selectedScheduleDate);
-      final profile = await ProfileService.getProfile();
-      final unread = await NotificationService.getUnreadCount();
       final workoutStreak = await _db.getCalculateWorkoutStreak();
-
-      // Load new metrics
       final consumedCals = await _db.getTodayCaloriesConsumed();
       final workoutMetrics = await _db.getTodayWorkoutMetrics();
-
-      // Load first page of feed (always fresh)
-      final feedResult = await SocialService.getFeedPosts();
-      final posts = feedResult['posts'] as List<Map<String, dynamic>>;
-      final lastDoc = feedResult['lastDoc'] as DocumentSnapshot?;
 
       if (mounted) {
         setState(() {
           _todayWorkouts = workouts;
           _todayProtein = protein;
           _upcomingEvents = events;
-          _userName = profile[ProfileService.keyName] ?? '';
-          _userPhotoUrl = profile[ProfileService.keyPhotoUrl];
-          _baseTargetProtein = profile[ProfileService.keyTargetProtein] ?? 0.0;
+          _todayCaloriesConsumed = consumedCals;
+          _todayCaloriesBurned = (workoutMetrics['caloriesBurned'] as num).toInt();
+          _todayWorkoutDuration = (workoutMetrics['duration'] as num).toInt();
+          _todayWorkoutDistance = (workoutMetrics['distance'] as num).toDouble();
+          _currentWorkoutStreak = workoutStreak['current'] ?? 0;
+        });
+      }
+
+      // 2. Load Network/Firestore Data (With Timeout to prevent Hang)
+      Map<String, dynamic> profile = {};
+      try {
+        profile = await ProfileService.getProfile().timeout(const Duration(seconds: 4));
+      } catch (_) {}
+
+      int unread = 0;
+      try {
+        unread = await NotificationService.getUnreadCount().timeout(const Duration(seconds: 3));
+      } catch (_) {}
+
+      List<Map<String, dynamic>> posts = [];
+      DocumentSnapshot? lastDoc;
+      try {
+        final feedResult = await SocialService.getFeedPosts().timeout(const Duration(seconds: 5));
+        posts = feedResult['posts'] as List<Map<String, dynamic>>;
+        lastDoc = feedResult['lastDoc'] as DocumentSnapshot?;
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          if (profile.isNotEmpty) {
+            _userName = profile[ProfileService.keyName] ?? '';
+            _userPhotoUrl = profile[ProfileService.keyPhotoUrl];
+            _baseTargetProtein = profile[ProfileService.keyTargetProtein] ?? 0.0;
+          }
           _unreadNotifs = unread;
           _feedPosts = posts;
           _lastFeedDoc = lastDoc;
           _hasMoreData = posts.isNotEmpty;
-
-          _todayCaloriesConsumed = consumedCals;
-          _todayCaloriesBurned =
-              (workoutMetrics['caloriesBurned'] as num).toInt();
-          _todayWorkoutDuration = (workoutMetrics['duration'] as num).toInt();
-          _todayWorkoutDistance =
-              (workoutMetrics['distance'] as num).toDouble();
-          _currentWorkoutStreak = workoutStreak['current'] ?? 0;
-
           _isLoadingFeed = false;
         });
       }

@@ -74,39 +74,62 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _initializeApp() async {
     try {
+      debugPrint('[SplashScreen] Memulai dotenv.load()');
       await dotenv.load(fileName: ".env");
 
-      // Initialize Firebase
-      await Firebase.initializeApp();
-      await FCMService.init();
+      debugPrint('[SplashScreen] Memulai Firebase.initializeApp()');
+      await Firebase.initializeApp().timeout(const Duration(seconds: 5));
+      
+      // Kunci Utama: Cek Auth SEGERA setelah Firebase siap.
+      _isLoggedIn = AuthService.isLoggedIn;
+      debugPrint('[SplashScreen] Status Auth: $_isLoggedIn');
 
-      // Configure Firestore
+      // Layanan lain bisa di-try-catch masing-masing agar tidak menggagalkan login
+      try {
+        debugPrint('[SplashScreen] Memulai FCMService.init()');
+        await FCMService.init().timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('[SplashScreen] FCM Timeout/Error: $e');
+      }
+
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: true,
         cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
       );
 
-      // Initialize Services
       LocationService.initialize();
       await initializeDateFormatting('id', null);
-      await NotificationService().init();
+      
+      try {
+        await NotificationService().init().timeout(const Duration(seconds: 2));
+      } catch (e) {
+        debugPrint('[SplashScreen] Notification Timeout: $e');
+      }
 
-      // Check Authentication
-      _isLoggedIn = AuthService.isLoggedIn;
-      _isOnboarded = await ProfileService.isOnboarded();
+      if (_isLoggedIn) {
+        // Cek Onboarding dengan fallback (jika offline dan error, anggap sudah onboard agar bisa masuk Home)
+        try {
+          _isOnboarded = await ProfileService.isOnboarded().timeout(const Duration(seconds: 3));
+        } catch (e) {
+          debugPrint('[SplashScreen] Onboard Check Error: $e');
+          // Jika kita tidak tahu, asumsikan sudah onboard agar tidak dilempar ke onboarding
+          _isOnboarded = true; 
+        }
 
-      if (_isLoggedIn && _isOnboarded) {
-        // Run prefetch, but cap it at 3 seconds maximum (timeout)
-        // If prefetch is slower than 3 seconds, Splash moves on, and prefetch continues in background
-        await Future.any([
-          _performPrefetch(),
-          Future.delayed(const Duration(seconds: 3)),
-        ]);
+        if (_isOnboarded) {
+          debugPrint('[SplashScreen] Melakukan Prefetch');
+          try {
+            await _performPrefetch().timeout(const Duration(seconds: 3));
+          } catch (e) {
+            debugPrint('[SplashScreen] Prefetch Timeout: $e');
+          }
+        }
       }
     } catch (e) {
-      debugPrint('[SplashScreen] Initialization Error: $e');
-      // Lanjut navigasi meskipun gagal agar pengguna tidak stuck.
+      debugPrint('[SplashScreen] Initialization Fatal Error: $e');
+      // Jika Firebase gagal initialize, tidak ada yang bisa dilakukan selain membiarkan _isLoggedIn false.
     } finally {
+      debugPrint('[SplashScreen] Selesai, melanjutkan navigasi');
       if (mounted) {
         _isInitComplete = true;
         _checkAndNavigate();
