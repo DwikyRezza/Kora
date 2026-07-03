@@ -22,6 +22,7 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
   final Set<String> _selectedMuscles = {};
   final List<String> _selectedExerciseIds = [];
   final Map<String, int> _exerciseSets = {};
+  String _searchQuery = ''; // State untuk filter pencarian gerakan
 
   final Map<String, List<String>> _muscleCategories = {
     'Dada (Chest)': ['Dada'],
@@ -147,7 +148,7 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.accent,
             foregroundColor: Colors.white,
-            disabledBackgroundColor: AppTheme.surfaceVariant,
+            disabledBackgroundColor: AppTheme.surfaceVariant.withOpacity(0.6), // Visual greyed out saat disabled
             disabledForegroundColor: AppTheme.textMuted,
             minimumSize: const Size(double.infinity, 56),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -190,9 +191,9 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.accent.withOpacity(0.1) : AppTheme.surface,
+          color: isSelected ? AppTheme.accent.withOpacity(0.15) : AppTheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? AppTheme.accent : AppTheme.border, width: 2),
+          border: Border.all(color: isSelected ? AppTheme.accent : AppTheme.border, width: isSelected ? 3 : 2),
         ),
         child: Row(
           children: [
@@ -316,12 +317,21 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
     // Filter logic
     final filtered = exerciseDatabase.where((e) {
       if (_selectedMode != null && e.category != _selectedMode) return false;
+      
+      // Filter otot strict
       if (_selectedMuscles.isNotEmpty) {
         bool match = false;
         for (var m in e.muscleGroups) {
           if (_selectedMuscles.contains(m)) match = true;
         }
         if (!match) return false;
+      }
+      
+      // Filter pencarian Search Bar
+      if (_searchQuery.isNotEmpty) {
+        if (!e.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+          return false;
+        }
       }
       return true;
     }).toList();
@@ -336,7 +346,31 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
           Text('Pilih gerakanmu', style: TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w900)),
           const SizedBox(height: 16),
           Text('Rekomendasi berdasarkan otot yang dipilih. Pilih yang ingin dilakukan.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          
+          // Search Bar
+          TextField(
+            onChanged: (val) => setState(() => _searchQuery = val),
+            style: TextStyle(color: AppTheme.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Cari gerakan (mis: Push up)...',
+              hintStyle: TextStyle(color: AppTheme.textMuted),
+              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textMuted),
+              filled: true,
+              fillColor: AppTheme.surface,
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppTheme.accent, width: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           Expanded(
             child: filtered.isEmpty
                 ? Center(child: Text('Tidak ada gerakan yang sesuai kriteria.', style: TextStyle(color: AppTheme.textMuted)))
@@ -553,7 +587,14 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Icon(Icons.drag_handle_rounded, color: AppTheme.textMuted, size: 20),
+                          // Drag Handle Icon wrapped with ReorderableDragStartListener
+                          ReorderableDragStartListener(
+                            index: i,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: Icon(Icons.drag_handle_rounded, color: AppTheme.textMuted, size: 28),
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -176,6 +176,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
       }
       setState(() => _restRemaining--);
 
+      if (_restRemaining <= 3 && _restRemaining > 0) {
+        HapticFeedback.lightImpact();
+      }
+
       if (_restRemaining <= 0) {
         t.cancel();
         _playAlarm();
@@ -675,7 +679,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                   color: Colors.white, size: 22),
               const SizedBox(width: 10),
               Text(
-                isFinishing ? 'SELESAI LATIHAN' : 'REST TIME',
+                isFinishing ? 'SELESAI LATIHAN' : 'SELESAI SET $_currentSet',
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -734,32 +738,48 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                         fontWeight: FontWeight.bold,
                         height: 1.4)),
               const SizedBox(height: 60),
-              Text(
-                '$mins:$secs',
-                style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 100,
-                  fontWeight: FontWeight.w800,
-                  fontFamily: 'monospace',
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  shadows: [
-                    // Highlight super tajam di bagian atas (Inner Bevel / Emboss edge)
-                    Shadow(
-                      color: Colors.white.withOpacity(AppTheme.isDarkMode ? 0.15 : 0.7),
-                      offset: const Offset(0, -1),
-                      blurRadius: 0,
+              SizedBox(
+                width: 240,
+                height: 240,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 240,
+                      height: 240,
+                      child: CircularProgressIndicator(
+                        value: _restRemaining / _restSeconds,
+                        strokeWidth: 4,
+                        color: AppTheme.neonGreen,
+                        backgroundColor: AppTheme.border.withOpacity(0.3),
+                      ),
                     ),
-                    // Bayangan solid di bawah angka untuk kedalaman fisik (Raised 3D effect)
-                    Shadow(
-                      color: Colors.black.withOpacity(AppTheme.isDarkMode ? 0.9 : 0.3),
-                      offset: const Offset(0, 3),
-                      blurRadius: 0,
-                    ),
-                    // Sedikit bayangan tipis agar angka terpisah dari background, tanpa efek menyebar
-                    Shadow(
-                      color: Colors.black.withOpacity(AppTheme.isDarkMode ? 0.4 : 0.1),
-                      offset: const Offset(0, 5),
-                      blurRadius: 2,
+                    Text(
+                      '$mins:$secs',
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 64, // Dikecilkan sedikit agar muat di dalam lingkaran
+                        fontWeight: FontWeight.w800,
+                        fontFamily: 'monospace',
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        shadows: [
+                          Shadow(
+                            color: Colors.white.withOpacity(AppTheme.isDarkMode ? 0.15 : 0.7),
+                            offset: const Offset(0, -1),
+                            blurRadius: 0,
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(AppTheme.isDarkMode ? 0.9 : 0.3),
+                            offset: const Offset(0, 3),
+                            blurRadius: 0,
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(AppTheme.isDarkMode ? 0.4 : 0.1),
+                            offset: const Offset(0, 5),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
