@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 class TrainingVolumeChart extends StatefulWidget {
   final List<double> weeklyVolumes; // Data untuk 12 minggu (3 bulan x 4 minggu)
   final List<String>? bottomLabels; // Label khusus untuk sumbu X
+  final double? maxY; // Memaksa max Y agar sejajar dengan label di luar
   final void Function(int?)? onIndexChanged; // Callback saat digeser
 
   const TrainingVolumeChart({
     super.key,
     required this.weeklyVolumes,
     this.bottomLabels,
+    this.maxY,
     this.onIndexChanged,
   }) : assert(weeklyVolumes.length == 12, 'Must provide exactly 12 weekly data points (4 weeks x 3 months)');
 
@@ -90,7 +92,20 @@ class _TrainingVolumeChartState extends State<TrainingVolumeChart> {
                 }
               },
             ),
-            gridData: const FlGridData(show: false), // Strava tidak menampilkan grid utama di tengah
+            gridData: FlGridData(
+              show: true, // Tampilkan grid untuk garis tengah dan atas
+              drawVerticalLine: false,
+              horizontalInterval: widget.maxY != null ? widget.maxY! / 2 : (maxVolume * 1.2).clamp(1.0, double.infinity) / 2,
+              getDrawingHorizontalLine: (value) {
+                // Sembunyikan garis Y=0 karena sudah ditangani oleh borderData
+                if (value == 0) return const FlLine(color: Colors.transparent, strokeWidth: 0);
+                return FlLine(
+                  color: Colors.grey.withOpacity(0.3),
+                  strokeWidth: 1,
+                  dashArray: [4, 4], // Opsional: putus-putus agar lebih rapi ala Strava, bisa dihilangkan jika ingin solid
+                );
+              },
+            ),
             titlesData: FlTitlesData(
               show: true,
               rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -141,7 +156,7 @@ class _TrainingVolumeChartState extends State<TrainingVolumeChart> {
             minX: 0,
             maxX: 11,
             minY: 0,
-            maxY: (maxVolume * 1.2).clamp(1.0, double.infinity), // Buffer ruang 20% di atas agar titik max tidak tertutup tooltip
+            maxY: widget.maxY ?? (maxVolume * 1.2).clamp(1.0, double.infinity), // Buffer ruang 20% di atas agar titik max tidak tertutup tooltip
             lineBarsData: [
               LineChartBarData(
                 spots: List.generate(

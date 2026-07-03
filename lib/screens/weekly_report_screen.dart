@@ -702,6 +702,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
               child: TrainingVolumeChart(
                 weeklyVolumes: chartValues,
                 bottomLabels: xLabels,
+                maxY: yMax,
                 onIndexChanged: (idx) {
                   if (mounted) {
                     setState(() => _selectedChartIndex = idx);
