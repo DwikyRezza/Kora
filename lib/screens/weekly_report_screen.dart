@@ -1306,47 +1306,42 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  if (isSuccess || isFrozen)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: (isFrozen
-                                ? const Color(0xFF00A9DD)
-                                : AppTheme.accent)
-                            .withOpacity(0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(isFrozen ? '🧊' : '🔥',
-                            style: TextStyle(fontSize: 22)),
-                      ),
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                          color: AppTheme.surfaceVariant, shape: BoxShape.circle),
-                      child: Center(
-                        child: Text('$day',
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _workoutDaysMonth.contains(day)
+                          ? AppTheme.accent.withOpacity(0.15)
+                          : (isFrozen ? const Color(0xFF00A9DD).withOpacity(0.15) : AppTheme.surfaceVariant),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (_workoutDaysMonth.contains(day))
+                            Opacity(
+                              opacity: 0.35,
+                              child: const Text('🔥', style: TextStyle(fontSize: 26)),
+                            )
+                          else if (isSuccess)
+                            // Fallback protein success marker if no workout
+                            Opacity(
+                              opacity: 0.15,
+                              child: const Text('🍗', style: TextStyle(fontSize: 22)),
+                            ),
+                          Text(
+                            '$day',
                             style: TextStyle(
-                                color: AppTheme.textMuted,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14)),
+                              color: _workoutDaysMonth.contains(day)
+                                  ? AppTheme.accent
+                                  : (isFrozen ? const Color(0xFF00A9DD) : AppTheme.textMuted),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  
-                  // Tanda api (🔥) kecil di bagian bawah-kanan jika ada latihan di hari tsb
-                  if (_workoutDaysMonth.contains(day))
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface, // Supaya tidak tertimpa background
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Text('🔥', style: TextStyle(fontSize: 10)),
-                      ),
-                    ),
+                  ),
                   if (isSuccess && gglWarn)
                     Positioned(
                       top: 2,
