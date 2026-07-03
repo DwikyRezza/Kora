@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/workout.dart';
@@ -525,6 +525,35 @@ class DatabaseHelper {
       [workoutId],
     );
     return ((result.first['max_order'] as int?) ?? -1) + 1;
+  }
+
+  // ---- METRICS FOR DASHBOARD ----
+  Future<int> getTodayCaloriesConsumed() async {
+    final db = await database;
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day).toIso8601String();
+    final end = DateTime(now.year, now.month, now.day, 23, 59, 59).toIso8601String();
+    final result = await db.rawQuery(
+      'SELECT SUM(calories) as total FROM protein_entries WHERE date BETWEEN ? AND ?',
+      [start, end]
+    );
+    return (result.first['total'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<Map<String, num>> getTodayWorkoutMetrics() async {
+    final db = await database;
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day).toIso8601String();
+    final end = DateTime(now.year, now.month, now.day, 23, 59, 59).toIso8601String();
+    final result = await db.rawQuery(
+      'SELECT SUM(caloriesBurned) as calories, SUM(duration) as duration, SUM(distance) as distance FROM workouts WHERE date BETWEEN ? AND ?',
+      [start, end]
+    );
+    return {
+      'caloriesBurned': (result.first['calories'] as num?)?.toInt() ?? 0,
+      'duration': (result.first['duration'] as num?)?.toInt() ?? 0,
+      'distance': (result.first['distance'] as num?)?.toDouble() ?? 0.0,
+    };
   }
 
   // ---- PROTEIN METHODS ----

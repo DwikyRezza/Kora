@@ -55,6 +55,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   List<Map<String, dynamic>> _feedPosts = [];
   bool _isLoadingFeed = true;
 
+  // ── Metrics Dashboard State ──────────────────────────────────────────────
+  int _todayCaloriesConsumed = 0;
+  int _todayCaloriesBurned = 0;
+  int _todayWorkoutDuration = 0;
+  double _todayWorkoutDistance = 0.0;
+
   // ── Pagination state ───────────────────────────────────────────────────
   DocumentSnapshot? _lastFeedDoc;
   bool _isLoadingMore = false; // Debounce: prevent multiple simultaneous loads
@@ -66,10 +72,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   double get _totalProteinToday =>
       _todayProtein.fold(0, (sum, e) => sum + e.proteinGrams);
   double get _totalProteinNeeded => _baseTargetProtein;
-  int get _totalCaloriesToday =>
-      _todayWorkouts.fold(0, (sum, w) => sum + w.caloriesBurned);
-  int get _totalWorkoutMinutes =>
-      _todayWorkouts.fold(0, (sum, w) => sum + w.duration.round());
 
   @override
   void initState() {
@@ -192,6 +194,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final profile = await ProfileService.getProfile();
       final unread = await NotificationService.getUnreadCount();
 
+      // Load new metrics
+      final consumedCals = await _db.getTodayCaloriesConsumed();
+      final workoutMetrics = await _db.getTodayWorkoutMetrics();
+
       // Load first page of feed (always fresh)
       final feedResult = await SocialService.getFeedPosts();
       final posts = feedResult['posts'] as List<Map<String, dynamic>>;
@@ -209,6 +215,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _feedPosts = posts;
           _lastFeedDoc = lastDoc;
           _hasMoreData = posts.isNotEmpty;
+          
+          _todayCaloriesConsumed = consumedCals;
+          _todayCaloriesBurned = (workoutMetrics['caloriesBurned'] as num).toInt();
+          _todayWorkoutDuration = (workoutMetrics['duration'] as num).toInt();
+          _todayWorkoutDistance = (workoutMetrics['distance'] as num).toDouble();
+          
           _isLoadingFeed = false;
         });
       }
@@ -466,40 +478,43 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       physics: const NeverScrollableScrollPhysics(),
       childAspectRatio: 1.3, // Memberikan ruang vertikal lebih agar tidak overflow
       children: [
-        _buildStatBox(title: 'Nutrisi', value: '${_totalProteinToday.toStringAsFixed(0)}g', color: AppTheme.accent),
-        _buildStatBox(title: 'Energi', value: '$_totalCaloriesToday', subValue: 'Kkal', color: AppTheme.accent),
-        _buildStatBox(title: 'Durasi', value: '$_totalWorkoutMinutes', subValue: 'Menit', color: AppTheme.accent),
-        _buildStatBox(title: 'Sesi', value: '${_todayWorkouts.length} Sesi', color: AppTheme.accent),
+        _buildStatBox(title: 'ASUPAN', value: '$_todayCaloriesConsumed', subValue: 'Kkal', color: AppTheme.accent, onTap: widget.onGoToProtein),
+        _buildStatBox(title: 'ENERGI', value: '$_todayCaloriesBurned', subValue: 'Kkal', color: AppTheme.accent),
+        _buildStatBox(title: 'DURASI', value: '$_todayWorkoutDuration', subValue: 'Menit', color: AppTheme.accent),
+        _buildStatBox(title: 'JARAK', value: _todayWorkoutDistance.toStringAsFixed(1), subValue: 'Km', color: AppTheme.accent),
       ],
     );
   }
 
-  Widget _buildStatBox({required String title, required String value, String? subValue, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(26),
-        border: Border(left: BorderSide(color: color, width: 4)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(title.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 1)),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
-              if (subValue != null) ...[
-                const SizedBox(width: 4),
-                Text(subValue, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+  Widget _buildStatBox({required String title, required String value, String? subValue, required Color color, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(26),
+          border: Border(left: BorderSide(color: color, width: 4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(title, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textMuted, letterSpacing: 1)),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textPrimary)),
+                if (subValue != null) ...[
+                  const SizedBox(width: 4),
+                  Text(subValue, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted)),
+                ],
               ],
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
