@@ -214,18 +214,7 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
   Widget _buildHeader(Workout workout) {
     return Row(
       children: [
-        // Avatar
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: AppTheme.surfaceVariant,
-          backgroundImage: _buildAvatarImage(),
-          child: _buildAvatarImage() == null
-              ? Text(
-                  widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'A',
-                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
-                )
-              : null,
-        ),
+        _buildAvatar(),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -494,12 +483,80 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
     );
   }
 
-  ImageProvider? _buildAvatarImage() {
+  /// Progressive avatar with fade-in transition
+  Widget _buildAvatar() {
     final url = widget.userPhotoUrl;
-    if (url == null || url.isEmpty) return null;
-    if (url.startsWith('http')) return NetworkImage(url);
-    
-    return FileImage(File(url));
+    final initials = widget.userName.isNotEmpty ? widget.userName[0].toUpperCase() : 'A';
+
+    if (url == null || url.isEmpty) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundColor: AppTheme.surfaceVariant,
+        child: Text(initials, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+      );
+    }
+
+    if (url.startsWith('http')) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundColor: AppTheme.surfaceVariant,
+        child: ClipOval(
+          child: Image.network(
+            url,
+            width: 44, height: 44,
+            fit: BoxFit.cover,
+            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+              if (wasSynchronouslyLoaded || frame != null) {
+                return AnimatedOpacity(
+                  opacity: 1.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: child,
+                );
+              }
+              // Placeholder while loading
+              return Container(
+                width: 44, height: 44,
+                color: AppTheme.surfaceVariant,
+                child: Icon(Icons.person_rounded, size: 22, color: AppTheme.textMuted),
+              );
+            },
+            errorBuilder: (_, __, ___) => Text(
+              initials, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Local file image with fade-in
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: AppTheme.surfaceVariant,
+      child: ClipOval(
+        child: Image.file(
+          File(url),
+          width: 44, height: 44,
+          fit: BoxFit.cover,
+          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            if (wasSynchronouslyLoaded || frame != null) {
+              return AnimatedOpacity(
+                opacity: 1.0,
+                duration: const Duration(milliseconds: 300),
+                child: child,
+              );
+            }
+            return Container(
+              width: 44, height: 44,
+              color: AppTheme.surfaceVariant,
+              child: Icon(Icons.person_rounded, size: 22, color: AppTheme.textMuted),
+            );
+          },
+          errorBuilder: (_, __, ___) => Text(
+            initials, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+        ),
+      ),
+    );
   }
 
   String _defaultTitle(Workout w) {

@@ -16,6 +16,10 @@ import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/prefetch_manager.dart';
+import '../widgets/shimmer_stat_box.dart';
+import '../widgets/shimmer_feed_card.dart';
+import '../widgets/shimmer_stat_box.dart';
+import '../widgets/shimmer_feed_card.dart';
 import 'dart:async';
 import 'search_screen.dart';
 import 'notification_screen.dart';
@@ -170,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   // ── Scroll listener for infinite scrolling ──────────────────────────────
   void _onScroll() {
     if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 300) {
+        _scrollController.position.maxScrollExtent * 0.7) {
       _loadMoreFeed();
     }
   }
@@ -181,15 +185,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     setState(() => _isLoadingMore = true);
 
     try {
-      final result = await SocialService.getFeedPosts(startAfter: _lastFeedDoc);
+      final result = await SocialService.getFeedPosts(
+        startAfter: _lastFeedDoc,
+        limit: 10,
+      );
       final newPosts = result['posts'] as List<Map<String, dynamic>>;
       final newLastDoc = result['lastDoc'] as DocumentSnapshot?;
 
       if (mounted) {
         setState(() {
-          _feedPosts.addAll(newPosts);
+          // Merge-Union logic: Only add posts that don't already exist in _feedPosts
+          final existingIds = _feedPosts.map((p) => p['id'] ?? '').toSet();
+          for (var post in newPosts) {
+            if (!existingIds.contains(post['id'] ?? '')) {
+              _feedPosts.add(post);
+              existingIds.add(post['id'] ?? '');
+            }
+          }
           _lastFeedDoc = newLastDoc;
-          _hasMoreData = newPosts.isNotEmpty;
+          _hasMoreData = newPosts.length >= 10;
           _isLoadingMore = false;
         });
       }
@@ -383,8 +397,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               if (_isLoading)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                    padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
+                    child: Column(
+                      children: [
+                        SizedBox(height: context.spaceLG),
+                        const ShimmerProteinCard(),
+                        SizedBox(height: context.space2XL),
+                        Row(
+                          children: const [
+                            Expanded(child: ShimmerStatBox()),
+                            SizedBox(width: 16),
+                            Expanded(child: ShimmerStatBox()),
+                          ],
+                        ),
+                        SizedBox(height: context.space2XL),
+                        Row(
+                          children: const [
+                            Expanded(child: ShimmerStatBox()),
+                            SizedBox(width: 16),
+                            Expanded(child: ShimmerStatBox()),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 )
               else ...[
@@ -634,7 +669,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
       if (_isLoadingFeed)
         SliverToBoxAdapter(
-          child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
+            child: Column(
+              children: List.generate(3, (index) => const ShimmerFeedCard()),
+            ),
+          ),
         )
       else if (_feedPosts.isEmpty)
         SliverToBoxAdapter(

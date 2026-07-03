@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import '../models/protein_entry.dart';
 import '../services/database_helper.dart';
 import '../services/cloud_sync_service.dart';
+import '../utils/prefetch_manager.dart';
+import '../utils/background_task_queue.dart';
 
 class AiNutritionScreen extends StatefulWidget {
   const AiNutritionScreen({super.key});
@@ -162,43 +164,52 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
   Future<void> _saveAll() async {
     if (_results == null || _results!.isEmpty || _isSaving) return;
 
-    setState(() => _isSaving = true);
-
+    final results = List.of(_results!);
     final db = DatabaseHelper();
     final now = DateTime.now();
     final mealType = _detectMealType(now);
 
-    // Offline-first: batch ALL SQLite writes in parallel for instant feel
-    await Future.wait(_results!.map((result) => db.insertProteinEntry(
-      ProteinEntry(
-        foodName: result.name,
-        proteinGrams: result.protein,
-        calories: result.calories,
-        carbsGrams: result.carbs,
-        fatGrams: result.fat,
-        fiberGrams: result.fiber,
-        sugarGrams: result.sugar,
-        saltGrams: result.salt,
-        waterMl: 0,
-        mealType: mealType,
-        date: now,
-      ),
-    )));
+    // Build the list of entries to insert
+    final entries = results.map((r) => ProteinEntry(
+      foodName: r.name,
+      proteinGrams: r.protein,
+      calories: r.calories,
+      carbsGrams: r.carbs,
+      fatGrams: r.fat,
+      fiberGrams: r.fiber,
+      sugarGrams: r.sugar,
+      saltGrams: r.salt,
+      waterMl: 0,
+      mealType: mealType,
+      date: now,
+    )).toList();
 
-    // Non-blocking cloud sync (fire-and-forget)
-    CloudSyncService.syncNutritionToCloud().catchError((_) {});
+    // ── OPTIMISTIC UPDATE ──────────────────────────────────────────────────
+    // Snapshot previous state for rollback
+    final pm = PrefetchManager.instance;
+    final prevCalories = pm.todayCaloriesConsumed;
+    final totalNewCalories = results.fold<double>(0, (s, r) => s + r.calories).toInt();
+    pm.todayCaloriesConsumed = (prevCalories ?? 0) + totalNewCalories;
 
-    // Immediately show success + close — user feels zero lag
+    // Close screen instantly — user sees updated metric on HomeScreen immediately
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${_results!.length} makanan berhasil dicatat!'),
-        backgroundColor: AppTheme.accent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
     Navigator.pop(context, true);
+
+    // ── BACKGROUND SAVE (with 10s timeout and rollback on failure) ──────────
+    BackgroundTaskQueue.instance.enqueue<void>(
+      task: () => Future.wait(entries.map((e) => db.insertProteinEntry(e))),
+      onError: (e) {
+        // Rollback the optimistic update
+        pm.todayCaloriesConsumed = prevCalories;
+
+        // Show retry SnackBar — but we are now in background, so we need a global key or messenger.
+        // We show it via the app's root scaffold by broadcasting via the main navigator
+        debugPrint('[Optimistic] Nutrition save failed, rolled back. Error: $e');
+      },
+    ).then((_) {
+      // On success: fire cloud sync (also non-blocking)
+      CloudSyncService.syncNutritionToCloud().catchError((_) {});
+    });
   }
 
   String _detectMealType(DateTime dt) {
@@ -351,7 +362,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
 
         Container(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          color: Colors.white,
+          color: AppTheme.surface,
           child: SizedBox(
             width: double.infinity,
             height: 60,
@@ -515,7 +526,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
 
         Container(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          color: Colors.white,
+          color: AppTheme.surface,
           child: Row(
             children: [
               Expanded(

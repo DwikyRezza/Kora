@@ -75,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _initializeApp() async {
     try {
       await dotenv.load(fileName: ".env");
-      
+
       // Initialize Firebase
       await Firebase.initializeApp();
       await FCMService.init();
@@ -118,25 +118,38 @@ class _SplashScreenState extends State<SplashScreen>
     final pm = PrefetchManager.instance;
     final db = DatabaseHelper();
     final today = DateTime.now();
-    
+
     await Future.wait([
-      ProfileService.getProfile().then((v) => pm.userProfile = v).catchError((e) {
+      ProfileService.getProfile()
+          .then((v) => pm.userProfile = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getUserProfile gagal: $e');
         return <String, dynamic>{};
       }),
-      db.getTodayCaloriesConsumed().then((v) => pm.todayCaloriesConsumed = v).catchError((e) {
+      db
+          .getTodayCaloriesConsumed()
+          .then((v) => pm.todayCaloriesConsumed = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getTodayCaloriesConsumed gagal: $e');
         return 0;
       }),
-      db.getTodayWorkoutMetrics().then((v) => pm.todayWorkoutMetrics = v).catchError((e) {
+      db
+          .getTodayWorkoutMetrics()
+          .then((v) => pm.todayWorkoutMetrics = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getTodayWorkoutMetrics gagal: $e');
         return <String, num>{};
       }),
-      db.getCalculateWorkoutStreak().then((v) => pm.currentWorkoutStreak = v).catchError((e) {
+      db
+          .getCalculateWorkoutStreak()
+          .then((v) => pm.currentWorkoutStreak = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getCalculateWorkoutStreak gagal: $e');
         return <String, int>{};
       }),
-      NotificationService.getUnreadCount().then((v) => pm.unreadNotificationCount = v).catchError((e) {
+      NotificationService.getUnreadCount()
+          .then((v) => pm.unreadNotificationCount = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getUnreadNotificationCount gagal: $e');
         return 0;
       }),
@@ -146,15 +159,24 @@ class _SplashScreenState extends State<SplashScreen>
         debugPrint('[Prefetch Error] getActivityFeed gagal: $e');
         return <String, dynamic>{};
       }),
-      db.getWorkoutsByDate(today).then((v) => pm.todayWorkouts = v).catchError((e) {
+      db
+          .getWorkoutsByDate(today)
+          .then((v) => pm.todayWorkouts = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getWorkoutsByDate gagal: $e');
         return [];
       }),
-      db.getProteinEntriesByDate(today).then((v) => pm.todayProtein = v).catchError((e) {
+      db
+          .getProteinEntriesByDate(today)
+          .then((v) => pm.todayProtein = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getProteinEntriesByDate gagal: $e');
         return [];
       }),
-      db.getScheduleEventsByDate(today).then((v) => pm.upcomingEvents = v).catchError((e) {
+      db
+          .getScheduleEventsByDate(today)
+          .then((v) => pm.upcomingEvents = v)
+          .catchError((e) {
         debugPrint('[Prefetch Error] getScheduleEventsByDate gagal: $e');
         return [];
       }),
@@ -174,7 +196,8 @@ class _SplashScreenState extends State<SplashScreen>
 
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 250), // Phase 6 Fade out
+          transitionDuration:
+              const Duration(milliseconds: 250), // Phase 6 Fade out
           pageBuilder: (_, __, ___) => nextScreen,
           transitionsBuilder: (_, animation, __, child) {
             return FadeTransition(opacity: animation, child: child);
@@ -194,7 +217,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     // Determine the theme
     final isDark = AppTheme.isDarkMode;
-    final logoPath = isDark 
+    final logoPath = isDark
         ? 'assets/icons/logo_splash_screen_dark_mode.png'
         : 'assets/icons/logo_splash_screen.png';
 
@@ -206,7 +229,7 @@ class _SplashScreenState extends State<SplashScreen>
           builder: (context, child) {
             // Apply scale logic
             final currentScale = _scaleAnimation.value;
-            
+
             return Transform.scale(
               scale: currentScale,
               child: Opacity(
