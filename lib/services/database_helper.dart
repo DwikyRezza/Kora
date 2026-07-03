@@ -417,6 +417,54 @@ class DatabaseHelper {
     return maps.map((m) => Workout.fromMap(m)).toList();
   }
 
+  /// Menghitung total hari berturut-turut (Streak) dari tabel workouts
+  /// menggunakan Aturan 48 Jam (Aman jika hari ini belum latihan tapi kemarin sudah)
+  /// Bug DST (Daylight Saving Time) dicegah dengan menggunakan list hari unik dan DateTime(YYYY-MM-DD).
+  Future<int> getCalculateWorkoutStreak() async {
+    final db = await database;
+    // Mengambil tanggal unik berformat 'YYYY-MM-DD' secara descending dari SQLite
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT DISTINCT substr(date, 1, 10) as dateStr 
+      FROM workouts 
+      ORDER BY dateStr DESC
+    ''');
+    
+    if (maps.isEmpty) return 0;
+    
+    List<String> dates = maps.map((m) => m['dateStr'] as String).toList();
+    
+    int streak = 0;
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day);
+    DateTime yesterday = DateTime(now.year, now.month, now.day - 1);
+    
+    String todayStr = today.toIso8601String().split('T')[0];
+    String yesterdayStr = yesterday.toIso8601String().split('T')[0];
+    
+    bool hasToday = dates.contains(todayStr);
+    bool hasYesterday = dates.contains(yesterdayStr);
+    
+    // Aturan Patah: Jika tidak ada log hari ini DAN kemarin, streak = 0
+    if (!hasToday && !hasYesterday) return 0;
+    
+    // Tentukan titik awal hitung mundur
+    DateTime checkDate = hasToday ? today : yesterday;
+    
+    // Hitung mundur hari secara aman dari DST
+    for (int i = 0; i < dates.length; i++) {
+      DateTime expectedDate = DateTime(checkDate.year, checkDate.month, checkDate.day - i);
+      String expectedDateStr = expectedDate.toIso8601String().split('T')[0];
+      
+      if (dates.contains(expectedDateStr)) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    
+    return streak;
+  }
+
   Future<int> deleteWorkout(int id) async {
     final db = await database;
     // Hapus foto terkait dulu (FK cascade tidak aktif by default di SQLite)

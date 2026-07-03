@@ -22,6 +22,7 @@ import 'running_tracker_screen.dart';
 import 'workout_setup_screen.dart';
 import '../widgets/feed_post_card.dart';
 import '../utils/responsive.dart';
+import 'package:lottie/lottie.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onGoToWorkout;
@@ -60,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _todayCaloriesBurned = 0;
   int _todayWorkoutDuration = 0;
   double _todayWorkoutDistance = 0.0;
+  int _currentWorkoutStreak = 0;
 
   // ── Pagination state ───────────────────────────────────────────────────
   DocumentSnapshot? _lastFeedDoc;
@@ -81,7 +83,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _whistleTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       _checkWhistleblower();
     });
-    _loadData();
+    // Auto-sync dari cloud saat aplikasi baru dibuka (sinkronisasi instan)
+    _initialSyncAndLoad();
+  }
+
+  Future<void> _initialSyncAndLoad() async {
+    setState(() => _isLoading = true);
+    try {
+      if (AuthService.isLoggedIn) {
+        await CloudSyncService.restoreAllFromCloud().timeout(const Duration(seconds: 5));
+      }
+    } catch (_) {
+      // Abaikan error jaringan agar aplikasi tetap bisa dibuka secara offline
+    }
+    await _loadData();
   }
 
   @override
@@ -193,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final events = await _db.getScheduleEventsByDate(_selectedScheduleDate);
       final profile = await ProfileService.getProfile();
       final unread = await NotificationService.getUnreadCount();
+      final workoutStreak = await _db.getCalculateWorkoutStreak();
 
       // Load new metrics
       final consumedCals = await _db.getTodayCaloriesConsumed();
@@ -220,6 +236,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _todayCaloriesBurned = (workoutMetrics['caloriesBurned'] as num).toInt();
           _todayWorkoutDuration = (workoutMetrics['duration'] as num).toInt();
           _todayWorkoutDistance = (workoutMetrics['distance'] as num).toDouble();
+          _currentWorkoutStreak = workoutStreak;
           
           _isLoadingFeed = false;
         });
@@ -346,6 +363,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
         Row(
           children: [
+            if (_currentWorkoutStreak > 0)
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.accent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '$_currentWorkoutStreak',
+                      style: TextStyle(
+                        color: AppTheme.accent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Lottie.asset(
+                        'assets/lottie/fire_streak.json',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             IconButton(
               icon: Icon(Icons.search, color: AppTheme.textPrimary),
               onPressed: () {
