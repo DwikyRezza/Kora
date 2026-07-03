@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/workout.dart';
 import '../services/database_helper.dart';
 import '../services/profile_service.dart';
+import '../widgets/activity/training_volume_chart.dart';
 
 class WeeklyReportScreen extends StatefulWidget {
   final bool embedMode;
@@ -190,52 +191,23 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         ? 'weightlifting'
         : ((_progressFilter == 'walk') ? null : 'running');
 
-    // Step 1: Count activities in the last 1 month to decide scale
-    final monthStart = DateTime(now.year, now.month, 1);
-    final monthEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
-    final lastMonthWorkouts = await _db.getWorkoutsByDateRange(
-      start: monthStart, end: monthEnd, type: dbType,
-    );
-    // Filter to match the progress filter properly
-    int countLastMonth = 0;
-    for (final wk in lastMonthWorkouts) {
-      if (_progressFilter == 'walk' && wk.type == 'running' && (wk.distance ?? 0) <= 2.0) countLastMonth++;
-      else if (_progressFilter == 'run' && wk.type == 'running' && (wk.distance ?? 0) > 2.0) countLastMonth++;
-      else if (_progressFilter == 'lift' && wk.type == 'weightlifting') countLastMonth++;
-    }
-
     final List<_ChartPoint> points = [];
-    bool isMonthly = countLastMonth < 2;
-
-    if (!isMonthly) {
-      // ── 1-MONTH MODE: 4 weekly points ───────────────────────────────────
-      final todayMidnight = DateTime(now.year, now.month, now.day);
-      final thisMonday = todayMidnight.subtract(Duration(days: (todayMidnight.weekday - 1) % 7));
-      for (int w = 3; w >= 0; w--) {
-        final weekStart = thisMonday.subtract(Duration(days: w * 7));
-        final weekEnd = weekStart.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
-        final workouts = await _db.getWorkoutsByDateRange(start: weekStart, end: weekEnd, type: dbType);
-        final metrics = _computeMetricsFromWorkouts(workouts);
-        points.add(_ChartPoint(rangeStart: weekStart, rangeEnd: weekEnd, metrics: metrics));
-      }
-    } else {
-      // ── 3-MONTH MODE: 3 monthly points ──────────────────────────────────
-      for (int m = 2; m >= 0; m--) {
-        // Calculate month boundaries correctly
-        final year = now.month - m <= 0 ? now.year - 1 : now.year;
-        final month = now.month - m <= 0 ? now.month - m + 12 : now.month - m;
-        final start = DateTime(year, month, 1);
-        final end = DateTime(year, month + 1, 0, 23, 59, 59);
-        final workouts = await _db.getWorkoutsByDateRange(start: start, end: end, type: dbType);
-        final metrics = _computeMetricsFromWorkouts(workouts);
-        points.add(_ChartPoint(rangeStart: start, rangeEnd: end, metrics: metrics));
-      }
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    final thisMonday = todayMidnight.subtract(Duration(days: (todayMidnight.weekday - 1) % 7));
+    
+    // SELALU gunakan 12 titik mingguan (past 12 weeks) untuk Strava-style
+    for (int w = 11; w >= 0; w--) {
+      final weekStart = thisMonday.subtract(Duration(days: w * 7));
+      final weekEnd = weekStart.add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59));
+      final workouts = await _db.getWorkoutsByDateRange(start: weekStart, end: weekEnd, type: dbType);
+      final metrics = _computeMetricsFromWorkouts(workouts);
+      points.add(_ChartPoint(rangeStart: weekStart, rangeEnd: weekEnd, metrics: metrics));
     }
 
     if (mounted) {
       setState(() {
         _chartData = points;
-        _isMonthlyScale = isMonthly;
+        _isMonthlyScale = false;
         _twelveWeekLoading = false;
       });
     }
@@ -678,7 +650,7 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
   }
 
   Widget _buildTwelveWeekChart() {
-    if (_twelveWeekLoading || _chartData.isEmpty) {
+    if (_twelveWeekLoading || _chartData.isEmpty || _chartData.length < 12) {
       return SizedBox(
         height: 200,
         child: Center(
@@ -686,14 +658,6 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
                 color: AppTheme.accent, strokeWidth: 2)),
       );
     }
-
-    final n = _chartData.length; // 4 (weekly) or 3 (monthly)
-    final maxX = (n - 1).toDouble();
-    final selectedIdx = (_selectedChartIndex != null &&
-            _selectedChartIndex! >= 0 &&
-            _selectedChartIndex! < n)
-        ? _selectedChartIndex!
-        : n - 1;
 
     // Helper untuk format nilai Y
     String formatVal(double v) {
@@ -713,26 +677,18 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         : (rawMax < 1.0 ? 2.0 : (rawMax * 1.4).ceilToDouble());
     final yMid = (yMax / 2).roundToDouble();
 
-    // Build spots — use distance or volume for Y
-    final spots = List.generate(n, (i) {
-      final val = _progressFilter == 'lift'
-          ? _chartData[i].metrics.volume
-          : _chartData[i].metrics.distance;
-      return FlSpot(i.toDouble(), val);
-    });
+    // Data 12 titik
+    final List<double> chartValues = _chartData.map((p) {
+      return _progressFilter == 'lift' ? p.metrics.volume : p.metrics.distance;
+    }).toList();
 
-    // X-axis labels
-    Map<int, String> xLabels = {};
-    for (int i = 0; i < n; i++) {
-      if (_isMonthlyScale) {
-        xLabels[i] = DateFormat('MMM').format(_chartData[i].rangeStart).toUpperCase();
-      } else {
-        // weekly — show month name only when it changes
-        if (i == 0 || _chartData[i].rangeStart.month != _chartData[i - 1].rangeStart.month) {
-          xLabels[i] = DateFormat('MMM').format(_chartData[i].rangeStart).toUpperCase();
-        }
+    // Sumbu X labels
+    final List<String> xLabels = List.generate(12, (i) {
+      if (i == 0 || _chartData[i].rangeStart.month != _chartData[i - 1].rangeStart.month) {
+        return DateFormat('MMM').format(_chartData[i].rangeStart).toUpperCase();
       }
-    }
+      return '';
+    });
 
     return Padding(
       padding: EdgeInsets.only(top: 12, bottom: 8),
@@ -740,127 +696,21 @@ class _WeeklyReportScreenState extends State<WeeklyReportScreen> {
         height: 220,
         child: Stack(
           children: [
-            // ── LineChart ─────────────────────────────────────────────────
+            // ── Menggunakan Reusable TrainingVolumeChart ──
             Padding(
-              padding: EdgeInsets.only(right: 44),
-              child: RepaintBoundary(
-                child: LineChart(
-                LineChartData(
-                  minX: 0,
-                  maxX: maxX,
-                  minY: 0,
-                  maxY: yMax,
-                  clipData: FlClipData.all(),
-                  backgroundColor: AppTheme.surface,
-
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval: yMid,
-                    getDrawingHorizontalLine: (_) => FlLine(
-                      color: AppTheme.textPrimary.withOpacity(0.08),
-                      strokeWidth: 1,
-                    ),
-                  ),
-
-                  borderData: FlBorderData(show: false),
-
-                  titlesData: FlTitlesData(
-                    show: true,
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 28,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          final i = value.toInt();
-                          final label = xLabels[i];
-                          if (label == null) return SizedBox();
-                          return Padding(
-                            padding: EdgeInsets.only(top: 6),
-                            child: Text(
-                              label,
-                              style: TextStyle(
-                                  color: AppTheme.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  // Vertical line on selected point
-                  extraLinesData: ExtraLinesData(
-                    verticalLines: [
-                      VerticalLine(
-                        x: selectedIdx.toDouble(),
-                        color: AppTheme.textPrimary.withOpacity(0.45),
-                        strokeWidth: 1.5,
-                      ),
-                    ],
-                  ),
-
-                  // ── Touch interaction: update stats header on drag ───────
-                  lineTouchData: LineTouchData(
-                    enabled: true,
-                    handleBuiltInTouches: true,
-                    touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
-                      if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
-                        if (event is FlPanEndEvent || event is FlTapUpEvent || event is FlLongPressEnd || event is FlPanCancelEvent) {
-                          setState(() => _selectedChartIndex = null);
-                        }
-                        return;
-                      }
-                      final spotIndex = response.lineBarSpots!.first.spotIndex;
-                      if (_selectedChartIndex != spotIndex) {
-                        setState(() => _selectedChartIndex = spotIndex);
-                      }
-                    },
-                    touchTooltipData: LineTouchTooltipData(
-                      fitInsideHorizontally: true,
-                      fitInsideVertically: true,
-                      getTooltipItems: _emptyTooltip, // hide fl_chart tooltip; we use the header
-                    ),
-                  ),
-
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: false,
-                      color: AppTheme.accent,
-                      barWidth: 2,
-                      isStrokeCapRound: true,
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, pct, bar, i) => FlDotCirclePainter(
-                          radius: i == selectedIdx ? 6 : 4,
-                          color: AppTheme.accent,
-                          strokeWidth: i == selectedIdx ? 2 : 0,
-                          strokeColor: Colors.white,
-                        ),
-                      ),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppTheme.accent.withOpacity(0.35),
-                            AppTheme.accent.withOpacity(0.0),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              padding: EdgeInsets.only(right: 56),
+              child: TrainingVolumeChart(
+                weeklyVolumes: chartValues,
+                bottomLabels: xLabels,
+                onIndexChanged: (idx) {
+                  if (mounted) {
+                    setState(() => _selectedChartIndex = idx);
+                  }
+                },
               ),
             ),
 
-            // ── Y-axis labels kanan ──────────────────────────────────
+            // ── Y-axis labels kanan (Tetap ada di luar chart) ──
             Positioned(
               right: 0,
               top: 0,

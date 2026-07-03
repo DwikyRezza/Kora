@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 
 class TrainingVolumeChart extends StatefulWidget {
   final List<double> weeklyVolumes; // Data untuk 12 minggu (3 bulan x 4 minggu)
+  final List<String>? bottomLabels; // Label khusus untuk sumbu X
+  final void Function(int?)? onIndexChanged; // Callback saat digeser
 
   const TrainingVolumeChart({
     super.key,
     required this.weeklyVolumes,
+    this.bottomLabels,
+    this.onIndexChanged,
   }) : assert(weeklyVolumes.length == 12, 'Must provide exactly 12 weekly data points (4 weeks x 3 months)');
 
   @override
@@ -68,9 +72,13 @@ class _TrainingVolumeChartState extends State<TrainingVolumeChart> {
               touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
                 // Tracking index secara realtime saat continuous drag / tap
                 if (response != null && response.lineBarSpots != null && response.lineBarSpots!.isNotEmpty) {
-                  setState(() {
-                    touchedIndex = response.lineBarSpots![0].spotIndex;
-                  });
+                  final idx = response.lineBarSpots![0].spotIndex;
+                  if (touchedIndex != idx) {
+                    setState(() {
+                      touchedIndex = idx;
+                    });
+                    if (widget.onIndexChanged != null) widget.onIndexChanged!(idx);
+                  }
                 }
                 
                 // Menghilangkan indikator jika sentuhan diangkat (lift off)
@@ -78,6 +86,7 @@ class _TrainingVolumeChartState extends State<TrainingVolumeChart> {
                   setState(() {
                     touchedIndex = null;
                   });
+                  if (widget.onIndexChanged != null) widget.onIndexChanged!(null);
                 }
               },
             ),
@@ -99,17 +108,20 @@ class _TrainingVolumeChartState extends State<TrainingVolumeChart> {
                       color: Colors.grey,
                     );
                     
-                    String text;
-                    // value berjalan dari 0 sampai 11
-                    if (value == 0) {
-                      text = 'Bulan 1';
-                    } else if (value == 4) {
-                      text = 'Bulan 2';
-                    } else if (value == 8) {
-                      text = 'Bulan 3';
+                    String text = '';
+                    if (widget.bottomLabels != null && value.toInt() >= 0 && value.toInt() < widget.bottomLabels!.length) {
+                      text = widget.bottomLabels![value.toInt()];
                     } else {
-                      return const SizedBox.shrink();
+                      if (value == 0) {
+                        text = 'Bulan 1';
+                      } else if (value == 4) {
+                        text = 'Bulan 2';
+                      } else if (value == 8) {
+                        text = 'Bulan 3';
+                      }
                     }
+                    
+                    if (text.isEmpty) return const SizedBox.shrink();
                     
                     return SideTitleWidget(
                       axisSide: meta.axisSide,
