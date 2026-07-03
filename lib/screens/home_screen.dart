@@ -12,6 +12,7 @@ import '../services/cloud_sync_service.dart';
 import '../services/whistleblower_service.dart';
 import '../services/notification_service.dart';
 import '../services/social_service.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'dart:async';
 import 'search_screen.dart';
