@@ -278,23 +278,23 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                 child: Row(
                   children: [
                     Expanded(
-                      flex: 5,
+                      flex: 7,
                       child: Text('Menu Makanan',
                           style: TextStyle(
                               color: AppTheme.textMuted,
                               fontSize: 13,
                               fontWeight: FontWeight.bold)),
                     ),
-                    SizedBox(width: 8),
-                    SizedBox(
-                      width: 80,
+                    SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
                       child: Text('Gram',
                           style: TextStyle(
                               color: AppTheme.textMuted,
                               fontSize: 13,
                               fontWeight: FontWeight.bold)),
                     ),
-                    SizedBox(width: 36),
+                    SizedBox(width: 48), // Padding allowance for the IconButton
                   ],
                 ),
               ),
@@ -393,45 +393,45 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            flex: 5,
+            flex: 7,
             child: TextField(
               controller: _rows[index]['name'],
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
-                hintText: '2 butir telur, nasi goreng...',
-                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 16),
+                hintText: '2 butir telur...',
+                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 15),
                 filled: true,
                 fillColor: AppTheme.surfaceVariant,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
           SizedBox(width: 12),
-          SizedBox(
-            width: 80,
+          Expanded(
+            flex: 3,
             child: TextField(
               controller: _rows[index]['gram'],
               keyboardType: TextInputType.number,
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+              textAlign: TextAlign.center,
               decoration: InputDecoration(
-                hintText: '100',
-                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 16),
+                hintText: '100g',
+                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 15),
                 filled: true,
                 fillColor: AppTheme.surfaceVariant,
-                suffixText: 'g',
-                suffixStyle: TextStyle(color: AppTheme.textMuted, fontSize: 14),
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide.none,
                 ),
               ),
