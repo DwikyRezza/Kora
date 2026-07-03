@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/workout.dart';
@@ -7,7 +6,6 @@ import '../../theme/app_theme.dart';
 import '../../screens/workout_detail_screen.dart';
 import '../mini_route_painter.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Activity feed card ala Strava. Bisa dipakai di halaman Aktivitas Pribadi maupun Aktivitas Teman.
 class ActivityFeedCard extends StatefulWidget {
@@ -375,7 +373,7 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
               child: Text(
                 '© OpenMapTiles © OpenStreetMap',
                 style: TextStyle(
-                  color: (AppTheme.isDarkMode ? Colors.white : Colors.black).withOpacity(0.4),
+                  color: (AppTheme.isDarkMode ? Colors.white : Colors.black).withValues(alpha: 0.4),
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
                 ),
@@ -501,18 +499,7 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
     if (url == null || url.isEmpty) return null;
     if (url.startsWith('http')) return NetworkImage(url);
     
-    }
     return FileImage(File(url));
-  }
-
-  IconData _workoutTypeIcon(String type) {
-    switch (type) {
-      case 'running': return Icons.directions_run_rounded;
-      case 'walking': return Icons.directions_walk_rounded;
-      case 'weightlifting': return Icons.fitness_center_rounded;
-      case 'basketball': return Icons.sports_basketball_rounded;
-      default: return Icons.sports_rounded;
-    }
   }
 
   String _defaultTitle(Workout w) {
@@ -536,15 +523,6 @@ class _ActivityFeedCardState extends State<ActivityFeedCard> {
       case 'walking':       return '$timeLabel Walk';
       default:              return '$timeLabel Activity';
     }
-  }
-
-  String _relativeDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return DateFormat('EEEE').format(date);
-    return DateFormat('d MMM yyyy').format(date);
   }
 
   String _calcPace(Workout w) {
