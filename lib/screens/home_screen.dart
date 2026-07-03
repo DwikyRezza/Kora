@@ -390,6 +390,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       child: Lottie.asset(
                         'assets/lottie/fire_streak.json',
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Center(
+                          child: Text('🔥', style: TextStyle(fontSize: 14)),
+                        ),
                       ),
                     ),
                   ],
