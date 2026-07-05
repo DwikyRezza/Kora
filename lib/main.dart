@@ -4,7 +4,9 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'theme/app_theme.dart';
 import 'utils/tab_visibility.dart';
-import 'screens/home_screen.dart';
+import 'features/home/presentation/screens/home_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'features/home/bloc/home_bloc.dart';
 import 'screens/workout_screen.dart';
 import 'screens/protein_screen.dart';
 import 'screens/schedule_screen.dart';
@@ -145,22 +147,25 @@ class _MainNavigationState extends State<MainNavigation>
           body: IndexedStack(
             index: _currentIndex,
             children: [
-              HomeScreen(
-                onGoToWorkout: () => _goToTab(2),
-                onGoToProtein: () => _goToTab(1),
-                onGoToSchedule: () => _goToTab(3),
-                onGoToBodyStats: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const BodyStatsScreen()),
-                  );
-                },
+              BlocProvider<HomeBloc>(
+                create: (context) => HomeBloc(),
+                child: HomeScreen(
+                  onGoToWorkout: () => _goToTab(2),
+                  onGoToProtein: () => _goToTab(1),
+                  onGoToSchedule: () => _goToTab(3),
+                  onGoToBodyStats: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const BodyStatsScreen()),
+                    );
+                  },
+                ),
               ),
-              ProteinScreen(),
+              const ProteinScreen(),
               WorkoutScreen(key: _workoutScreenKey),
-              ScheduleScreen(),
-              ProfileScreen(), // Diubah dari SettingScreen() menjadi ProfileScreen()
+              const ScheduleScreen(),
+              const ProfileScreen(), // Diubah dari SettingScreen() menjadi ProfileScreen()
             ],
           ),
           bottomNavigationBar: _buildBottomNav(),

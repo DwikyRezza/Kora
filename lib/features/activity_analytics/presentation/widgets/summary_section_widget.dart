@@ -5,7 +5,7 @@ import '../../bloc/activity_analytics_bloc.dart';
 import '../../bloc/activity_analytics_state.dart';
 
 class SummarySectionWidget extends StatelessWidget {
-  const SummarySectionWidget({Key? key}) : super(key: key);
+  const SummarySectionWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +50,7 @@ class SummarySectionWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${(state.heroNumber * 0.8).toStringAsFixed(0)}",
+                      (state.heroNumber * 0.8).toStringAsFixed(0),
                       style: TextStyle(
                         fontSize: 16,
                         color: AppTheme.textPrimary,
@@ -73,7 +73,7 @@ class SummarySectionWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${(state.heroNumber * 1.2).toStringAsFixed(0)}",
+                      (state.heroNumber * 1.2).toStringAsFixed(0),
                       style: TextStyle(
                         fontSize: 16,
                         color: AppTheme.textPrimary,
@@ -96,7 +96,7 @@ class SummarySectionWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${(state.heroNumber).toStringAsFixed(0)}",
+                      (state.heroNumber).toStringAsFixed(0),
                       style: TextStyle(
                         fontSize: 16,
                         color: AppTheme.textPrimary,

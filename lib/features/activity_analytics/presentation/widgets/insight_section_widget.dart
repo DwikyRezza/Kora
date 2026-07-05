@@ -5,7 +5,7 @@ import '../../bloc/activity_analytics_bloc.dart';
 import '../../bloc/activity_analytics_state.dart';
 
 class InsightSectionWidget extends StatelessWidget {
-  const InsightSectionWidget({Key? key}) : super(key: key);
+  const InsightSectionWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

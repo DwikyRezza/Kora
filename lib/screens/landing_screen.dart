@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/responsive.dart';
 import '../main.dart';
 import 'onboarding_screen.dart';
 
@@ -221,7 +220,7 @@ class _LandingScreenState extends State<LandingScreen>
                           fit: BoxFit.cover),
                     ),
                   ),
-                  SizedBox(height: 48),
+                  const SizedBox(height: 48),
 
                   // â”€â”€ App Name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Text.rich(
@@ -251,7 +250,7 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Asisten Digital untuk Atlet\nLacak latihan, nutrisi, dan jadwalmu',
                     textAlign: TextAlign.center,
@@ -282,7 +281,7 @@ class _LandingScreenState extends State<LandingScreen>
                         ),
                       ),
                       child: _isLoadingRegister
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(
@@ -292,8 +291,8 @@ class _LandingScreenState extends State<LandingScreen>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _GoogleGIcon(),
-                                SizedBox(width: 16),
-                                Text(
+                                const SizedBox(width: 16),
+                                const Text(
                                   'Daftar dengan Google',
                                   style: TextStyle(
                                     fontSize: 16,
@@ -306,7 +305,7 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                   // â”€â”€ Login Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   SizedBox(
@@ -337,7 +336,7 @@ class _LandingScreenState extends State<LandingScreen>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _GoogleGIcon(),
-                                SizedBox(width: 16),
+                                const SizedBox(width: 16),
                                 Text(
                                   'Masuk dengan Google',
                                   style: TextStyle(
@@ -351,7 +350,7 @@ class _LandingScreenState extends State<LandingScreen>
                     ),
                   ),
 
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
                   // â”€â”€ Terms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Text(
@@ -363,7 +362,7 @@ class _LandingScreenState extends State<LandingScreen>
                       height: 1.4,
                     ),
                   ),
-                  SizedBox(height: 32),
+                  const SizedBox(height: 32),
                             ],
                           ),
                         ),

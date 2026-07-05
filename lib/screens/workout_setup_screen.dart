@@ -280,8 +280,11 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
                               selected: isSelected,
                               onSelected: (val) {
                                 setState(() {
-                                  if (val) _selectedMuscles.add(m);
-                                  else _selectedMuscles.remove(m);
+                                  if (val) {
+                                    _selectedMuscles.add(m);
+                                  } else {
+                                    _selectedMuscles.remove(m);
+                                  }
                                 });
                               },
                               backgroundColor: AppTheme.background,
@@ -385,8 +388,11 @@ class _WorkoutSetupScreenState extends State<WorkoutSetupScreen> {
                         value: isSelected,
                         onChanged: (val) {
                           setState(() {
-                            if (val == true) _selectedExerciseIds.add(ex.id);
-                            else _selectedExerciseIds.remove(ex.id);
+                            if (val == true) {
+                              _selectedExerciseIds.add(ex.id);
+                            } else {
+                              _selectedExerciseIds.remove(ex.id);
+                            }
                           });
                         },
                         title: Text(ex.name, style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),

@@ -79,12 +79,12 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
     int s = int.tryParse(_setsController.text) ?? 0;
     
     if (_selectedCategory == 1) {
-      return (w * r * s).toStringAsFixed(1) + ' kg';
+      return '${(w * r * s).toStringAsFixed(1)} kg';
     } else if (_selectedCategory == 0) {
-      return (r * s).toString() + ' repetisi';
+      return '${r * s} repetisi';
     } else {
       int d = int.tryParse(_durationController.text) ?? 0;
-      return (d * s).toString() + ' detik';
+      return '${d * s} detik';
     }
   }
 
@@ -201,7 +201,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
           });
         },
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected ? AppTheme.weightliftingColor : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
@@ -216,7 +216,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                 color: isSelected ? Colors.white : AppTheme.textSecondary,
                 size: 20,
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 label,
                 textAlign: TextAlign.center,
@@ -240,14 +240,14 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           TextField(
             controller: controller,
             keyboardType: TextInputType.numberWithOptions(decimal: !isInteger),
             style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
             decoration: InputDecoration(
               hintText: hint,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: AppTheme.weightliftingColor, width: 1.5),
@@ -261,7 +261,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
 
   Widget _buildRestTimerControls() {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
@@ -273,13 +273,13 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
             'â³ Rest Timer',
             style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           if (_isResting) ...[
             Text(
               '${_restTimeRemaining ~/ 60}:${(_restTimeRemaining % 60).toString().padLeft(2, '0')}',
               style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.neonGreen),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             ElevatedButton(
               onPressed: _stopRestTimer,
               style: ElevatedButton.styleFrom(
@@ -287,16 +287,16 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: Text('Akhiri Istirahat'),
+              child: const Text('Akhiri Istirahat'),
             ),
           ] else ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _restBtn("+30s", 30),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 _restBtn("+60s", 60),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 _restBtn("+90s", 90),
               ],
             )
@@ -323,18 +323,18 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(' Logs Workout'),
+        title: const Text(' Logs Workout'),
         backgroundColor: AppTheme.background,
         elevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildCategorySelector(),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               // Inputs based on Category
               if (_selectedCategory == 1) // Free Weights
@@ -344,7 +344,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                 Row(
                   children: [
                     Expanded(child: _buildInputField('Set', _setsController, '4', isInteger: true)),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 16),
                     Expanded(child: _buildInputField('Repetisi', _repsController, '10', isInteger: true)),
                   ],
                 ),
@@ -354,7 +354,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                 Row(
                   children: [
                     Expanded(child: _buildInputField('Set', _setsController, '3', isInteger: true)),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 16),
                     Expanded(child: _buildInputField('Durasi Tahan (detik)', _durationController, '60', isInteger: true)),
                   ],
                 ),
@@ -362,8 +362,8 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
 
               // Volume Calculator Display
               Container(
-                margin: EdgeInsets.only(bottom: 24),
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppTheme.weightliftingColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -376,7 +376,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                     AnimatedBuilder(
                       animation: Listenable.merge([_weightController, _repsController, _setsController, _durationController]),
                       builder: (context, child) {
-                        return Text('$_volumeTotal', style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w900, fontSize: 18));
+                        return Text(_volumeTotal, style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w900, fontSize: 18));
                       }
                     ),
                   ],
@@ -385,11 +385,11 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
 
               // Rest Timer
               _buildRestTimerControls(),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               // Notes
               Text('Catatan / RPE (Opsional)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               TextField(
                 controller: _notesController,
                 style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
@@ -403,20 +403,20 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
                 ),
               ),
 
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
               
               ElevatedButton(
                 onPressed: _saveWorkout,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.weightliftingColor,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 18),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                child: Text('Simpan Rekapan Workout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text('Simpan Rekapan Workout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
             ],
           ),
         ),

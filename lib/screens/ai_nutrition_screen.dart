@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/protein_entry.dart';
@@ -20,7 +19,7 @@ class AiNutritionScreen extends StatefulWidget {
 class _AiNutritionScreenState extends State<AiNutritionScreen> {
   final List<Map<String, TextEditingController>> _rows = [];
   bool _isAnalyzing = false;
-  bool _isSaving = false;
+  final bool _isSaving = false;
   List<_FoodResult>? _results;
   String? _errorMsg;
 
@@ -260,7 +259,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                 height: 56,
                 color: AppTheme.isDarkMode ? Colors.white : AppTheme.textPrimary,
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +272,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                         fontSize: 16,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       'Tulis menu makananmu secara natural.',
                       style: TextStyle(
@@ -302,7 +301,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                               fontSize: 13,
                               fontWeight: FontWeight.bold)),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       flex: 3,
                       child: Text('Gram',
@@ -311,14 +310,14 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                               fontSize: 13,
                               fontWeight: FontWeight.bold)),
                     ),
-                    SizedBox(width: 48), // Padding allowance for the IconButton
+                    const SizedBox(width: 48), // Padding allowance for the IconButton
                   ],
                 ),
               ),
 
               ...List.generate(_rows.length, (i) => _buildInputRow(i)),
 
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               GestureDetector(
                 onTap: _addRow,
                 child: Container(
@@ -336,7 +335,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                     children: [
                       Icon(Icons.add_circle_outline_rounded,
                           color: AppTheme.textPrimary, size: 24),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text('Tambah Makanan',
                           style: TextStyle(
                               color: AppTheme.textPrimary,
@@ -348,7 +347,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               ),
 
               if (_errorMsg != null) ...[
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -357,11 +356,11 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                   ),
                   child: Text(_errorMsg!,
                       style:
-                          TextStyle(color: Color(0xFFFF3400), fontSize: 13, fontWeight: FontWeight.bold)),
+                          const TextStyle(color: Color(0xFFFF3400), fontSize: 13, fontWeight: FontWeight.bold)),
                 ),
               ],
 
-              SizedBox(height: 100),
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -385,7 +384,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (_isAnalyzing)
-                    SizedBox(
+                    const SizedBox(
                       width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                     )
@@ -396,9 +395,9 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                       height: 36,
                       color: Colors.white,
                     ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Text(_isAnalyzing ? 'Menganalisis...' : 'Catat Makanan',
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
@@ -437,7 +436,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               ),
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
             flex: 3,
             child: TextField(
@@ -459,7 +458,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
               ),
             ),
           ),
-          SizedBox(width: 4),
+          const SizedBox(width: 4),
           IconButton(
             icon: Icon(Icons.remove_circle_outline_rounded,
                 color: _rows.length > 1
@@ -504,7 +503,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                           height: 32,
                           color: AppTheme.isDarkMode ? Colors.white : AppTheme.textPrimary,
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Text('Hasil Analisis',
                             style: TextStyle(
                                 color: AppTheme.textPrimary,
@@ -512,30 +511,30 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                                 fontSize: 16)),
                       ],
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     Row(
                       children: [
                         _totalChip('Pro', '${totalProtein.toStringAsFixed(0)}g', const Color(0xFFBD4BE5)),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         _totalChip('Cal', '${totalCalories.toStringAsFixed(0)}k', const Color(0xFFFF3400)),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         _totalChip('Carb', '${totalCarbs.toStringAsFixed(0)}g', const Color(0xFF00A9DD)),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         _totalChip('Fat', '${totalFat.toStringAsFixed(0)}g', AppTheme.accent),
                       ],
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               Text('Detail Per Makanan',
                   style: TextStyle(
                       color: AppTheme.textPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 18)),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ...results.map((r) => _buildFoodResultCard(r)),
-              SizedBox(height: 80),
+              const SizedBox(height: 80),
             ],
           ),
         ),
@@ -560,7 +559,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                           fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
@@ -574,11 +573,11 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                     elevation: 0,
                   ),
                   child: _isSaving
-                      ? SizedBox(
+                      ? const SizedBox(
                           width: 22, height: 22,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
-                      : Text('Simpan',
+                      : const Text('Simpan',
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                 ),
               ),
@@ -614,7 +613,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                         fontSize: 14,
                         fontWeight: FontWeight.bold)),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(r.name,
                     style: TextStyle(
@@ -623,13 +622,13 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
                         fontSize: 18)),
               ),
               Text('${r.calories.toStringAsFixed(0)} kcal',
-                  style: TextStyle(
+                  style: const TextStyle(
                       color: Color(0xFFFF3400),
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           Row(
             children: [
               _miniNutrient('Protein', r.protein, const Color(0xFFBD4BE5)),
@@ -650,7 +649,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
           Text('${value.toStringAsFixed(1)}g',
               style: TextStyle(
                   color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(label,
               style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
@@ -671,7 +670,7 @@ Catatan: semua nilai dalam angka (double). Jika tidak tahu, perkirakan dengan be
             Text(value,
                 style: TextStyle(
                     color: color, fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(label,
                 style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
@@ -705,17 +704,17 @@ class _FoodResult {
   });
 
   factory _FoodResult.fromMap(Map<String, dynamic> m) {
-    double _d(dynamic v) => (v is num) ? v.toDouble() : 0.0;
+    double d(dynamic v) => (v is num) ? v.toDouble() : 0.0;
     return _FoodResult(
       name: m['name']?.toString() ?? '',
-      gram: _d(m['gram']),
-      protein: _d(m['protein']),
-      calories: _d(m['calories']),
-      carbs: _d(m['carbs']),
-      fat: _d(m['fat']),
-      fiber: _d(m['fiber']),
-      sugar: _d(m['sugar']),
-      salt: _d(m['salt']),
+      gram: d(m['gram']),
+      protein: d(m['protein']),
+      calories: d(m['calories']),
+      carbs: d(m['carbs']),
+      fat: d(m['fat']),
+      fiber: d(m['fiber']),
+      sugar: d(m['sugar']),
+      salt: d(m['salt']),
     );
   }
 }

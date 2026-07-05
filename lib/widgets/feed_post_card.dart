@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/social_service.dart';
@@ -177,7 +175,7 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
   String _formatTime(dynamic timestamp) {
     if (timestamp == null) return '';
     final date = timestamp.toDate();
-    return DateFormat('MMMM d, yyyy').format(date) + ' at ' + DateFormat('h:mm a').format(date);
+    return '${DateFormat('MMMM d, yyyy').format(date)} at ${DateFormat('h:mm a').format(date)}';
   }
 
   ImageProvider? _buildAvatarImage() {
@@ -254,7 +252,7 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeader(typeLower),
-                    RSpace.md(),
+                    const RSpace.md(),
 
                     // ── JUDUL AKTIVITAS ─────────────────────────────────────
                     Text(
@@ -266,14 +264,14 @@ class _FeedPostCardState extends State<FeedPostCard> with WidgetsBindingObserver
                         letterSpacing: -0.3,
                       ),
                     ),
-                    RSpace.md(),
+                    const RSpace.md(),
 
                     // ── 3 KOLOM METRIK ──────────────────────────────────────
                     typeLower == 'running' || typeLower == 'walking'
                         ? _buildRunMetrics(dist, dur)
                         : _buildStrengthMetrics(workoutData, dur),
 
-                    RSpace.md(),
+                    const RSpace.md(),
                   ],
                 ),
               ),

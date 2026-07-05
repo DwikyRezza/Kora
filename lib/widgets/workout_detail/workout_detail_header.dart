@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/workout.dart';
@@ -84,10 +83,7 @@ class _WorkoutDetailHeaderState extends State<WorkoutDetailHeader> {
   Widget build(BuildContext context) {
     final workout = widget.workout;
 
-    final formattedDate = DateFormat('MMMM d, yyyy').format(workout.date) +
-        ' at ' +
-        DateFormat('h:mm a').format(workout.date) +
-        ' • Central Java';
+    final formattedDate = '${DateFormat('MMMM d, yyyy').format(workout.date)} at ${DateFormat('h:mm a').format(workout.date)} • Central Java';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),

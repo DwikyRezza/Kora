@@ -48,7 +48,9 @@ dependencies:
   latlong2: ^0.10.1
   flutter_bloc: ^9.1.1
   equatable: ^2.0.8
+  cached_network_image: ^3.4.1
 
+  path_provider: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

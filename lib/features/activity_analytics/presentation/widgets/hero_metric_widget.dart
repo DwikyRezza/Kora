@@ -6,7 +6,7 @@ import '../../bloc/activity_analytics_bloc.dart';
 import '../../bloc/activity_analytics_state.dart';
 
 class HeroMetricWidget extends StatelessWidget {
-  const HeroMetricWidget({Key? key}) : super(key: key);
+  const HeroMetricWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

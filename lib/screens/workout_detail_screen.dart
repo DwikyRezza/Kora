@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:intl/intl.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/workout.dart';
@@ -31,7 +29,7 @@ class WorkoutDetailScreen extends StatefulWidget {
   final String? authorPhotoUrl;
   final String? authorUid;
 
-  WorkoutDetailScreen({
+  const WorkoutDetailScreen({
     super.key, 
     required this.workout,
     this.postId,

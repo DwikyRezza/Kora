@@ -51,14 +51,14 @@ class ActivityAnalyticsState extends Equatable {
   // Helper method to clear insight when generating new one
   ActivityAnalyticsState copyWithInsight(InsightModel? newInsight) {
     return ActivityAnalyticsState(
-      status: this.status,
-      selectedMetric: this.selectedMetric,
-      selectedTimeframe: this.selectedTimeframe,
-      chartData: this.chartData,
-      heroNumber: this.heroNumber,
-      trendPercentage: this.trendPercentage,
+      status: status,
+      selectedMetric: selectedMetric,
+      selectedTimeframe: selectedTimeframe,
+      chartData: chartData,
+      heroNumber: heroNumber,
+      trendPercentage: trendPercentage,
       insight: newInsight,
-      errorMessage: this.errorMessage,
+      errorMessage: errorMessage,
     );
   }
 

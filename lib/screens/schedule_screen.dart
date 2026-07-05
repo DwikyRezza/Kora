@@ -9,10 +9,9 @@ import '../services/meal_recommender_service.dart';
 import '../services/profile_service.dart';
 import '../services/settings_service.dart';
 import '../services/cloud_sync_service.dart';
-import 'weekly_report_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
-  ScheduleScreen({super.key});
+  const ScheduleScreen({super.key});
 
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -134,7 +133,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
         backgroundColor: AppTheme.surface,
         elevation: 0,
-        actions: [],
+        actions: const [],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
@@ -150,8 +149,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             backgroundColor: AppTheme.accent,
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
-            icon: Icon(Icons.add_rounded, color: Colors.white),
-            label: Text('Buat Jadwal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('Buat Jadwal', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
           ),
         ),
       ),
@@ -169,14 +168,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         Column(
                           children: [
                             Icon(Icons.event_seat_rounded, color: AppTheme.textMuted, size: 80),
-                            SizedBox(height: 24),
+                            const SizedBox(height: 24),
                             Text(
                               'Belum ada agenda.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold),
                             ),
-                            SizedBox(height: 12),
+                            const SizedBox(height: 12),
                             Text(
                               'Mau buat jadwal baru atau lanjut istirahat?',
                               textAlign: TextAlign.center,
@@ -210,7 +209,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   decoration: BoxDecoration(color: AppTheme.surface, shape: BoxShape.circle),
                                   child: Icon(event.typeIcon, size: 24, color: _getColorForType(event.type)),
                                 ),
-                                SizedBox(width: 16),
+                                const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,9 +219,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                               color: AppTheme.textPrimary,
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold)),
-                                      SizedBox(height: 4),
+                                      const SizedBox(height: 4),
                                       Text(
-                                          '${DateFormat('d MMM yyyy • HH:mm').format(event.dateTime)}',
+                                          DateFormat('d MMM yyyy • HH:mm').format(event.dateTime),
                                           style: TextStyle(
                                               color: AppTheme.accent,
                                               fontWeight: FontWeight.bold, fontSize: 12)),
@@ -412,7 +411,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
         ),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       child: Form(
         key: _formKey,
@@ -428,7 +427,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       decoration: BoxDecoration(
                           color: AppTheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(2)))),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -445,7 +444,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   ),
                 ],
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               TextFormField(
                 controller: _titleController,
@@ -462,10 +461,10 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     ? 'Judul tidak boleh kosong'
                     : null,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 dropdownColor: Colors.white,
                 style: TextStyle(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
@@ -476,7 +475,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       borderRadius: BorderRadius.circular(26),
                       borderSide: BorderSide.none),
                 ),
-                items: [
+                items: const [
                   DropdownMenuItem(value: 'workout', child: Text(' Latihan (Workout)')),
                   DropdownMenuItem(value: 'meal', child: Text(' Nutrisi/Makan')),
                   DropdownMenuItem(value: 'rest', child: Text(' Istirahat')),
@@ -484,11 +483,11 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                 ],
                 onChanged: (val) => setState(() => _type = val!),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               if (_type == 'workout') ...[
                 DropdownButtonFormField<String>(
-                  value: _workoutType,
+                  initialValue: _workoutType,
                   dropdownColor: Colors.white,
                   style: TextStyle(color: AppTheme.textPrimary),
                   decoration: InputDecoration(
@@ -499,7 +498,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                         borderRadius: BorderRadius.circular(26),
                         borderSide: BorderSide.none),
                   ),
-                  items: [
+                  items: const [
                     DropdownMenuItem(value: 'running', child: Text('Lari / Running')),
                     DropdownMenuItem(value: 'basketball', child: Text('Basket')),
                     DropdownMenuItem(value: 'weightlifting', child: Text('Workout')),
@@ -507,7 +506,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   ],
                   onChanged: (val) => setState(() => _workoutType = val!),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
 
               if (_type == 'meal') ...[
@@ -536,7 +535,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     ),
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _notesController,
                   style: TextStyle(color: AppTheme.textPrimary),
@@ -550,7 +549,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                         borderSide: BorderSide.none),
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
 
               Row(
@@ -569,7 +568,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                           children: [
                             Icon(Icons.calendar_today,
                                 color: AppTheme.accent, size: 20),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(DateFormat('d MMM').format(_selectedDate),
                                 style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                           ],
@@ -577,7 +576,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       ),
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: InkWell(
                       onTap: _pickTime,
@@ -592,7 +591,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                           children: [
                             Icon(Icons.access_time,
                                 color: AppTheme.accent, size: 20),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(_selectedTime.format(context),
                                 style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
                           ],
@@ -602,7 +601,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   ),
                 ],
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
 
               TextFormField(
                 controller: _durationController,
@@ -620,7 +619,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                       borderSide: BorderSide.none),
                 ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               
               Wrap(
                 spacing: 8,
@@ -657,7 +656,7 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                   );
                 }).toList(),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
 
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -667,12 +666,12 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                         fontWeight: FontWeight.bold)),
                 subtitle: Text('Alarm akan berbunyi di waktu terjadwal',
                     style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-                activeColor: AppTheme.accent,
+                activeThumbColor: AppTheme.accent,
                 value: _isReminderOn,
                 onChanged: (val) => setState(() => _isReminderOn = val),
               ),
 
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -684,12 +683,12 @@ class _AddEditEventFormState extends State<_AddEditEventForm> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(26)),
                   ),
-                  child: Text('Simpan Jadwal',
+                  child: const Text('Simpan Jadwal',
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
             ],
           ),
         ),

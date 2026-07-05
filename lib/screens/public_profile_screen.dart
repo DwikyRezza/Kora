@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import 'social_screen.dart';
@@ -209,7 +208,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               SliverToBoxAdapter(
                 child: Center(
                   child: Padding(
-                    padding: EdgeInsets.all(32.0),
+                    padding: const EdgeInsets.all(32.0),
                     child: Text('Belum ada aktivitas yang dibagikan.', style: TextStyle(color: AppTheme.textMuted)),
                   ),
                 ),
@@ -224,7 +223,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   );
                 },
               ),
-            SliverToBoxAdapter(child: SizedBox(height: 40)),
+            const SliverToBoxAdapter(child: SizedBox(height: 40)),
           ],
         ),
       ),

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/responsive.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
 import '../screens/landing_screen.dart';
@@ -80,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Mulai Perjalananmu', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20)),
-            Text(AuthService.email ?? '', style: TextStyle(color: const Color(0xFF72A2C5), fontSize: 13, fontWeight: FontWeight.normal)),
+            Text(AuthService.email ?? '', style: const TextStyle(color: Color(0xFF72A2C5), fontSize: 13, fontWeight: FontWeight.normal)),
           ],
         ),
         backgroundColor: AppTheme.surface,
@@ -115,10 +114,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               
               _buildTextField('Nama', (v) => _name = v!, TextInputType.name, initialValue: AuthService.displayName),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               
               // Username Field
               TextFormField(
@@ -126,9 +125,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(
                   labelText: 'Username',
-                  labelStyle: TextStyle(color: const Color(0xFF72A2C5)),
+                  labelStyle: const TextStyle(color: Color(0xFF72A2C5)),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+                    borderSide: const BorderSide(color: Color(0xFFE2E2E2)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -137,7 +136,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   filled: true,
                   fillColor: AppTheme.surfaceVariant,
-                  prefixIcon: Icon(Icons.alternate_email_rounded, color: const Color(0xFF72A2C5)),
+                  prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF72A2C5)),
                 ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[a-z0-9_.]')),
@@ -150,20 +149,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
                 onSaved: (v) => _username = v!,
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               Row(
                 children: [
                   Expanded(child: _buildTextField('Usia', (v) => _age = int.parse(v!), TextInputType.number)),
-                  SizedBox(width: 20),
+                  const SizedBox(width: 20),
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Gender',
-                        labelStyle: TextStyle(color: const Color(0xFF72A2C5)),
+                        labelStyle: const TextStyle(color: Color(0xFF72A2C5)),
                         enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+                          borderSide: const BorderSide(color: Color(0xFFE2E2E2)),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -182,21 +181,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: _buildTextField('Tinggi Badan (cm)', (v) => _height = double.parse(v!), TextInputType.number)),
-                  SizedBox(width: 20),
+                  const SizedBox(width: 20),
                   Expanded(child: _buildTextField('Berat Badan (kg)', (v) => _weight = double.parse(v!), TextInputType.number)),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 decoration: InputDecoration(
                   labelText: 'Goal Latihan',
-                  labelStyle: TextStyle(color: const Color(0xFF72A2C5)),
+                  labelStyle: const TextStyle(color: Color(0xFF72A2C5)),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+                    borderSide: const BorderSide(color: Color(0xFFE2E2E2)),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   focusedBorder: OutlineInputBorder(
@@ -212,7 +211,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 items: _goals.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
                 onChanged: (v) => setState(() => _goal = v!),
               ),
-              SizedBox(height: 48),
+              const SizedBox(height: 48),
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -249,9 +248,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       keyboardType: type,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: const Color(0xFF72A2C5)), // Mist Blue
+        labelStyle: const TextStyle(color: Color(0xFF72A2C5)), // Mist Blue
         enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: const Color(0xFFE2E2E2)),
+          borderSide: const BorderSide(color: Color(0xFFE2E2E2)),
           borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
@@ -241,7 +240,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                 unselectedLabelColor: AppTheme.textSecondary, // Secondary
                 labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.05),
                 dividerColor: Colors.transparent,
-                tabs: [
+                tabs: const [
                   Tab(text: 'Pengikut'),
                   Tab(text: 'Mengikuti'),
                 ],

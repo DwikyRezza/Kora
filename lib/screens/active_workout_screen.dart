@@ -7,9 +7,7 @@ import 'package:vibration/vibration.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../theme/app_theme.dart';
-import '../models/workout.dart';
 import '../models/exercise_definition.dart';
-import '../services/database_helper.dart';
 import 'workout_summary_screen.dart';
 
 class SetLog {
@@ -51,7 +49,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
   Timer? _sessionTimer;
 
   bool _isResting = false;
-  int _restSeconds = 45;
+  final int _restSeconds = 45;
   int _restRemaining = 60;
   Timer? _restTimer;
   bool _restAlertFired = false;
@@ -276,7 +274,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: AppTheme.surface,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (_) => Padding(
@@ -423,7 +421,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.textPrimary,
-                    fontFeatures: [FontFeature.tabularFigures()],
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
@@ -564,7 +562,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
                         color: AppTheme.textPrimary,
                         fontSize: 56,
                         fontWeight: FontWeight.w900,
-                        fontFeatures: [FontFeature.tabularFigures()],
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                   ),
@@ -656,7 +654,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isFinishing
-                ? [AppTheme.neonGreen, Color(0xFF00CC6A)]
+                ? [AppTheme.neonGreen, const Color(0xFF00CC6A)]
                 : [AppTheme.accent, const Color(0xFFFF7A3D)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

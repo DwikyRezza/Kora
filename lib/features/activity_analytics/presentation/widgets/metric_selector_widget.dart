@@ -7,7 +7,7 @@ import '../../bloc/activity_analytics_event.dart';
 import '../../bloc/activity_analytics_state.dart';
 
 class MetricSelectorWidget extends StatelessWidget {
-  const MetricSelectorWidget({Key? key}) : super(key: key);
+  const MetricSelectorWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,32 +1,50 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'setting_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import '../../../../theme/app_theme.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import '../models/workout.dart';
-import '../services/database_helper.dart';
-import '../services/location_service.dart';
-import '../services/profile_service.dart';
-import '../services/cloud_sync_service.dart';
-import '../services/social_service.dart';
-import '../utils/responsive.dart';
-import '../utils/tab_visibility.dart';
+import '../../../../models/workout.dart';
+import '../../../../services/database_helper.dart';
+import '../../../../services/location_service.dart';
+import '../../../../services/profile_service.dart';
+import '../../../../services/cloud_sync_service.dart';
+import '../../../../services/social_service.dart';
+import '../../../../utils/responsive.dart';
+import '../../../../utils/tab_visibility.dart';
+import '../../../../widgets/running_tracker/running_tracker_components.dart';
 
-class RunningTrackerScreen extends StatefulWidget {
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/running_bloc.dart';
+import '../../bloc/running_event.dart';
+import '../../bloc/running_state.dart';
+
+class RunningTrackerScreen extends StatelessWidget {
   final double userWeight;
   const RunningTrackerScreen({super.key, required this.userWeight});
 
   @override
-  State<RunningTrackerScreen> createState() => _RunningTrackerScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => RunningBloc(),
+      child: RunningTrackerView(userWeight: userWeight),
+    );
+  }
 }
 
-class _RunningTrackerScreenState extends State<RunningTrackerScreen>
+class RunningTrackerView extends StatefulWidget {
+  final double userWeight;
+  const RunningTrackerView({super.key, required this.userWeight});
+
+  @override
+  State<RunningTrackerView> createState() => _RunningTrackerViewState();
+}
+
+class _RunningTrackerViewState extends State<RunningTrackerView>
+
     with WidgetsBindingObserver, TickerProviderStateMixin {
   // ── Google Maps controller ────────────────────────────────────────────
   final Completer<GoogleMapController> _mapController = Completer();
@@ -809,17 +827,13 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
   // ── Simpan ke Database ────────────────────────────────────────────────
   Future<void> _saveRunToDatabase() async {
-    // Guard double-save
     if (!_isSaving) return;
-
     await LocationService.stopService();
 
     if (_distanceKm < 0.01) {
       if (mounted) {
         _showSnackBar('Aktivitas dibatalkan: Tidak ada rekaman jarak (0 km).');
-        setState(() {
-          _isSaving = false;
-        });
+        setState(() => _isSaving = false);
         Navigator.pop(context);
       }
       return;
@@ -827,13 +841,9 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
 
     final durationMinutes = _elapsedSeconds / 60.0;
     final calories = Workout.calculateCalories('running', durationMinutes);
-    final protein = Workout.calculateProteinNeeded(
-      'running',
-      durationMinutes,
-      weight: widget.userWeight,
-    );
-
+    final protein = Workout.calculateProteinNeeded('running', durationMinutes, weight: widget.userWeight);
     final now = DateTime.now();
+
     final workout = Workout(
       type: 'running',
       duration: durationMinutes,
@@ -841,35 +851,22 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       caloriesBurned: calories,
       proteinNeeded: protein,
       date: now,
-      notes: 'Lari GPS Tracker. Jarak: ${_distanceKm.toStringAsFixed(2)} km',
+      notes: 'Lari GPS Tracker. Jarak:  km',
       movingTime: _movingSeconds / 60.0,
       elevationGain: _elevationGain,
       maxElevation: _maxElevation,
       splitsStr: _finalSplitsJson ?? jsonEncode(_splits),
-      polyline: _finalRouteJson ??
-          jsonEncode(
-              _routePoints.map((p) => [p.latitude, p.longitude]).toList()),
+      polyline: _finalRouteJson ?? jsonEncode(_routePoints.map((p) => [p.latitude, p.longitude]).toList()),
       title: _defaultActivityTitle('running', now),
     );
 
-    await DatabaseHelper().insertWorkout(workout);
-
-    // Build workout map
-    final workoutMap = workout.toMap();
-
-    // Auto-backup ke Firestore setelah sesi selesai disimpan
-    CloudSyncService.backupToCloud().catchError((_) {});
-
-    // Publish ke Social Feed (includes map snapshot if available)
-    SocialService.publishWorkoutToFeed(workoutMap).catchError((_) {});
+    context.read<RunningBloc>().add(RunningSaveWorkout(workout));
 
     if (mounted) {
-      _showSnackBar('Sesi lari berhasil disimpan! 🏃');
+      _showSnackBar('Sesi lari berhasil disimpan! ??');
       Navigator.pop(context);
     }
   }
-
-
   void _showSnackBar(String msg) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -950,7 +947,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
       child: SafeArea(
         child: Column(
           children: [
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               padding: const EdgeInsets.all(24),
@@ -968,7 +965,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -978,7 +975,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       _pauseStatItem('Pace', _pace),
                     ],
                   ),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
@@ -1006,7 +1003,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.play_arrow, color: _isSaving ? AppTheme.textMuted : Colors.white, size: 32),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text('Resume',
                           style: TextStyle(
                               color: _isSaving ? AppTheme.textMuted : Colors.white,
@@ -1017,7 +1014,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                 ),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: GestureDetector(
@@ -1033,13 +1030,13 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                     children: _isSaving
                         ? [
                             SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: AppTheme.textMuted, strokeWidth: 3)),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text('Menyimpan...', style: TextStyle(color: AppTheme.textMuted, fontSize: 20, fontWeight: FontWeight.w900)),
                           ]
                         : [
-                            Icon(Icons.stop, color: Colors.white, size: 32),
-                            SizedBox(width: 8),
-                            Text('Finish & Simpan',
+                            const Icon(Icons.stop, color: Colors.white, size: 32),
+                            const SizedBox(width: 8),
+                            const Text('Finish & Simpan',
                                 style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 20,
@@ -1049,7 +1046,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                 ),
               ),
             ),
-            SizedBox(height: 48),
+            const SizedBox(height: 48),
           ],
         ),
       ),
@@ -1064,7 +1061,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                 color: AppTheme.textPrimary,
                 fontSize: 24,
                 fontWeight: FontWeight.w900)),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(label,
             style: TextStyle(
                 color: AppTheme.textMuted,
@@ -1145,7 +1142,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
             backgroundColor: Colors.black54,
             child: IconButton(
               icon:
-                  Icon(Icons.expand_more, color: Colors.white, size: 30),
+                  const Icon(Icons.expand_more, color: Colors.white, size: 30),
               onPressed: _handleBackPress,
             ),
           ),
@@ -1176,7 +1173,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                           : Colors.redAccent,
                       size: 14,
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
                       _currentLocation != null ? 'GPS Ready' : 'Mencari GPS...',
                       style: TextStyle(
@@ -1200,21 +1197,21 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
           top: 110,
           child: Column(
             children: [
-              _mapToolIcon(Icons.add, onTap: () async {
+              MapToolIcon(Icons.add, onTap: () async {
                 if (_mapController.isCompleted) {
                   final ctrl = await _mapController.future;
                   ctrl.animateCamera(CameraUpdate.zoomIn());
                 }
               }),
-              SizedBox(height: 8),
-              _mapToolIcon(Icons.remove, onTap: () async {
+              const SizedBox(height: 8),
+              MapToolIcon(Icons.remove, onTap: () async {
                 if (_mapController.isCompleted) {
                   final ctrl = await _mapController.future;
                   ctrl.animateCamera(CameraUpdate.zoomOut());
                 }
               }),
-              SizedBox(height: 12),
-              _mapToolIcon(Icons.my_location, onTap: _centerOnCurrentLocation),
+              const SizedBox(height: 12),
+              MapToolIcon(Icons.my_location, onTap: _centerOnCurrentLocation),
             ],
           ),
         ),
@@ -1249,7 +1246,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                         // ── Waktu (elapsed) — rebuild only when seconds change ──
                         ValueListenableBuilder<int>(
                           valueListenable: _elapsedNotifier,
-                          builder: (_, elapsed, __) => _statItem(
+                          builder: (_, elapsed, __) => StatItem(
                             'Waktu',
                             _formatElapsed(elapsed),
                           ),
@@ -1257,7 +1254,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                         // ── Pace — rebuild only when pace recalc triggers ──
                         ValueListenableBuilder<String>(
                           valueListenable: _paceNotifier,
-                          builder: (_, pace, __) => _statItemPace(
+                          builder: (_, pace, __) => StatItemPace(
                             'Avg pace (/km)',
                             pace,
                           ),
@@ -1265,7 +1262,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                         // ── Jarak — rebuild only when distance changes ──
                         ValueListenableBuilder<double>(
                           valueListenable: _distanceNotifier,
-                          builder: (_, dist, __) => _statItem(
+                          builder: (_, dist, __) => StatItem(
                             'Jarak (km)',
                             dist.toStringAsFixed(2),
                           ),
@@ -1291,16 +1288,16 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                   children: [
                     if (!_isRunning && _hasStarted) ...[
                       Expanded(
-                          child: _actionButton(
+                          child: ActionButton(
                         label: 'Resume',
                         color: _isSaving ? AppTheme.surfaceVariant : AppTheme.accent,
                         icon: Icons.play_arrow,
                         textColor: _isSaving ? AppTheme.textMuted : Colors.white,
                         onTap: _isSaving ? () {} : _resumeRun,
                       )),
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
                       Expanded(
-                          child: _actionButton(
+                          child: ActionButton(
                         label: _isSaving ? 'Menyimpan...' : 'Finish',
                         color: _isSaving ? AppTheme.surfaceVariant : AppTheme.accent,
                         icon: _isSaving ? Icons.hourglass_empty : Icons.stop,
@@ -1309,7 +1306,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       )),
                     ] else if (_isRunning) ...[
                       Expanded(
-                          child: _actionButton(
+                          child: ActionButton(
                         label: 'Pause',
                         color: AppTheme.accent,
                         icon: Icons.pause,
@@ -1318,7 +1315,7 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
                       )),
                     ] else ...[
                       Expanded(
-                          child: _actionButton(
+                          child: ActionButton(
                         label: _currentLocation == null
                             ? 'Mencari GPS...'
                             : 'Mulai Lari',
@@ -1340,88 +1337,5 @@ class _RunningTrackerScreenState extends State<RunningTrackerScreen>
     );
   }
 
-  // ─── Helpers ──────────────────────────────────────────────────────────
-  Widget _mapToolIcon(IconData icon, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration:
-            BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-        child: Icon(icon, color: Colors.white, size: 24),
-      ),
-    );
-  }
 
-  Widget _statItem(String label, String value) {
-    return Column(
-      children: [
-        Text(value,
-            style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: context.fontXL,
-                fontWeight: FontWeight.w900)),
-        Text(label,
-            style: TextStyle(
-                color: AppTheme.textMuted,
-                fontSize: context.fontXS,
-                fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-
-  Widget _statItemPace(String label, String value) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.speed, color: AppTheme.textMuted, size: context.iconSM),
-            SizedBox(width: 4),
-            Text(value,
-                style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: context.fontXL,
-                    fontWeight: FontWeight.w900)),
-          ],
-        ),
-        Text(label,
-            style: TextStyle(
-                color: AppTheme.textMuted,
-                fontSize: context.fontXS,
-                fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-
-  Widget _actionButton({
-    required String label,
-    required Color color,
-    required IconData icon,
-    required Color textColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(26),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: textColor, size: context.iconMD),
-            SizedBox(width: context.spaceSM),
-            Text(label,
-                style: TextStyle(
-                    color: textColor,
-                    fontSize: context.fontLG,
-                    fontWeight: FontWeight.w900)),
-          ],
-        ),
-      ),
-    );
-  }
 }

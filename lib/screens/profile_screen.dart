@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/tab_visibility.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'package:intl/intl.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/workout.dart';
 import '../services/profile_service.dart';
 import '../services/auth_service.dart';
@@ -54,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     int followers = 0;
     int following = 0;
     List<Map<String, dynamic>> userPosts = [];
-    if (uid != null && uid.isNotEmpty) {
+    if (uid.isNotEmpty) {
       followers = await SocialService.getFollowersCount(uid);
       following = await SocialService.getFollowingCount(uid);
       userPosts = await SocialService.getUserPosts(uid);
@@ -208,7 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
             onPressed: _goToSettings,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ),
       body: CustomScrollView(
@@ -295,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
               
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               
               // Bio Section
               Text(
@@ -306,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 bio.isNotEmpty ? '$bio • $goal Goal' : '$goal Goal',
                 style: TextStyle(
@@ -315,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               
               // BMI Badge
               Container(
@@ -329,7 +325,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.monitor_weight_rounded, color: AppTheme.accent, size: 18),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       'BMI $bmiStr $bmiStatus',
                       style: TextStyle(
@@ -342,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               
-              SizedBox(height: 32),
+              const SizedBox(height: 32),
               
               // Action Button
               SizedBox(
@@ -358,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
+                  child: const Text(
                     'Edit Profil',
                     style: TextStyle(
                       fontSize: 16,
@@ -368,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               
-                  SizedBox(height: 48),
+                  const SizedBox(height: 48),
                 ],
               ),
             ),
@@ -377,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Feed Content
           _buildListFeed(),
             
-          SliverToBoxAdapter(
+          const SliverToBoxAdapter(
             child: SizedBox(height: 40),
           ),
         ],
@@ -416,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return SliverToBoxAdapter(
         child: Center(
           child: Padding(
-            padding: EdgeInsets.all(32.0),
+            padding: const EdgeInsets.all(32.0),
             child: Text('Belum ada aktivitas olahraga.', style: TextStyle(color: AppTheme.textMuted)),
           ),
         ),

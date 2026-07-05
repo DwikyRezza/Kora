@@ -11,18 +11,14 @@ import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import 'running_tracker_screen.dart';
 import 'workout_setup_screen.dart';
-import 'workout_detail_screen.dart';
-import 'profile_screen.dart';
-import 'setting_screen.dart';
 import 'weekly_report_screen.dart';
 import '../services/social_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/feed_post_card.dart';
-import '../widgets/mini_route_painter.dart';
 import '../utils/responsive.dart';
 
 class WorkoutScreen extends StatefulWidget {
-  WorkoutScreen({super.key});
+  const WorkoutScreen({super.key});
 
   @override
   State<WorkoutScreen> createState() => WorkoutScreenState();
@@ -70,7 +66,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
     
     List<Map<String, dynamic>> userPosts = [];
     if (AuthService.isLoggedIn) {
-      userPosts = await SocialService.getUserPosts(AuthService.uid!);
+      userPosts = await SocialService.getUserPosts(AuthService.uid);
     }
     
     final now = DateTime.now();
@@ -477,7 +473,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
         child: Row(
           children: [
             Icon(Icons.share_rounded, size: 16, color: AppTheme.textPrimary),
-            SizedBox(width: 6),
+            const SizedBox(width: 6),
             Text('Bagikan', style: TextStyle(color: AppTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
           ],
         ),
@@ -529,7 +525,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
             getTooltipColor: (group) => AppTheme.textPrimary,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
                return BarTooltipItem(
-                 '${rod.toY.toStringAsFixed(1)}',
+                 rod.toY.toStringAsFixed(1),
                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                );
             },
@@ -569,7 +565,7 @@ class WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProviderS
       context: context,
       backgroundColor: AppTheme.surface,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
       builder: (_) {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom + 32, top: 24, left: 24, right: 24),

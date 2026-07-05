@@ -16,7 +16,7 @@ import 'metric_selector_widget.dart';
 import 'summary_section_widget.dart';
 
 class ActivityAnalyticsCard extends StatelessWidget {
-  const ActivityAnalyticsCard({Key? key}) : super(key: key);
+  const ActivityAnalyticsCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -62,10 +62,10 @@ class ActivityAnalyticsCard extends StatelessWidget {
               );
             }
 
-            return Column(
+            return const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 HeaderWidget(),
                 HeroMetricWidget(),
                 ActivityChartWidget(),

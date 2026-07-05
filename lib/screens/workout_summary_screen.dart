@@ -373,9 +373,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
       maxY: maxY,
       barTouchData: BarTouchData(enabled: false),
       titlesData: FlTitlesData(
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -510,9 +510,9 @@ class _WorkoutSummaryScreenState extends State<WorkoutSummaryScreen>
         width: double.infinity,
         height: 60,
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [AppTheme.accent, Color(0xFFFF7A3D)]),
+          gradient: LinearGradient(colors: [AppTheme.accent, const Color(0xFFFF7A3D)]),
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: AppTheme.accent.withOpacity(0.35), blurRadius: 20, offset: Offset(0, 6))],
+          boxShadow: [BoxShadow(color: AppTheme.accent.withOpacity(0.35), blurRadius: 20, offset: const Offset(0, 6))],
         ),
         child: const Center(
           child: Text('SELESAI & KEMBALI', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900, letterSpacing: 1.2)),

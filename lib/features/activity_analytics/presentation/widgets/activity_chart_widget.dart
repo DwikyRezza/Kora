@@ -7,7 +7,7 @@ import '../../bloc/activity_analytics_bloc.dart';
 import '../../bloc/activity_analytics_state.dart';
 
 class ActivityChartWidget extends StatelessWidget {
-  const ActivityChartWidget({Key? key}) : super(key: key);
+  const ActivityChartWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

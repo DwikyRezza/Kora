@@ -1,35 +1,34 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import '../main.dart';
-import '../models/workout.dart';
-import '../models/protein_entry.dart';
-import '../models/schedule_event.dart';
-import '../services/database_helper.dart';
-import '../services/profile_service.dart';
-import '../services/cloud_sync_service.dart';
-import '../services/whistleblower_service.dart';
-import '../services/notification_service.dart';
-import '../services/social_service.dart';
-import '../services/auth_service.dart';
-import '../theme/app_theme.dart';
-import '../utils/prefetch_manager.dart';
-import '../widgets/shimmer_stat_box.dart';
-import '../widgets/shimmer_feed_card.dart';
-import '../widgets/shimmer_stat_box.dart';
-import '../widgets/shimmer_feed_card.dart';
-import 'dart:async';
-import 'search_screen.dart';
-import 'notification_screen.dart';
-import 'profile_screen.dart';
-import 'workout_detail_screen.dart';
-import 'running_tracker_screen.dart';
-import 'workout_setup_screen.dart';
-import '../widgets/feed_post_card.dart';
-import '../utils/responsive.dart';
 import 'package:lottie/lottie.dart';
+import '../../../../models/workout.dart';
+import '../../../../models/protein_entry.dart';
+import '../../../../models/schedule_event.dart';
+import '../../../../services/database_helper.dart';
+import '../../../../services/profile_service.dart';
+import '../../../../services/cloud_sync_service.dart';
+import '../../../../services/whistleblower_service.dart';
+import '../../../../services/notification_service.dart';
+import '../../../../services/social_service.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../theme/app_theme.dart';
+import '../../../../utils/prefetch_manager.dart';
+import '../../../../widgets/shimmer_stat_box.dart';
+import '../../../../widgets/shimmer_feed_card.dart';
+import '../../../../widgets/home_screen/home_screen_components.dart';
+import 'dart:async';
+import '../../../../screens/search_screen.dart';
+import '../../../../screens/notification_screen.dart';
+import '../../../../features/running/presentation/screens/running_screen.dart';
+import '../../../../screens/workout_setup_screen.dart';
+import '../../../../widgets/feed_post_card.dart';
+import '../../../../utils/responsive.dart';
+
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../bloc/home_bloc.dart';
+import '../../bloc/home_event.dart';
+import '../../bloc/home_state.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback onGoToWorkout;
@@ -49,370 +48,55 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  final _db = DatabaseHelper();
-  List<Workout> _todayWorkouts = [];
-  List<ProteinEntry> _todayProtein = [];
-  List<ScheduleEvent> _upcomingEvents = [];
-  bool _isLoading = true;
-  String _userName = '';
-  String? _userPhotoUrl;
-  double _baseTargetProtein = 0.0;
-  DateTime _selectedScheduleDate = DateTime.now();
-  int _unreadNotifs = 0;
-  List<Map<String, dynamic>> _feedPosts = [];
-  bool _isLoadingFeed = true;
-  int _dashboardTab = 0; // 0: Nutrition, 1: Activity
-  double _targetCalories = 2500.0;
-
-  // ── Metrics Dashboard State ──────────────────────────────────────────────
-  int _todayCaloriesConsumed = 0;
-  int _todayCaloriesBurned = 0;
-  int _todayWorkoutDuration = 0;
-  double _todayWorkoutDistance = 0.0;
-  int _currentWorkoutStreak = 0;
-
-  // ── Pagination state ───────────────────────────────────────────────────
-  DocumentSnapshot? _lastFeedDoc;
-  bool _isLoadingMore = false; // Debounce: prevent multiple simultaneous loads
-  bool _hasMoreData = true; // Flag: false when last page is empty
+class _HomeScreenState extends State<HomeScreen> {
   late ScrollController _scrollController;
+  
+  HomeState get state => context.watch<HomeBloc>().state;
 
-  Timer? _whistleTimer;
-
-  double get _totalProteinToday =>
-      _todayProtein.fold(0, (sum, e) => sum + e.proteinGrams);
-  double get _totalProteinNeeded => _baseTargetProtein;
+  bool get _isLoading => state.status == HomeStatus.loading || state.status == HomeStatus.initial;
+  String get _userName => state.userName;
+  String? get _userPhotoUrl => state.userPhotoUrl;
+  double get _baseTargetProtein => state.baseTargetProtein;
+  double get _targetCalories => state.targetCalories;
+  int get _unreadNotifs => state.unreadNotifs;
+  List<Workout> get _todayWorkouts => state.todayWorkouts;
+  List<ProteinEntry> get _todayProtein => state.todayProtein;
+  List<ScheduleEvent> get _upcomingEvents => state.upcomingEvents;
+  int get _todayCaloriesConsumed => state.todayCaloriesConsumed;
+  int get _todayCaloriesBurned => state.todayCaloriesBurned;
+  int get _todayWorkoutDuration => state.todayWorkoutDuration;
+  double get _todayWorkoutDistance => state.todayWorkoutDistance;
+  int get _currentWorkoutStreak => state.currentWorkoutStreak;
+  List<Map<String, dynamic>> get _feedPosts => state.feedPosts;
+  bool get _isLoadingMore => state.isLoadingMore;
+  bool get _hasMoreData => state.hasMoreData;
+  int get _dashboardTab => state.dashboardTab;
+  double get _totalProteinToday => state.totalProteinToday;
+  double get _totalProteinNeeded => state.totalProteinNeeded;
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
-    _whistleTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      _checkWhistleblower();
-    });
-
-    final pm = PrefetchManager.instance;
-    if (pm.hasData) {
-      _applyPrefetchedData(pm);
-      _backgroundSync(); // Fire and forget
-    } else {
-      _initialSyncAndLoad();
-    }
-  }
-
-  void _applyPrefetchedData(PrefetchManager pm) {
-    _isLoading = false;
-    _isLoadingFeed = false;
-
-    _todayWorkouts = pm.todayWorkouts ?? [];
-    _todayProtein = pm.todayProtein ?? [];
-    _upcomingEvents = pm.upcomingEvents ?? [];
-
-    if (pm.userProfile != null) {
-      _userName = pm.userProfile!['name'] ?? '';
-      _userPhotoUrl = pm.userProfile!['photoUrl'];
-      _baseTargetProtein =
-          (pm.userProfile!['targetProtein'] as num?)?.toDouble() ?? 0.0;
-      final goal = pm.userProfile!['goal']?.toString() ?? 'Bulking';
-      if (goal == 'Bulking' || goal == 'Weightlifter') {
-        _targetCalories = 3000.0;
-      } else if (goal == 'Diet' || goal == 'Runner') {
-        _targetCalories = 2000.0;
-      } else {
-        _targetCalories = 2500.0;
-      }
-    }
-
-    _unreadNotifs = pm.unreadNotificationCount ?? 0;
-    _todayCaloriesConsumed = pm.todayCaloriesConsumed ?? 0;
-    _todayCaloriesBurned =
-        (pm.todayWorkoutMetrics?['caloriesBurned'] as num?)?.toInt() ?? 0;
-    _todayWorkoutDuration =
-        (pm.todayWorkoutMetrics?['duration'] as num?)?.toInt() ?? 0;
-    _todayWorkoutDistance =
-        (pm.todayWorkoutMetrics?['distance'] as num?)?.toDouble() ?? 0.0;
-    _currentWorkoutStreak = pm.currentWorkoutStreak?['current'] ?? 0;
-
-    if (pm.limitedActivityFeed != null) {
-      _feedPosts = pm.limitedActivityFeed!;
-      _hasMoreData = _feedPosts.isNotEmpty;
-    }
-  }
-
-  Future<void> _backgroundSync() async {
-    try {
-      if (AuthService.isLoggedIn) {
-        bool isEmpty = await CloudSyncService.isLocalDataEmpty();
-        if (isEmpty) {
-          await CloudSyncService.restoreAllFromCloud()
-              .timeout(const Duration(seconds: 5));
-        } else {
-          await CloudSyncService.syncWorkoutsToCloud().timeout(const Duration(seconds: 3));
-          await CloudSyncService.syncNutritionToCloud().timeout(const Duration(seconds: 3));
-        }
-      }
-    } catch (_) {}
-
-    if (mounted) {
-      _loadData(silent: true);
-    }
-  }
-
-  Future<void> _initialSyncAndLoad() async {
-    setState(() => _isLoading = true);
-    try {
-      if (AuthService.isLoggedIn) {
-        bool isEmpty = await CloudSyncService.isLocalDataEmpty();
-        if (isEmpty) {
-          await CloudSyncService.restoreAllFromCloud()
-              .timeout(const Duration(seconds: 5));
-        } else {
-          await CloudSyncService.syncWorkoutsToCloud().timeout(const Duration(seconds: 3));
-          await CloudSyncService.syncNutritionToCloud().timeout(const Duration(seconds: 3));
-        }
-      }
-    } catch (_) {
-      // Abaikan error jaringan
-    }
-    await _loadData();
+    context.read<HomeBloc>().add(const HomeLoadData());
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    _whistleTimer?.cancel();
     super.dispose();
   }
 
-  // ── Scroll listener for infinite scrolling ──────────────────────────────
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent * 0.7) {
-      _loadMoreFeed();
-    }
-  }
-
-  Future<void> _loadMoreFeed() async {
-    // Debounce: skip if already loading or no more data
-    if (_isLoadingMore || !_hasMoreData) return;
-    setState(() => _isLoadingMore = true);
-
-    try {
-      final result = await SocialService.getFeedPosts(
-        startAfter: _lastFeedDoc,
-        limit: 10,
-      );
-      final newPosts = result['posts'] as List<Map<String, dynamic>>;
-      final newLastDoc = result['lastDoc'] as DocumentSnapshot?;
-
-      if (mounted) {
-        setState(() {
-          // Merge-Union logic: Only add posts that don't already exist in _feedPosts
-          final existingIds = _feedPosts.map((p) => p['id'] ?? '').toSet();
-          for (var post in newPosts) {
-            if (!existingIds.contains(post['id'] ?? '')) {
-              _feedPosts.add(post);
-              existingIds.add(post['id'] ?? '');
-            }
-          }
-          _lastFeedDoc = newLastDoc;
-          _hasMoreData = newPosts.length >= 10;
-          _isLoadingMore = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoadingMore = false);
-    }
-  }
-
-  void _checkWhistleblower() async {
-    final now = DateTime.now();
-    final events = await _db.getUpcomingEvents();
-    for (var event in events) {
-      if (event.status == 'pending' &&
-          event.dateTime.year == now.year &&
-          event.dateTime.month == now.month &&
-          event.dateTime.day == now.day &&
-          event.dateTime.hour == now.hour &&
-          event.dateTime.minute == now.minute) {
-        WhistleblowerService.playAlarm();
-
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: AppTheme.surface,
-            title: Row(
-              children: [
-                Icon(Icons.sports, color: AppTheme.accent),
-                const SizedBox(width: 8),
-                Text('Waktunya Action!',
-                    style: TextStyle(color: AppTheme.textPrimary)),
-              ],
-            ),
-            content: Text(
-              'Jadwal "${event.title}" telah tiba. Ayo mulai!',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  HapticFeedback.vibrate();
-                  WhistleblowerService.stopAlarm();
-                  Navigator.pop(ctx);
-                },
-                style:
-                    ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                child: const Text('OK', style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
-        );
-        break;
-      }
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent * 0.7) {
+      context.read<HomeBloc>().add(HomeLoadMoreFeed());
     }
   }
 
   Future<void> _refreshData() async {
-    // Reset pagination state before re-fetching from top
-    _lastFeedDoc = null;
-    _hasMoreData = true;
-    try {
-      if (AuthService.isLoggedIn) {
-        bool isEmpty = await CloudSyncService.isLocalDataEmpty();
-        if (isEmpty) {
-          await CloudSyncService.restoreAllFromCloud()
-              .timeout(const Duration(seconds: 5));
-        } else {
-          await CloudSyncService.syncWorkoutsToCloud();
-          await CloudSyncService.syncNutritionToCloud();
-        }
-      }
-    } catch (_) {}
-    await _loadData();
-  }
-
-  Future<void> _loadData({bool silent = false}) async {
-    if (!silent) {
-      setState(() => _isLoading = true);
-    }
-    final today = DateTime.now();
-    try {
-      // 1. Load Local SQLite Data (Fast & Reliable)
-      await _db.checkLateSchedules();
-      final workouts = await _db.getWorkoutsByDate(today);
-      final protein = await _db.getProteinEntriesByDate(today);
-      final events = await _db.getScheduleEventsByDate(_selectedScheduleDate);
-      final workoutStreak = await _db.getCalculateWorkoutStreak();
-      final consumedCals = await _db.getTodayCaloriesConsumed();
-      final workoutMetrics = await _db.getTodayWorkoutMetrics();
-
-      if (mounted) {
-        setState(() {
-          _todayWorkouts = workouts;
-          _todayProtein = protein;
-          _upcomingEvents = events;
-          _todayCaloriesConsumed = consumedCals;
-          _todayCaloriesBurned = (workoutMetrics['caloriesBurned'] as num).toInt();
-          _todayWorkoutDuration = (workoutMetrics['duration'] as num).toInt();
-          _todayWorkoutDistance = (workoutMetrics['distance'] as num).toDouble();
-          _currentWorkoutStreak = workoutStreak['current'] ?? 0;
-        });
-      }
-
-      // 2. Load Network/Firestore Data (With Timeout to prevent Hang)
-      Map<String, dynamic> profile = {};
-      try {
-        profile = await ProfileService.getProfile().timeout(const Duration(seconds: 4));
-      } catch (_) {}
-
-      int unread = 0;
-      try {
-        unread = await NotificationService.getUnreadCount().timeout(const Duration(seconds: 3));
-      } catch (_) {}
-
-      List<Map<String, dynamic>> posts = [];
-      DocumentSnapshot? lastDoc;
-      try {
-        final feedResult = await SocialService.getFeedPosts().timeout(const Duration(seconds: 5));
-        posts = feedResult['posts'] as List<Map<String, dynamic>>;
-        lastDoc = feedResult['lastDoc'] as DocumentSnapshot?;
-      } catch (_) {}
-
-      if (mounted) {
-        setState(() {
-          if (profile.isNotEmpty) {
-            _userName = profile[ProfileService.keyName] ?? '';
-            _userPhotoUrl = profile[ProfileService.keyPhotoUrl];
-            _baseTargetProtein = profile[ProfileService.keyTargetProtein] ?? 0.0;
-            final goal = profile[ProfileService.keyGoal]?.toString() ?? 'Bulking';
-            if (goal == 'Bulking' || goal == 'Weightlifter') {
-              _targetCalories = 3000.0;
-            } else if (goal == 'Diet' || goal == 'Runner') {
-              _targetCalories = 2000.0;
-            } else {
-              _targetCalories = 2500.0;
-            }
-          }
-          _unreadNotifs = unread;
-          _feedPosts = posts;
-          _lastFeedDoc = lastDoc;
-          _hasMoreData = posts.isNotEmpty;
-          _isLoadingFeed = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error loading home data: $e");
-      if (mounted) setState(() => _isLoadingFeed = false);
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _loadScheduleOnly(DateTime date) async {
-    setState(() {
-      _selectedScheduleDate = date;
-    });
-    final events = await _db.getScheduleEventsByDate(date);
-    if (mounted) {
-      setState(() {
-        _upcomingEvents = events;
-      });
-    }
-  }
-
-  Future<void> _navigateByWorkoutType(ScheduleEvent event) async {
-    final profile = await ProfileService.getProfile();
-    final weight = profile[ProfileService.keyWeight] ?? 70.0;
-    if (!mounted) return;
-
-    switch (event.workoutType) {
-      case 'running':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => RunningTrackerScreen(userWeight: weight)),
-        ).then((_) => _loadData());
-        break;
-      case 'weightlifting':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => WorkoutSetupScreen(userWeight: weight)),
-        ).then((_) => _loadData());
-        break;
-      default:
-        // Fallback: go to Workout tab
-        widget.onGoToWorkout();
-        break;
-    }
+    context.read<HomeBloc>().add(const HomeLoadData(isRefresh: true));
   }
 
   @override
@@ -450,16 +134,16 @@ class _HomeScreenState extends State<HomeScreen>
                         SizedBox(height: context.spaceLG),
                         const ShimmerProteinCard(),
                         SizedBox(height: context.space2XL),
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Expanded(child: ShimmerStatBox()),
                             SizedBox(width: 16),
                             Expanded(child: ShimmerStatBox()),
                           ],
                         ),
                         SizedBox(height: context.space2XL),
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Expanded(child: ShimmerStatBox()),
                             SizedBox(width: 16),
                             Expanded(child: ShimmerStatBox()),
@@ -527,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen>
                         context,
                         MaterialPageRoute(
                             builder: (_) => const NotificationScreen()));
-                    _loadData();
+                    context.read<HomeBloc>().add(const HomeLoadData(isRefresh: true));
                   },
                 ),
                 if (_unreadNotifs > 0)
@@ -551,67 +235,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildPillToggle() {
-    return Container(
-      width: 86,
-      height: 30,
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Stack(
-        children: [
-          AnimatedAlign(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            alignment: _dashboardTab == 0 ? Alignment.centerLeft : Alignment.centerRight,
-            child: Container(
-              width: 43,
-              height: 30,
-              decoration: BoxDecoration(
-                color: AppTheme.accent,
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _dashboardTab = 0),
-                  child: Container(
-                    color: Colors.transparent,
-                    child: Center(
-                      child: Icon(
-                        Icons.restaurant_outlined,
-                        size: 16,
-                        color: _dashboardTab == 0 ? Colors.white : AppTheme.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _dashboardTab = 1),
-                  child: Container(
-                    color: Colors.transparent,
-                    child: Center(
-                      child: Icon(
-                        Icons.fitness_center_outlined,
-                        size: 16,
-                        color: _dashboardTab == 1 ? Colors.white : AppTheme.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildNutritionTab() {
     final proteinProgress = _totalProteinNeeded > 0
@@ -714,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildDashboardCard() {
     return Container(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surfaceVariant,
         borderRadius: BorderRadius.circular(26),
@@ -738,7 +362,10 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              _buildPillToggle(),
+              PillToggle(
+                dashboardTab: _dashboardTab,
+                onTabChanged: (index) => context.read<HomeBloc>().add(HomeChangeTab(index)),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -779,9 +406,9 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
-      SliverToBoxAdapter(child: const SizedBox(height: 24)),
+      const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-      if (_isLoadingFeed)
+      if ((state.status == HomeStatus.loading))
         SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: context.spaceXL),
@@ -805,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   Icon(Icons.group_outlined,
                       size: 48, color: AppTheme.textMuted),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Belum ada aktivitas',
                     style: TextStyle(
@@ -813,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen>
                         fontSize: 16,
                         color: AppTheme.textPrimary),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Ikuti lebih banyak teman untuk melihat aktivitas mereka di sini.',
                     textAlign: TextAlign.center,
@@ -832,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen>
             return FeedPostCard(
               key: ValueKey(post['postId']),
               post: post,
-              onDataChanged: () => _loadData(silent: true),
+              onDataChanged: () => context.read<HomeBloc>().add(const HomeLoadData(isRefresh: true)),
             );
           },
         ),
@@ -873,12 +500,12 @@ class StatBoxWidget extends StatefulWidget {
   final VoidCallback? onTap;
 
   const StatBoxWidget({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.subValue,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   State<StatBoxWidget> createState() => _StatBoxWidgetState();

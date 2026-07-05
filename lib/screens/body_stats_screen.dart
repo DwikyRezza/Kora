@@ -335,7 +335,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +350,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                   controller: _weightCtrl,
                   keyboardType: TextInputType.number,
                   style: TextStyle(color: AppTheme.textPrimary),
-                  decoration: InputDecoration(labelText: 'Berat Badan (kg)', prefixIcon: Icon(Icons.monitor_weight_rounded)),
+                  decoration: const InputDecoration(labelText: 'Berat Badan (kg)', prefixIcon: Icon(Icons.monitor_weight_rounded)),
                 ),
               ),
               const SizedBox(width: 16),
@@ -359,7 +359,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                   controller: _heightCtrl,
                   keyboardType: TextInputType.number,
                   style: TextStyle(color: AppTheme.textPrimary),
-                  decoration: InputDecoration(labelText: 'Tinggi Badan (cm)', prefixIcon: Icon(Icons.height_rounded)),
+                  decoration: const InputDecoration(labelText: 'Tinggi Badan (cm)', prefixIcon: Icon(Icons.height_rounded)),
                 ),
               ),
             ],
@@ -369,7 +369,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _save,
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.electricBlue, padding: EdgeInsets.symmetric(vertical: 16)),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.electricBlue, padding: const EdgeInsets.symmetric(vertical: 16)),
               child: const Text('Simpan Data', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ),

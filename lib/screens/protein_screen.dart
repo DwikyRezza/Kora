@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter/services.dart';
 import '../models/protein_entry.dart';
 import '../services/database_helper.dart';
 import '../services/profile_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/notification_service.dart';
-import 'weekly_report_screen.dart';
 import 'ai_nutrition_screen.dart';
 import '../utils/responsive.dart';
 
@@ -90,15 +87,15 @@ class _ProteinScreenState extends State<ProteinScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildHeader(),
-                            SizedBox(height: 32),
+                            const SizedBox(height: 32),
                             _buildHeroRings(),
-                            SizedBox(height: 32),
+                            const SizedBox(height: 32),
                             Text('Riwayat Hari Ini',
                                 style: TextStyle(
                                     color: AppTheme.textPrimary,
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold)),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                           ],
                         ),
                       ),
@@ -162,7 +159,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                 decoration: BoxDecoration(
                     color: AppTheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(26)),
-                child: Icon(Icons.water_drop,
+                child: const Icon(Icons.water_drop,
                     color: Color(0xFF00A9DD), size: 24),
               ),
             ),
@@ -190,7 +187,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                   const Color(0xFFBD4BE5), 'g'),
             ],
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -215,7 +212,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CircularProgressIndicator(
+              const CircularProgressIndicator(
                 value: 1.0,
                 strokeWidth: 8,
                 color: Colors.white, // background track
@@ -246,7 +243,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
             ],
           ),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         Text(label,
             style: TextStyle(
                 color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.bold)),
@@ -264,7 +261,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         color: const Color(0xFFFF3400),
-        child: Icon(Icons.delete_rounded, color: Colors.white),
+        child: const Icon(Icons.delete_rounded, color: Colors.white),
       ),
       onDismissed: (_) async {
         await _db.deleteProteinEntry(entry.id!);
@@ -291,7 +288,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                           color: AppTheme.textPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
                       isWater
                           ? '${entry.waterMl} ml • Hidrasi'
@@ -314,7 +311,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                           : const Color(0xFFBD4BE5),
                       shape: BoxShape.circle),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   isWater
                       ? 'Air'
@@ -363,14 +360,14 @@ class _ProteinScreenState extends State<ProteinScreen> {
                 height: 36,
                 color: Colors.white,
               ),
-              SizedBox(width: 10),
-              Text('Catat Makanan',
+              const SizedBox(width: 10),
+              const Text('Catat Makanan',
                   style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16)),
-              SizedBox(width: 8),
-              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
             ],
           ),
         ),
@@ -382,7 +379,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
     showModalBottomSheet(
         context: context,
         backgroundColor: AppTheme.surface,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
         builder: (_) {
           return Padding(
@@ -390,12 +387,12 @@ class _ProteinScreenState extends State<ProteinScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Tambah Air Putih',
+                const Text('Tambah Air Putih',
                     style: TextStyle(
                         color: Color(0xFF00A9DD),
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
-                SizedBox(height: 32),
+                const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -404,7 +401,7 @@ class _ProteinScreenState extends State<ProteinScreen> {
                     _waterButton(1000, 'Botol Besar'),
                   ],
                 ),
-                SizedBox(height: 32),
+                const SizedBox(height: 32),
               ],
             ),
           );
@@ -435,10 +432,10 @@ class _ProteinScreenState extends State<ProteinScreen> {
         ),
         child: Column(
           children: [
-            Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
-            SizedBox(height: 12),
+            const Icon(Icons.water_drop, color: Color(0xFF00A9DD), size: 32),
+            const SizedBox(height: 12),
             Text('+$ml ml',
-                style: TextStyle(
+                style: const TextStyle(
                     color: Color(0xFF00A9DD),
                     fontWeight: FontWeight.bold,
                     fontSize: 16)),
