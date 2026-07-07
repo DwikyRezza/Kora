@@ -320,10 +320,10 @@ class _MainNavigationState extends State<MainNavigation>
                   },
                 ),
               ),
-              const ProteinScreen(),
-              const WorkoutScreen(),
-              const ScheduleScreen(),
-              const ProfileScreen(), // Diubah dari SettingScreen() menjadi ProfileScreen()
+              ProteinScreen(),
+              WorkoutScreen(),
+              ScheduleScreen(),
+              ProfileScreen(), // Diubah dari SettingScreen() menjadi ProfileScreen()
             ],
           ),
           bottomNavigationBar: _buildBottomNav(),
