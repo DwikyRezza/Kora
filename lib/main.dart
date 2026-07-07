@@ -300,60 +300,84 @@ class _MainNavigationState extends State<MainNavigation>
 
   Widget _buildBottomNav() {
     return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surface.withValues(alpha: 0.95),
-        border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
-      ),
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 60,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-            _buildNavItem(0, Icons.home_rounded, 'Home'),
-            _buildNavItem(1, Icons.restaurant_menu_rounded, 'Meal'),
-            
-            // Center Training Button
-            Expanded(
-              child: GestureDetector(
-                onTap: _onFabTapped,
-                behavior: HitTestBehavior.opaque,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      margin: const EdgeInsets.only(bottom: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.textPrimary,
-                        shape: BoxShape.circle,
+      color: Colors.transparent, // Transparan agar tombol tengah bisa keluar dari garis atas
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Background and top border
+          Container(
+            height: 80, // Tinggi standar navbar
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(top: BorderSide(color: AppTheme.border, width: 1.5)),
+            ),
+          ),
+          
+          // Items Row
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: _buildNavItem(0, Icons.home_rounded, 'Beranda')),
+                  Expanded(child: _buildNavItem(1, Icons.restaurant_menu_rounded, 'Nutrisi')),
+                  
+                  // Center Training Button
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _onFabTapped,
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Transform.translate(
+                            offset: const Offset(0, -8),
+                            child: Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: AppTheme.textPrimary,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppTheme.surface, width: 5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Icon(Icons.add_rounded, color: AppTheme.background, size: 32),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'LATIHAN',
+                            style: TextStyle(
+                              color: AppTheme.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Icon(Icons.add_rounded, color: AppTheme.background, size: 22),
                     ),
-                    Text(
-                      'TRAINING',
-                      style: TextStyle(
-                        color: AppTheme.textMuted,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  
+                  Expanded(child: _buildNavItem(3, Icons.calendar_month_rounded, 'Jadwal')),
+                  Expanded(child: _buildNavItem(4, Icons.person_rounded, 'Profil')),
+                ],
               ),
             ),
-            
-            _buildNavItem(3, Icons.calendar_month_rounded, 'Plan'),
-            _buildNavItem(4, Icons.person_rounded, 'Profil'),
-          ],
-        ),
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -361,73 +385,52 @@ class _MainNavigationState extends State<MainNavigation>
   Widget _buildNavItem(int index, IconData icon, String label) {
     final isActive = _currentIndex == index;
     
-    if (isActive) {
-      return Expanded(
-        child: GestureDetector(
-          onTap: () => _goToTab(index),
-          child: Align(
-            alignment: Alignment.center,
-            heightFactor: 1.0,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 60),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    return GestureDetector(
+      onTap: () => _goToTab(index),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+            Container(
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.accent, // ember-orange
-                borderRadius: BorderRadius.circular(26), // rounded-athlete
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: Colors.white, size: 24),
-                  const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                color: isActive ? AppTheme.accent : Colors.transparent,
+                shape: BoxShape.circle,
+                boxShadow: isActive 
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.accent.withValues(alpha: 0.5),
+                        blurRadius: 16,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                  ),
-                ],
+                    ] 
+                  : null,
+              ),
+              child: Icon(
+                icon, 
+                color: isActive ? Colors.white : AppTheme.textMuted, 
+                size: 26,
               ),
             ),
-          ),
-        ),
-      );
-    }
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _goToTab(index),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppTheme.textMuted, size: 24),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label.toUpperCase(),
-                style: TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
+            const SizedBox(height: 6),
+            Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              style: TextStyle(
+                color: isActive ? AppTheme.accent : AppTheme.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.2,
               ),
             ),
           ],
         ),
-      ),
     );
   }
+
 }
 
 class _GlowScrollBehavior extends ScrollBehavior {
