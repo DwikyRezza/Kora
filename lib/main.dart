@@ -72,22 +72,26 @@ class KoraApp extends StatelessWidget {
           create: (context) => ScheduleRepository(),
         ),
       ],
-      child: ValueListenableBuilder<ThemeMode>(
-        valueListenable: AppTheme.themeNotifier,
-        builder: (context, currentMode, _) {
-          return MaterialApp(
-            title: 'Kora',
-            debugShowCheckedModeBanner: false,
-            scrollBehavior: const _GlowScrollBehavior(),
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: currentMode,
-            home: BlocProvider<AuthBloc>(
-              create: (context) => AuthBloc(),
-              child: const new_splash.SplashScreen(),
-            ),
-          );
-        },
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (context) => AuthBloc(),
+          ),
+        ],
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: AppTheme.themeNotifier,
+          builder: (context, currentMode, _) {
+            return MaterialApp(
+              title: 'Kora',
+              debugShowCheckedModeBanner: false,
+              scrollBehavior: const _GlowScrollBehavior(),
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: currentMode,
+              home: const new_splash.SplashScreen(),
+            );
+          },
+        ),
       ),
     );
   }

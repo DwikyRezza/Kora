@@ -45,23 +45,31 @@ class AuthService {
   static Future<bool> checkUserExistsInCloud() async {
     if (!isLoggedIn) return false;
     try {
-      final doc = await _firestore.collection('users').doc(uid).get();
+      final doc = await _firestore.collection('users').doc(uid).get().timeout(const Duration(seconds: 10));
       // Dianggap terdaftar jika dokumen ada dan memiliki field 'profile'
       return doc.exists && doc.data()!.containsKey('profile');
     } catch (e) {
       print('[AuthService] Error checking cloud user: $e');
-      return false;
+      throw Exception('Gagal menghubungi server. Periksa koneksi internet Anda.');
     }
   }
 
   /// Sign out dari Firebase + Google + bersihkan sesi lokal
   static Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
-      await _auth.signOut();
+      await _googleSignIn.signOut().timeout(const Duration(seconds: 2));
+    } catch (e) {
+      print('[AuthService] Error Google signOut: $e');
+    }
+    try {
+      await _auth.signOut().timeout(const Duration(seconds: 2));
+    } catch (e) {
+      print('[AuthService] Error Firebase signOut: $e');
+    }
+    try {
       await clearLocalSession();
     } catch (e) {
-      print('[AuthService] Error signing out: $e');
+      print('[AuthService] Error clearLocalSession: $e');
     }
   }
 
