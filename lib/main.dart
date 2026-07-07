@@ -342,7 +342,8 @@ class _MainNavigationState extends State<MainNavigation>
         children: [
           // Background and top border
           Container(
-            height: 80, // Tinggi standar navbar
+            height:
+                74, // Sesuaikan tinggi agar menutupi icon tapi tidak terlalu jauh
             decoration: BoxDecoration(
               color: AppTheme.surface,
               border:
@@ -351,73 +352,77 @@ class _MainNavigationState extends State<MainNavigation>
           ),
 
           // Items Row
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                      child: _buildNavItem(0, Icons.home_rounded, 'Beranda')),
-                  Expanded(
-                      child: _buildNavItem(
-                          1, Icons.restaurant_menu_rounded, 'Nutrisi')),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                        child: _buildNavItem(0, Icons.home_rounded, 'Beranda')),
+                    Expanded(
+                        child: _buildNavItem(1, Icons.tune_rounded, 'Nutrisi')),
 
-                  // Center Training Button
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _onFabTapped,
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Transform.translate(
-                            offset: const Offset(0, -8),
-                            child: Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: AppTheme.textPrimary,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: AppTheme.surface, width: 5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Icon(Icons.add_rounded,
-                                    color: AppTheme.background, size: 32),
+                    // Center Training Button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _onFabTapped,
+                        behavior: HitTestBehavior.opaque,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Transform.translate(
+                              offset: const Offset(0, -10),
+                              child: Container(
+                                width: 58,
+                                height: 58,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.textPrimary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: AppTheme.surface, width: 4),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.15),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(Icons.add_rounded,
+                                      color: AppTheme.background, size: 28),
+                                ),
                               ),
                             ),
-                          ),
-                          Text(
-                            'LATIHAN',
-                            style: TextStyle(
-                              color: AppTheme.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.2,
+                            Text(
+                              'LATIHAN',
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.2,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  Expanded(
-                      child: _buildNavItem(
-                          3, Icons.calendar_month_rounded, 'Jadwal')),
-                  Expanded(
-                      child: _buildNavItem(4, Icons.person_rounded, 'Profil')),
-                ],
+                    Expanded(
+                        child:
+                            _buildNavItem(3, Icons.assignment_rounded, 'Jadwal')),
+                    Expanded(
+                        child: _buildNavItem(4, Icons.person_rounded, 'Profil')),
+                  ],
+                ),
               ),
             ),
           ),
@@ -437,17 +442,17 @@ class _MainNavigationState extends State<MainNavigation>
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: isActive ? AppTheme.accent : Colors.transparent,
               shape: BoxShape.circle,
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: AppTheme.accent.withValues(alpha: 0.5),
-                        blurRadius: 16,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 6),
+                        color: AppTheme.accent.withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 4),
                       ),
                     ]
                   : null,
@@ -455,10 +460,10 @@ class _MainNavigationState extends State<MainNavigation>
             child: Icon(
               icon,
               color: isActive ? Colors.white : AppTheme.textMuted,
-              size: 26,
+              size: 22,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 2),
           Text(
             label.toUpperCase(),
             maxLines: 1,
