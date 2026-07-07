@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import '../../../../theme/app_theme.dart';
 
 /// High-performance Q&A screen using ValueNotifier + ListView.builder.
 /// - Search filtering is isolated via ValueNotifier<String> so only the

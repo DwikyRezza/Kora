@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../models/workout.dart';
-import '../services/database_helper.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
+import '../../../../theme/app_theme.dart';
+import '../../bloc/weightlifting/weightlifting_bloc.dart';
+import '../../bloc/weightlifting/weightlifting_event.dart';
+import '../../bloc/weightlifting/weightlifting_state.dart';
 
 class WeightliftingScreen extends StatefulWidget {
   final double userWeight;
@@ -19,7 +21,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _repsController = TextEditingController();
   final TextEditingController _setsController = TextEditingController();
-  final TextEditingController _durationController = TextEditingController(); // for isometric duration / total duration
+  final TextEditingController _durationController = TextEditingController(); 
   final TextEditingController _notesController = TextEditingController();
 
   // Rest Timer
@@ -88,87 +90,21 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
     }
   }
 
-  Future<void> _saveWorkout() async {
-    // Collect data
+  void _saveWorkout() {
     double weight = double.tryParse(_weightController.text) ?? 0.0;
     int reps = int.tryParse(_repsController.text) ?? 0;
     int sets = int.tryParse(_setsController.text) ?? 0;
-    double durationMins = double.tryParse(_durationController.text) ?? 0.0; // Assume total time logged or typed
+    int durationSec = int.tryParse(_durationController.text) ?? 0;
 
-    // If isometric, maybe duration was in seconds per set? For simplification let's just use durationMins for the overall log
-    if (_selectedCategory == 2) {
-       // user inputs duration per set in seconds. Let's say Total duration = sets * duration_per_set / 60
-       int durSec = int.tryParse(_durationController.text) ?? 0;
-       durationMins = (durSec * sets) / 60.0;
-       if (durationMins < 1.0) durationMins = 5.0; // default 5 mins minimum for isometric logic
-    } else {
-       // if no duration given, lets estimate 3 mins per set including rest
-       if (durationMins <= 0) {
-         durationMins = sets * 3.0; // 3 minutes per set typically
-         if (durationMins <= 0) durationMins = 10.0; // Default fallback
-       }
-    }
-
-    final calories = Workout.calculateCalories('weightlifting', durationMins);
-    final protein = Workout.calculateProteinNeeded('weightlifting', durationMins, weight: widget.userWeight);
-
-    String subTypeStr = _selectedCategory == 0 
-      ? "Bodyweight" 
-      : (_selectedCategory == 1 ? "Free Weights" : "Isometric");
-
-    String notes = "Kategori: $subTypeStr\n"
-                 "Volume: $_volumeTotal\n";
-    if (_notesController.text.isNotEmpty) {
-      notes += "Catatan: ${_notesController.text}";
-    }
-
-    final now = DateTime.now();
-    final workout = Workout(
-      type: 'weightlifting',
-      duration: durationMins,
-      distance: null,
-      sets: sets,
+    context.read<WeightliftingBloc>().add(SaveWorkout(
+      category: _selectedCategory,
+      weight: weight,
       reps: reps,
-      weight: _selectedCategory == 1 ? weight : null,
-      caloriesBurned: calories,
-      proteinNeeded: protein,
-      notes: notes,
-      date: now,
-      title: _defaultActivityTitle('weightlifting', now),
-    );
-
-    await DatabaseHelper().insertWorkout(workout);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sesi $subTypeStr berhasil disimpan!')),
-      );
-      Navigator.pop(context, true);
-    }
-  }
-
-  /// Generates a time-aware default activity title.
-  static String _defaultActivityTitle(String type, DateTime date) {
-    final hour = date.hour;
-    String timeLabel;
-    if (hour >= 5 && hour < 10) {
-      timeLabel = 'Morning';
-    } else if (hour >= 10 && hour < 14) {
-      timeLabel = 'Midday';
-    } else if (hour >= 14 && hour < 17) {
-      timeLabel = 'Afternoon';
-    } else if (hour >= 17 && hour < 20) {
-      timeLabel = 'Evening';
-    } else {
-      timeLabel = 'Night';
-    }
-    switch (type) {
-      case 'running':    return '$timeLabel Run';
-      case 'weightlifting': return '$timeLabel Workout';
-      case 'basketball': return '$timeLabel Basketball';
-      case 'walking':    return '$timeLabel Walk';
-      default:           return '$timeLabel Activity';
-    }
+      sets: sets,
+      durationSeconds: durationSec,
+      notes: _notesController.text,
+      userWeight: widget.userWeight,
+    ));
   }
 
   Widget _buildCategorySelector() {
@@ -270,7 +206,7 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
       child: Column(
         children: [
           Text(
-            'â³ Rest Timer',
+            '⏳ Rest Timer',
             style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -320,104 +256,119 @@ class _WeightliftingScreenState extends State<WeightliftingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text(' Logs Workout'),
+    return BlocProvider<WeightliftingBloc>(
+      create: (context) => WeightliftingBloc(),
+      child: Scaffold(
         backgroundColor: AppTheme.background,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildCategorySelector(),
-              const SizedBox(height: 24),
+        appBar: AppBar(
+          title: const Text(' Logs Workout'),
+          backgroundColor: AppTheme.background,
+          elevation: 0,
+        ),
+        body: SafeArea(
+          child: BlocConsumer<WeightliftingBloc, WeightliftingState>(
+            listener: (context, state) {
+              if (state.status == WeightliftingStatus.success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Sesi ${state.subTypeStr} berhasil disimpan!')),
+                );
+                Navigator.pop(context, true);
+              } else if (state.status == WeightliftingStatus.failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal menyimpan: ${state.errorMessage}')),
+                );
+              }
+            },
+            builder: (context, state) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildCategorySelector(),
+                    const SizedBox(height: 24),
+                    if (_selectedCategory == 1) 
+                      _buildInputField('Beban (kg/lbs)', _weightController, 'Misal: 40', isInteger: false),
+                    
+                    if (_selectedCategory == 0 || _selectedCategory == 1) ...[
+                      Row(
+                        children: [
+                          Expanded(child: _buildInputField('Set', _setsController, '4', isInteger: true)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildInputField('Repetisi', _repsController, '10', isInteger: true)),
+                        ],
+                      ),
+                    ],
+                    
+                    if (_selectedCategory == 2) ...[
+                      Row(
+                        children: [
+                          Expanded(child: _buildInputField('Set', _setsController, '3', isInteger: true)),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildInputField('Durasi Tahan (detik)', _durationController, '60', isInteger: true)),
+                        ],
+                      ),
+                    ],
 
-              // Inputs based on Category
-              if (_selectedCategory == 1) // Free Weights
-                _buildInputField('Beban (kg/lbs)', _weightController, 'Misal: 40', isInteger: false),
-              
-              if (_selectedCategory == 0 || _selectedCategory == 1) ...[ // Bodyweight & Free Weights
-                Row(
-                  children: [
-                    Expanded(child: _buildInputField('Set', _setsController, '4', isInteger: true)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildInputField('Repetisi', _repsController, '10', isInteger: true)),
-                  ],
-                ),
-              ],
-              
-              if (_selectedCategory == 2) ...[ // Isometric
-                Row(
-                  children: [
-                    Expanded(child: _buildInputField('Set', _setsController, '3', isInteger: true)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildInputField('Durasi Tahan (detik)', _durationController, '60', isInteger: true)),
-                  ],
-                ),
-              ],
-
-              // Volume Calculator Display
-              Container(
-                margin: const EdgeInsets.only(bottom: 24),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.weightliftingColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.weightliftingColor.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Total Volume Kerja:', style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w600)),
-                    AnimatedBuilder(
-                      animation: Listenable.merge([_weightController, _repsController, _setsController, _durationController]),
-                      builder: (context, child) {
-                        return Text(_volumeTotal, style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w900, fontSize: 18));
-                      }
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.weightliftingColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.weightliftingColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total Volume Kerja:', style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w600)),
+                          AnimatedBuilder(
+                            animation: Listenable.merge([_weightController, _repsController, _setsController, _durationController]),
+                            builder: (context, child) {
+                              return Text(_volumeTotal, style: TextStyle(color: AppTheme.weightliftingColor, fontWeight: FontWeight.w900, fontSize: 18));
+                            }
+                          ),
+                        ],
+                      ),
                     ),
+
+                    _buildRestTimerControls(),
+                    const SizedBox(height: 24),
+
+                    Text('Catatan / RPE (Opsional)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesController,
+                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Misal: RPE 8, terasa lebih ringan dari minggu lalu...',
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppTheme.weightliftingColor, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    
+                    ElevatedButton(
+                      onPressed: state.status == WeightliftingStatus.loading ? null : () => _saveWorkout(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.weightliftingColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: state.status == WeightliftingStatus.loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Simpan Rekapan Workout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
-              ),
-
-              // Rest Timer
-              _buildRestTimerControls(),
-              const SizedBox(height: 24),
-
-              // Notes
-              Text('Catatan / RPE (Opsional)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _notesController,
-                style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-                maxLines: 2,
-                decoration: InputDecoration(
-                  hintText: 'Misal: RPE 8, terasa lebih ringan dari minggu lalu...',
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: AppTheme.weightliftingColor, width: 1.5),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 40),
-              
-              ElevatedButton(
-                onPressed: _saveWorkout,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.weightliftingColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 0,
-                ),
-                child: const Text('Simpan Rekapan Workout', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 20),
-            ],
+              );
+            },
           ),
         ),
       ),

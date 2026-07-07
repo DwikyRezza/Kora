@@ -14,9 +14,8 @@ import 'features/workout/presentation/screens/workout_setup_screen.dart';
 import 'services/profile_service.dart';
 import 'features/nutrition/presentation/screens/protein_screen.dart';
 import 'features/schedule/presentation/screens/schedule_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'screens/landing_screen.dart';
+import 'features/auth/presentation/screens/onboarding_screen.dart';
+import 'features/auth/presentation/screens/landing_screen.dart';
 import 'features/profile/presentation/screens/body_stats_screen.dart';
 import 'features/profile/bloc/body_stats/body_stats_bloc.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
@@ -24,8 +23,9 @@ import 'services/notification_service.dart';
 import 'services/settings_service.dart';
 import 'repositories/workout_repository.dart';
 import 'repositories/schedule_repository.dart';
-
-import 'screens/splash_screen.dart';
+import 'features/auth/bloc/auth/auth_bloc.dart';
+import 'features/auth/bloc/auth/auth_event.dart';
+import 'features/auth/presentation/screens/splash_screen.dart' as new_splash;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,7 +80,10 @@ class KoraApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: currentMode,
-            home: const SplashScreen(),
+            home: BlocProvider<AuthBloc>(
+              create: (context) => AuthBloc(),
+              child: const new_splash.SplashScreen(),
+            ),
           );
         },
       ),
