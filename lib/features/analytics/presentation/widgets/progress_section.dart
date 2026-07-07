@@ -46,7 +46,7 @@ class _ProgressSectionState extends State<ProgressSection> {
       final workouts = allWorkouts.where((w) {
         return w.date.isAfter(weekStart.subtract(const Duration(seconds: 1))) && 
                w.date.isBefore(weekEnd.add(const Duration(seconds: 1))) &&
-               w.type == _progressFilter;
+               w.type.toLowerCase() == _progressFilter.toLowerCase();
       }).toList();
 
       double distance = 0, duration = 0, elevation = 0, volume = 0, sets = 0;
