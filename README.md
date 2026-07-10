@@ -59,4 +59,3 @@
 
 ---
 
-*Dibuat untuk Tugas Besar Pemrograman Mobile.*
